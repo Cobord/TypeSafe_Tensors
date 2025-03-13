@@ -23,6 +23,31 @@ Foldable (Tensor shape) where
   foldr f z (TZ x) = f x z 
   foldr f z (TS xs) = foldr (\t, acc => foldr f acc t) z xs 
 
+-- unit of a monoidal functor
+tensorReplicate : {shape : Vect n Nat} -> a -> Tensor shape a
+tensorReplicate {shape = []} a = TZ a
+tensorReplicate {shape = (n :: ns)} a = TS (replicate n (tensorReplicate a))
+
+-- generalised zip
+-- laxator of a monoidal functor
+liftA2Tensor : Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
+liftA2Tensor (TZ a) (TZ b) = TZ (a, b)
+liftA2Tensor (TS as) (TS bs) = TS (zipWith liftA2Tensor as bs) 
+
+
+{shape : Vect n Nat} -> Applicative (Tensor shape) where
+  pure x = tensorReplicate x
+  fs <*> xs = map (uncurry ($)) $ liftA2Tensor fs xs 
+
+liftA2 : Applicative f => f a -> f b -> f (a, b)
+liftA2 fa fb = (map (,) fa) <*> fb
+
+  -- probably can be defined for arbitrary tensors, but it wasn't clear how to pattern match on `shape` in `Tensor shape`
+-- {n : Nat} -> Applicative (Tensor [n]) where
+--   pure x = TS (replicate n (TZ x))
+--   fs <*> xs = map (uncurry ($)) $ liftA2 fs xs 
+
+
 interface Ring a where
   zero : a
   one : a
@@ -39,23 +64,14 @@ interface Algebra (f : Type -> Type) a where
 {shape : Vect n Nat} -> Ring a => Algebra (Tensor shape) a where
   reduce xs = foldr (~+~) zero xs 
 
--- generalised zip
--- laxator of a monoidal functor
-liftA2 : Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
-liftA2 (TZ a) (TZ b) = TZ (a, b)
-liftA2 (TS as) (TS bs) = TS (zipWith liftA2 as bs) 
+dot : {f : Type -> Type} -> {a : Type}
+  -> (Ring a, Applicative f, Algebra f a)
+  => f a -> f a -> a
+dot xs ys = reduce $ map (uncurry (~*~)) (liftA2 xs ys)
 
--- probably can be defined for arbitrary tensors, but it wasn't clear how to pattern match on `shape` in `Tensor shape`
-{n : Nat} -> Applicative (Tensor [n]) where
-  pure x = TS (replicate n (TZ x))
-  fs <*> xs = ?applyy
-  -- (<*>) (TZ f) (TZ x) = TZ (f x)
-  -- (<*>) (TS fs) (TS xs) = TS (zipWith (<*>) fs xs)
-
-
-matMul : {i, j, k : Nat}
-  -> Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
-matMul = ?ooo
+-- matMul : {i, j, k : Nat}
+--   -> Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
+-- matMul m1 m2 = ?ooo
 
 -- not sure what to do with this. Also, there was this thing with a separate indexing type
 Array : (shape : Vect rank Nat) -> (contentType : Type) -> Type
