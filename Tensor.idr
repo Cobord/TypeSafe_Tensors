@@ -4,21 +4,31 @@ import Data.Fin
 import Data.Vect
 
 {-
+Three main datatypes in this file:
+data Tensor -> defines tensors
+Array -> for ease of creation of tensors from lists
+IndexTensor -> for easy indexing of tensors
+-}
+
+{-
 `n` is also often called rank of a tensor
 -}
+public export
 data Tensor : (shape : Vect n Nat) -> (contentType : Type) -> Type where
-    TZ  : a -> Tensor [] a
-    TS : Vect d (Tensor ds a) -> Tensor (d :: ds) a
+    TZ  : (val : contentType) -> Tensor [] contentType
+    TS : Vect d (Tensor ds contentType) -> Tensor (d :: ds) contentType
 
+public export
 Functor (Tensor shape) where
   map f (TZ x) = TZ (f x)
   map f (TS xs) = TS (map (map f) xs)
 
+public export
 Foldable (Tensor shape) where
   foldr f z (TZ x) = f x z 
   foldr f z (TS xs) = foldr (\t, acc => foldr f acc t) z xs 
 
-
+public export
 Show a => Show (Tensor shape a) where
   show (TZ x) = show x
   show (TS xs) = show xs
@@ -30,10 +40,12 @@ Show a => Show (Tensor shape a) where
 -- 
 -- We can define functions that convert between these representations:
 
+public export
 toNestedTensor : {n : Nat} -> {ns : Vect m Nat} -> {a : Type} -> 
                 Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
 toNestedTensor (TS vs) = TS (map TZ vs)
 
+public export
 fromNestedTensor : {n : Nat} -> {ns : Vect m Nat} -> {a : Type} -> 
                    Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
 fromNestedTensor (TS vs) = TS (map (\(TZ jk) => jk) vs)
@@ -48,31 +60,39 @@ fromNestedTensor (TS vs) = TS (map (\(TZ jk) => jk) vs)
 --      (v : Vect n (Tensor ns a)) -> v = toNestedTensor (fromNestedTensor v)
 --pp2 v = Refl
 
+public export
 Scalar : (contentType : Type) -> Type
 Scalar contentType = Tensor [] contentType
 
+public export
 Vector : (size : Nat) -> (contentType : Type) -> Type
 Vector size contentType = Tensor [size] contentType
 
+public export
 Matrix : (rows, cols : Nat) -> (contentType : Type) -> Type
 Matrix rows cols contentType = Tensor [rows, cols] contentType
 
 -- unit of a monoidal functor
+public export
 tensorReplicate : {shape : Vect n Nat} -> a -> Tensor shape a
 tensorReplicate {shape = []} a = TZ a
 tensorReplicate {shape = (n :: ns)} a = TS (replicate n (tensorReplicate a))
 
 -- generalised zip
 -- laxator of a monoidal functor
+
+public export
 liftA2Tensor : Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
 liftA2Tensor (TZ a) (TZ b) = TZ (a, b)
 liftA2Tensor (TS as) (TS bs) = TS (zipWith liftA2Tensor as bs) 
 
 
+public export
 {shape : Vect n Nat} -> Applicative (Tensor shape) where
   pure x = tensorReplicate x
   fs <*> xs = map (uncurry ($)) $ liftA2Tensor fs xs 
 
+public export
 liftA2 : Applicative f => f a -> f b -> f (a, b)
 liftA2 fa fb = (map (,) fa) <*> fb
 
@@ -81,118 +101,34 @@ liftA2 fa fb = (map (,) fa) <*> fb
 --   pure x = TS (replicate n (TZ x))
 --   fs <*> xs = map (uncurry ($)) $ liftA2 fs xs 
 
-interface Ring a where
-  zero : a
-  one : a
-  (~+~) : a -> a -> a
-  (~*~) : a -> a -> a
-  -- also laws, but we don't care right now
 
-export infixr 6 ~+~
-export infixr 7 ~*~
-
-Ring Double where
-  zero = 0
-  one = 1
-  (~+~) = (+)
-  (~*~) = (*)
-
-{shape : Vect n Nat} -> Ring a => Ring (Tensor shape a) where
-  zero = tensorReplicate zero
-  one = tensorReplicate one
-  xs ~+~ ys = map (uncurry (~+~)) $ liftA2 xs ys
-  xs ~*~ ys = map (uncurry (~*~)) $ liftA2 xs ys
-
-
--- Generalised sum operation
--- F-Algebra in the usual sense
-interface Algebra (f : Type -> Type) a where
-  reduce : f a -> a
-
--- Generalised sum operation on a tensor
-{shape : Vect n Nat} -> Ring a => Algebra (Tensor shape) a where
-  reduce xs = foldr (~+~) zero xs 
-
-dot : {f : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Algebra f a)
-  => f a -> f a -> a
-dot xs ys = reduce $ map (uncurry (~*~)) (liftA2 xs ys)
-
-scaleVector : {f : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Algebra f a)
-  => a -> f a -> f a
-scaleVector a v = map (a ~*~) v
-
-matrixVectorMultiply : {f, g : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Applicative g, Algebra f a)
-  => g (f a) -> f a -> g a
-matrixVectorMultiply m v = map (dot v) m
-
-vectorMatrixMultiply : {f, g : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Applicative g, Algebra f (g a), Algebra g a)
-  => f a -> f (g a) -> g a
-vectorMatrixMultiply {a} {f} v m = let t : f (a, g a)
-                                       t = liftA2 v m
-                                       w : f (g a)
-                                       w = map (uncurry scaleVector) t
-                                   in reduce w
-
-matMul : {f, g, h : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Applicative g, Applicative h, Algebra g a, Algebra h a, Algebra g (h a))
-  => f (g a) -> g (h a) -> f (h a)
-matMul m1 m2 = map (\row => vectorMatrixMultiply {f=g} {g=h} row m2) m1
-
-
--- matMul : {i, j, k : Nat}
---   -> Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
--- matMul m1 m2 = ?ooo
-
--- The point of this construction is to be able to easily create tensors, without needing to use the inductive form requiring `TZ` and `TS`. 
--- Also, there was this thing with a separate indexing type? But that's unrelated, I think
+-- The point of this construction is to be able to easily create tensors using lists, without needing to use the inductive form requiring `TZ` and `TS`. 
+public export
 Array : (shape : Vect rank Nat) -> (contentType : Type) -> Type
 Array []        a = a
 Array (m :: ms) a = Vect m (Array ms a)
 
+public export
 fromArray : {xs : Vect rank Nat} -> Array xs a -> Tensor xs a
 fromArray {xs = []} y = TZ y
 fromArray {xs = (_ :: _)} y = TS (fromArray <$> y)
 
-v1 : Vector 3 Double
-v1 = fromArray [0, 1, 2]
+{-
+Machinery for indexing tensors
+Allows us to write `indexTensor` below, and get following functionality
+- example with indexTensor (tensor of shape 3 ,4 ) (2, 3) = val at that point
+- example with indexTensor (tensor of shape 3 ,4 ) (10, 7) = can't even compile
 
-m1 : Matrix 3 4 Double
-m1 = fromArray [ [0, 1, 2, 3]
-               , [4, 5, 6, 7]
-               , [8, 9, 10, 11]]
-
-v2 : Vector 4 Double
-v2 = vectorMatrixMultiply {g=(Tensor [4])} v1 (toNestedTensor m1)
-
-
-
-scalar1 : Tensor [] Double
-scalar1 = TZ 3
-
-scalar2 : Tensor [1] Double
-scalar2 = TS [TZ 1.8]
+-- Given a tensor `Tensor [3, 4] Double` this allows us to index one of its elements, and provide a compile-time guarantee that we won't be out of bounds
+-}
+data IndexT : (shape : Vect n Nat) -> Type where
+  Nil  : IndexT []
+  (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
 
 
-t : {A, B : Type}
-  -> Bool -> Type
-t False = A
-t True = B
-
-iso : {A, B : Type}
-  -> (A, B) -> (b : Bool) -> t {A=A} {B=B} b
-iso (a, _) False = a
-iso (_, b) True = b
-
-tt : {A : Type} -> {B : A -> Type}
-  -> Bool -> Type
-tt False = A
-tt True = B ?otetwe_1
-
-iso2 : {A : Type} -> {B : A -> Type}
-  -> (a : A ** B a) -> (b : Bool) -> tt {A=A} {B=B} b
-iso2 ((a ** _)) False = a
-iso2 ((a ** b)) True = ?tuu_2
+indexTensor : (index : IndexT shape)
+            -> Tensor shape a
+            -> a
+indexTensor [] (TZ val) = val
+indexTensor (indHere :: restOfIndex) (TS xs)
+  = indexTensor restOfIndex (index indHere xs)
