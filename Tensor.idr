@@ -2,6 +2,7 @@ module Tensor
 
 import Data.Fin
 import Data.Vect
+import Misc
 
 {-
 Three main datatypes in this file:
@@ -32,6 +33,12 @@ public export
 Show a => Show (Tensor shape a) where
   show (TZ x) = show x
   show (TS xs) = show xs
+
+public export
+Eq a => Eq (Tensor shape a) where
+  (TZ v1) == (TZ v2) = v1 == v2
+  (TS xs) == (TS ys) = xs == ys
+
 
 
 -- This equality doesn't hold as stated because:
@@ -125,10 +132,59 @@ data IndexT : (shape : Vect n Nat) -> Type where
   Nil  : IndexT []
   (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
 
+indexToShape : {n : Nat}
+    -> {shape : Vect n Nat}
+    -> IndexT shape -> Vect n Nat
+indexToShape [] = []
+indexToShape (s :: ss) = finToNat s :: indexToShape ss
 
+-- Couterpart of 'index' for Vectors
 indexTensor : (index : IndexT shape)
             -> Tensor shape a
             -> a
 indexTensor [] (TZ val) = val
 indexTensor (indHere :: restOfIndex) (TS xs)
   = indexTensor restOfIndex (index indHere xs)
+
+(+++) : Vect n Nat -> Vect n Nat -> Vect n Nat
+(+++) [] [] = []
+(+++) (x :: xs) (y :: ys) = (x + y) :: ((+++) xs ys)
+
+  -- Counterpart of 'take' for Vectors
+takeTensor : {extra : Vect n Nat}
+           -> (slice : Vect n Nat)
+           -> Tensor ((+++) slice extra) a
+           -> Tensor slice a
+takeTensor {extra = []} [] (TZ val) = TZ val
+takeTensor {extra = (e :: es)} (s :: ss) (TS xs) = TS $ (takeTensor ss) <$> take s xs 
+
+-- TODO should this be done with IndexT or with nats, like it's done in take?
+takeTensor' : (slice : IndexT shape)
+           -> Tensor shape a
+           -> Tensor (indexToShape slice) a
+takeTensor' [] (TZ val) = TZ val
+takeTensor' (s :: ss) (TS xs) = TS $ map (takeTensor' ss) (Data.Vect.take (finToNat s) (?bb xs))
+
+
+-- rwrt : (d : Nat) -> (s : Fin d) -> (m : Nat ** d = (finToNat s) + m)
+-- rwrt 0 s impossible
+-- rwrt (S k) FZ = ( ** ?aa)
+-- rwrt (S k) (FS x) = ?rwrt_rhs_3
+
+reshapeTensor : Tensor shape a
+              -> (newShape : Vect n Nat)
+              -> prod shape = prod newShape
+              -> Tensor newshape a
+reshapeTensor x newShape prf = ?reshapeTensor_rhs
+
+
+matMul' : (m : Tensor [i, j] Double)
+        -> (n : Tensor [j, k] Double) 
+        -> Tensor [i, k] Double
+
+
+{-
+What do we want of einsum?
+
+es "aab" Tensor [i,i,i] should sum over the first two axes
+-}
