@@ -150,32 +150,48 @@ indexTensor (indHere :: restOfIndex) (TS xs)
 (+++) [] [] = []
 (+++) (x :: xs) (y :: ys) = (x + y) :: ((+++) xs ys)
 
-  -- Counterpart of 'take' for Vectors
-takeTensor : {extra : Vect n Nat}
-           -> (slice : Vect n Nat)
-           -> Tensor ((+++) slice extra) a
-           -> Tensor slice a
-takeTensor {extra = []} [] (TZ val) = TZ val
-takeTensor {extra = (e :: es)} (s :: ss) (TS xs) = TS $ (takeTensor ss) <$> take s xs 
+public export -- analogus to take in Data.Vect, but for Fin
+takeFin : (s : Fin n) -> Vect n a -> Vect (finToNat s) a
+takeFin FZ _ = []
+takeFin (FS s) (x :: xs) = x :: takeFin s xs
 
--- TODO should this be done with IndexT or with nats, like it's done in take?
-takeTensor' : (slice : IndexT shape)
-           -> Tensor shape a
-           -> Tensor (indexToShape slice) a
-takeTensor' [] (TZ val) = TZ val
-takeTensor' (s :: ss) (TS xs) = TS $ map (takeTensor' ss) (Data.Vect.take (finToNat s) (?bb xs))
+public export --
+takeTensor : (slice : IndexT shape)
+          -> Tensor shape a
+          -> Tensor (indexToShape slice) a
+takeTensor [] (TZ val) = TZ val
+takeTensor (s :: ss) (TS xs) = TS $ (takeTensor ss) <$> takeFin s xs
+-- 
 
+-- Old: Counterpart of 'take' for Vectors
+-- takeTensor : {extra : Vect n Nat}
+--            -> (slice : Vect n Nat)
+--            -> Tensor ((+++) slice extra) a
+--            -> Tensor slice a
+-- takeTensor {extra = []} [] (TZ val) = TZ val
+-- takeTensor {extra = (e :: es)} (s :: ss) (TS xs) = TS $ (takeTensor ss) <$> take s xs 
 
--- rwrt : (d : Nat) -> (s : Fin d) -> (m : Nat ** d = (finToNat s) + m)
--- rwrt 0 s impossible
--- rwrt (S k) FZ = ( ** ?aa)
--- rwrt (S k) (FS x) = ?rwrt_rhs_3
+data AllSmaller : Vect n Nat -> Vect n Nat -> Type where
+  Empty : AllSmaller [] []
+  Cons : {a : Nat} -> {b : Nat} -> {as : Vect n Nat} -> {bs : Vect n Nat} -> 
+         LTE a b -> AllSmaller as bs -> AllSmaller (a :: es) (b :: bs)
+
+takeTensor' : {shape : Vect n Nat}
+            -> (newShape : Vect n Nat)
+            -> Tensor shape a
+            -> {auto prf : AllSmaller shape newShape}
+            -> Tensor newShape a
+-- takeTensor' {shape = []} [] t = t
+-- takeTensor' {shape = (s :: ss)} (n :: ns) (TS xs) = TS $ map ?f (take n xs)
+-- takeTensor' [] (TZ val) = TZ val
+-- takeTensor' (s :: ss) t = ?takeTensor'_rhs_1
+
 
 reshapeTensor : Tensor shape a
               -> (newShape : Vect n Nat)
-              -> prod shape = prod newShape
+              -> {auto prf : prod shape = prod newShape}
               -> Tensor newshape a
-reshapeTensor x newShape prf = ?reshapeTensor_rhs
+reshapeTensor t newShape = ?reshapeTensor_rhs
 
 
 matMul' : (m : Tensor [i, j] Double)
@@ -188,3 +204,27 @@ What do we want of einsum?
 
 es "aab" Tensor [i,i,i] should sum over the first two axes
 -}
+
+
+---------------
+--- Examples
+---------------
+
+t1 : Tensor [3, 4] Double
+t1 = fromArray $ [ [0, 1, 2, 3]
+                 , [4, 5, 6, 7]
+                 , [8, 9, 10, 11]]
+
+
+d : Double
+d = indexTensor [1, 2] t1
+
+tt : Tensor [1, 2] Double
+tt = takeTensorFin [1, 2] t1
+
+
+s : Vect 4 Nat
+s = [1,2,3,4]
+
+ss : Vect 2 Nat
+ss = take 2 s
