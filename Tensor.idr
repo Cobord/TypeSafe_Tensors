@@ -16,7 +16,7 @@ IndexTensor -> for easy indexing of tensors
 -}
 public export
 data Tensor : (shape : Vect n Nat) -> (contentType : Type) -> Type where
-    TZ  : (val : contentType) -> Tensor [] contentType
+    TZ : (val : contentType) -> Tensor [] contentType
     TS : Vect d (Tensor ds contentType) -> Tensor (d :: ds) contentType
 
 public export
@@ -48,14 +48,23 @@ Eq a => Eq (Tensor shape a) where
 -- We can define functions that convert between these representations:
 
 public export
-toNestedTensor : {n : Nat} -> {ns : Vect m Nat} -> {a : Type} -> 
-                Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
+toNestedTensor : Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
 toNestedTensor (TS vs) = TS (map TZ vs)
 
 public export
-fromNestedTensor : {n : Nat} -> {ns : Vect m Nat} -> {a : Type} -> 
-                   Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
+fromNestedTensor : Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
 fromNestedTensor (TS vs) = TS (map (\(TZ jk) => jk) vs)
+
+
+-- More general version than above
+public export
+fromNestedTensor' : Tensor sh1 (Tensor sh2 a) -> Tensor (sh1 ++ sh2) a
+fromNestedTensor' (TZ tv) = tv
+fromNestedTensor' (TS xts) = TS $ map fromNestedTensor' xts
+
+public export
+toNestedTensor' : Tensor (sh1 ++ sh2) a -> Tensor sh1 (Tensor sh2 a)
+toNestedTensor' t = ?toNestedTensor'_rhs
 
 -- The proof shows these conversions form a round-trip:
 --pp : {n : Nat} -> {ns : Vect m Nat} -> {a : Type} ->
@@ -146,6 +155,13 @@ indexTensor [] (TZ val) = val
 indexTensor (indHere :: restOfIndex) (TS xs)
   = indexTensor restOfIndex (index indHere xs)
 
+
+public export
+infixr 9 @@
+(@@) : Tensor shape a -> IndexT shape -> a
+(@@) = flip indexTensor
+
+
 (+++) : Vect n Nat -> Vect n Nat -> Vect n Nat
 (+++) [] [] = []
 (+++) (x :: xs) (y :: ys) = (x + y) :: ((+++) xs ys)
@@ -161,30 +177,6 @@ takeTensor : (slice : IndexT shape)
           -> Tensor (indexToShape slice) a
 takeTensor [] (TZ val) = TZ val
 takeTensor (s :: ss) (TS xs) = TS $ (takeTensor ss) <$> takeFin s xs
--- 
-
--- Old: Counterpart of 'take' for Vectors
--- takeTensor : {extra : Vect n Nat}
---            -> (slice : Vect n Nat)
---            -> Tensor ((+++) slice extra) a
---            -> Tensor slice a
--- takeTensor {extra = []} [] (TZ val) = TZ val
--- takeTensor {extra = (e :: es)} (s :: ss) (TS xs) = TS $ (takeTensor ss) <$> take s xs 
-
-data AllSmaller : Vect n Nat -> Vect n Nat -> Type where
-  Empty : AllSmaller [] []
-  Cons : {a : Nat} -> {b : Nat} -> {as : Vect n Nat} -> {bs : Vect n Nat} -> 
-         LTE a b -> AllSmaller as bs -> AllSmaller (a :: es) (b :: bs)
-
-takeTensor' : {shape : Vect n Nat}
-            -> (newShape : Vect n Nat)
-            -> Tensor shape a
-            -> {auto prf : AllSmaller shape newShape}
-            -> Tensor newShape a
--- takeTensor' {shape = []} [] t = t
--- takeTensor' {shape = (s :: ss)} (n :: ns) (TS xs) = TS $ map ?f (take n xs)
--- takeTensor' [] (TZ val) = TZ val
--- takeTensor' (s :: ss) t = ?takeTensor'_rhs_1
 
 
 reshapeTensor : Tensor shape a
@@ -193,6 +185,9 @@ reshapeTensor : Tensor shape a
               -> Tensor newshape a
 reshapeTensor t newShape = ?reshapeTensor_rhs
 
+public export
+toList : Tensor shape a -> List a
+toList = foldr (::) []
 
 matMul' : (m : Tensor [i, j] Double)
         -> (n : Tensor [j, k] Double) 
@@ -217,10 +212,10 @@ t1 = fromArray $ [ [0, 1, 2, 3]
 
 
 d : Double
-d = indexTensor [1, 2] t1
+d = t1 @@ [1, 2]
 
 tt : Tensor [1, 2] Double
-tt = takeTensorFin [1, 2] t1
+tt = takeTensor [1, 2] t1
 
 
 s : Vect 4 Nat
