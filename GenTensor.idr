@@ -20,7 +20,7 @@ Tensor' : (shape : Vect n Nat) -> Type -> Type
 Tensor' shape = GenTensor (map Vect shape)
 
 rt : Tensor' [2, 3] Double
-rt = ?einm
+rt = ?ein
 
 t0 : GenTensor [] Double
 t0 = GTZ 3
