@@ -3,7 +3,7 @@ module Tensor.Einsum
 import Data.Vect
 
 import Tensor.Tensor
-
+import Tensor.Naperian
 
 {-
 What do we want of einsum?
@@ -28,8 +28,8 @@ Is einsum abount binding?
  Here we bind the tensor M to ij, and N to jk
 
  Einsum seems to be formed out of a few operations:
- - Transpose
- - Sum
+ - Transpose -> Covered by Naperian
+ - Sum -> Algebra
  - Dot product
  - Outer product
 

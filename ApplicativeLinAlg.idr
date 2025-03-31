@@ -3,9 +3,9 @@ module ApplicativeLinAlg
 import Data.Fin
 import Data.Vect
 
-import Tensor
+import Tensor.Tensor
 import Tree
-import Ring
+import Rig
 
 -- Generalised sum operation
 -- F-Algebra in the usual sense
@@ -15,24 +15,31 @@ interface Algebra (f : Type -> Type) a where
 interface Comult (f : Type -> Type) a where
   comult : f a -> f (f a)
 
+{n : Nat} -> Rig a => Algebra (Vect n) a where
+  reduce xs = foldr (~+~) zero xs
+
 -- Generalised sum operation on a tensor
 -- This will be an instance of Applicative
-{shape : Vect n Nat} -> Ring a => Algebra (Tensor shape) a where
+{shape : Vect n Nat} -> Rig a => Algebra (Tensor shape) a where
   reduce xs = foldr (~+~) zero xs 
 
-{shape : Vect n Nat} -> Ring a => Comult (Tensor shape) a where
+{shape : Vect n Nat} -> Rig a => Comult (Tensor shape) a where
   comult t = toNestedTensor' ?eii
 
 gg : Tensor [3] Double -> Tensor [3, 3] Double
 gg (TS xs) = TS $ map ?fn ?gg_rhs_0
 
-Ring a => Algebra BinTreeLeafOnly a where
+Rig a => Algebra BinTreeLeafOnly a where
   reduce (Leaf leaf) = leaf
   reduce (Node _ leftTree rightTree)
     = (reduce {f=BinTreeLeafOnly} leftTree) ~+~ (reduce {f=BinTreeLeafOnly} rightTree)
 
+Rig a => Algebra BinTreeNodeOnly a where
+  reduce (Leaf _) = zero
+  reduce (Node node leftTree rightTree) = node ~+~ (reduce {f=BinTreeNodeOnly} leftTree) ~+~ (reduce {f=BinTreeNodeOnly} rightTree)
+
 dot : {f : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Algebra f a)
+  -> (Rig a, Applicative f, Algebra f a)
   => f a -> f a -> a
 dot xs ys = reduce $ (\(x, y) => x ~*~ y) <$> (liftA2 xs ys)
 
@@ -40,24 +47,24 @@ dot xs ys = reduce $ (\(x, y) => x ~*~ y) <$> (liftA2 xs ys)
 -- can we even do outer product?
 -- we wouldn't need reduce, but something like multiply?
 outer : {f : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Algebra f a)
+  -> (Rig a, Applicative f, Algebra f a)
   => f a -> f a -> f (f a)
 outer xs ys = let t = liftA2 xs ys
               in ?outer_rhs 
   
 
 scaleVector : {f : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Algebra f a)
+  -> (Rig a, Applicative f, Algebra f a)
   => a -> f a -> f a
 scaleVector a v = map (a ~*~) v
 
 matrixVectorMultiply : {f, g : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Applicative g, Algebra f a)
+  -> (Rig a, Applicative f, Applicative g, Algebra f a)
   => g (f a) -> f a -> g a
 matrixVectorMultiply m v = map (dot v) m
 
 vectorMatrixMultiply : {f, g : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Applicative g, Algebra f (g a), Algebra g a)
+  -> (Rig a, Applicative f, Applicative g, Algebra f (g a), Algebra g a)
   => f a -> f (g a) -> g a
 vectorMatrixMultiply {a} {f} v m = let t : f (a, g a)
                                        t = liftA2 v m
@@ -66,7 +73,7 @@ vectorMatrixMultiply {a} {f} v m = let t : f (a, g a)
                                    in reduce w
 
 matMul : {f, g, h : Type -> Type} -> {a : Type}
-  -> (Ring a, Applicative f, Applicative g, Applicative h, Algebra g a, Algebra h a, Algebra g (h a))
+  -> (Rig a, Applicative f, Applicative g, Applicative h, Algebra g a, Algebra h a, Algebra g (h a))
   => f (g a) -> g (h a) -> f (h a)
 matMul m1 m2 = map (\row => vectorMatrixMultiply {f=g} {g=h} row m2) m1
 
@@ -105,3 +112,47 @@ tree2 = Node () (Node () (Leaf 1) (Leaf 10)) (Node () (Leaf 100) (Leaf 1000))
 
 dd : Double
 dd = dot {f=BinTreeLeafOnly} tree1 tree2
+
+
+interface Exp a where
+  exp : a -> a
+
+Exp Double where
+  exp = Prelude.exp
+
+softmax : {f : Type -> Type}
+  -> (Functor f, Algebra f a, Fractional a, Exp a) => f a -> f a
+softmax {f} xs = let exps = exp <$> xs
+                 in exps <&> (/ reduce exps)
+ 
+{-
+softmax :: (Functor f, Counit f a, Exp a) => f a -> f a
+softmax f = ((/ (counit f)) . exp) <$> f
+-}
+
+softmaxVect : {n : Nat} -> Vect n Double -> Vect n Double
+softmaxVect xs = softmax {f=(Vect n)} xs
+
+
+softmaxTreeLeaf : BinTreeLeafOnly Double -> BinTreeLeafOnly Double
+softmaxTreeLeaf xs = softmax {f=BinTreeLeafOnly} xs
+
+softmaxTreeNode : BinTreeNodeOnly Double -> BinTreeNodeOnly Double
+softmaxTreeNode xs = softmax {f=BinTreeNodeOnly} xs
+
+
+tN1 : BinTreeNodeOnly Double
+tN1 = Node 3 (Leaf ()) (Leaf ())
+
+tN2 : BinTreeNodeOnly Double
+tN2 = Node 3 (Node 4 (Leaf ()) (Leaf ())) (Leaf ())
+
+tL1 : BinTreeLeafOnly Double
+tL1 = Node () (Leaf 0.1) (Leaf 0.3)
+
+-- tL2 : BinTreeLeafOnly Double
+-- tL2 = Node () (Leaf 0.4) (Node (Leaf 0.1) (Leaf 0.3))
+
+
+
+

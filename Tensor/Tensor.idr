@@ -6,6 +6,8 @@ import Data.Vect
 
 import Rig
 
+%hide Data.Vect.transpose
+
 
 {-
 Three main datatypes in this file:
@@ -14,9 +16,6 @@ Array -> for ease of creation of tensors from lists
 IndexTensor -> for easy indexing of tensors
 -}
 
-NonZeroNat : Type
-NonZeroNat = (n : Nat ** So (n > 0))
-
 {-
 `n` is also often called rank of a tensor
 -}
@@ -24,6 +23,16 @@ public export
 data Tensor : (shape : Vect n Nat) -> (contentType : Type) -> Type where
     TZ : (val : contentType) -> Tensor [] contentType
     TS : Vect d (Tensor ds contentType) -> Tensor (d :: ds) contentType
+
+public export
+Show a => Show (Tensor shape a) where
+  show (TZ x) = show x
+  show (TS xs) = show xs
+
+public export
+Eq a => Eq (Tensor shape a) where
+  (TZ v1) == (TZ v2) = v1 == v2
+  (TS xs) == (TS ys) = xs == ys
 
 public export
 Functor (Tensor shape) where
@@ -35,15 +44,10 @@ Foldable (Tensor shape) where
   foldr f z (TZ x) = f x z 
   foldr f z (TS xs) = foldr (\t, acc => foldr f acc t) z xs 
 
-public export
-Show a => Show (Tensor shape a) where
-  show (TZ x) = show x
-  show (TS xs) = show xs
-
-public export
-Eq a => Eq (Tensor shape a) where
-  (TZ v1) == (TZ v2) = v1 == v2
-  (TS xs) == (TS ys) = xs == ys
+-- public export
+-- Traversable (Tensor shape) where
+--   traverse f (TZ x) = TZ <$> f x
+--   traverse f (TS xs) = TS <$> traverse (traverse f) xs
 
 -- This equality doesn't hold as stated because:
 -- Tensor (n :: ns) a is a tensor of shape (n :: ns) with elements of type a
@@ -211,11 +215,6 @@ reshapeTensor t newShape = ?reshapeTensor_rhs
 public export
 toList : Tensor shape a -> List a
 toList = foldr (::) []
-
-
--- using Naperian instance?
-transpose : Tensor [i, j] a -> Tensor [j, i] a
-transpose x = ?transpose_rhs
 
 
 

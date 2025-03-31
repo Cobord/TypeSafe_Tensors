@@ -3,6 +3,9 @@ module Tensor.Naperian
 import Data.Vect
 
 import Tensor.Tensor
+import Rig
+
+%hide Data.Vect.transpose
 
 -- Needed to define transposition
 {-
@@ -29,7 +32,7 @@ positions = tabulate id
 public export
 transpose : (Naperian f, Naperian g) => f (g a) -> g (f a)
 transpose {f} {g} x = tabulate <$> tabulate (flip (lookup . (lookup x)))
--- 
+
 
 listLookup : List a -> Nat -> a
 listLookup xs 0 = ?listLookup_rhs_0
@@ -63,6 +66,22 @@ tensorTabulate {shape = (s :: ss)} f = TS $ vectTabulate (\i => tensorTabulate {
     Log = IndexT shape
     lookup = flip indexTensor
     tabulate = tensorTabulate
+
+-- using Naperian instance
+transposeMatrix : {i, j : Nat} -> Tensor [i, j] a -> Tensor [j, i] a
+transposeMatrix = fromNestedTensor . transpose . toNestedTensor
+
+reshapeTensorNap : {shape : Vect n Nat} -> {newShape : Vect m Nat}
+  -> Tensor shape a
+  -> (newShape : Vect n Nat)
+  -> {auto prf : prod shape = prod newShape}
+  -> Tensor newShape a
+reshapeTensorNap t newShape = let tR = lookup t in tabulate ?aa
+
+reshapeIndex : {shape : Vect n Nat} -> {newShape : Vect m Nat}
+  -> {auto prf : prod shape = prod newShape}
+  -> IndexT newShape
+  -> IndexT shape
 
 vectPositionsEx : Vect 3 (Fin 3)
 vectPositionsEx = positions

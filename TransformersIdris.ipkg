@@ -17,7 +17,7 @@ authors = "Bruno Gavranovic"
 
 -- modules to install
 modules = ApplicativeLinAlg,
-          IevaExamples,
+          IevaExamples.IevaExamples,
           Misc,
           Rig,
           Tensor.Einsum,
