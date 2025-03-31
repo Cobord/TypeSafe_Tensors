@@ -37,6 +37,38 @@ public export
 BinTreeNodeOnly : (nodeType : Type) -> Type
 BinTreeNodeOnly nodeType = BinTree () nodeType
 
+public export
+Functor BinTreeLeafOnly where
+    map f (Leaf x) = Leaf (f x)
+    map {a} {b} f (Node x leftTree rightTree)
+      = Node x (map {f=BinTreeLeafOnly} f leftTree) (map {f=BinTreeLeafOnly} f rightTree)
+
+public export
+liftA2BinTreeLO : BinTreeLeafOnly a -> BinTreeLeafOnly b -> BinTreeLeafOnly (a, b)
+liftA2BinTreeLO (Leaf a) (Leaf b) = Leaf (a, b)
+liftA2BinTreeLO l@(Leaf x) (Node n z w)
+  = Node n (liftA2BinTreeLO l z) (liftA2BinTreeLO l w)
+liftA2BinTreeLO (Node n z w) (Leaf x)
+  = Node n (liftA2BinTreeLO z (Leaf x)) (liftA2BinTreeLO w (Leaf x))
+liftA2BinTreeLO (Node n y z) (Node m v s) = Node n (liftA2BinTreeLO y v) (liftA2BinTreeLO z s) -- there's a choice here on what node to use! Maybe if we had a dot there?
+
+public export
+Applicative BinTreeLeafOnly where
+    pure x = Leaf x
+    fs <*> xs = map {f=BinTreeLeafOnly} (uncurry ($)) $ liftA2BinTreeLO fs xs 
+
+-- Is this even possible?
+-- probably is, but foldable really means traversing in a linear order
+-- with tree in principle we'd have to process each subtree in parallel
+-- but we could implement foldable by first making a choice on how to traverse a tree and turn it into a list, and then performing the fold on the resulting list
+public export
+Foldable BinTreeLeafOnly where
+  foldr f z (Leaf leaf) = f leaf z
+  foldr f z (Node _ leftTree rightTree) = ?oo_1 where
+    leftTreeRes : acc
+    leftTreeRes = foldr {t=BinTreeLeafOnly} f z leftTree
+    rightTreeRes = foldr {t=BinTreeLeafOnly} f z rightTree
+
 {-
 Can only rotate right trees of the shape
 
@@ -89,37 +121,6 @@ rotateRight (Node n (Node n' leftLeftTree leftRightTree) rightTree) x
   = Node n leftLeftTree (Node n' leftRightTree rightTree)
 
 
-public export
-Functor BinTreeLeafOnly where
-    map f (Leaf x) = Leaf (f x)
-    map {a} {b} f (Node x leftTree rightTree)
-      = Node x (map {f=BinTreeLeafOnly} f leftTree) (map {f=BinTreeLeafOnly} f rightTree)
-
-public export
-liftA2BinTreeLO : BinTreeLeafOnly a -> BinTreeLeafOnly b -> BinTreeLeafOnly (a, b)
-liftA2BinTreeLO (Leaf a) (Leaf b) = Leaf (a, b)
-liftA2BinTreeLO l@(Leaf x) (Node n z w)
-  = Node n (liftA2BinTreeLO l z) (liftA2BinTreeLO l w)
-liftA2BinTreeLO (Node n z w) (Leaf x)
-  = Node n (liftA2BinTreeLO z (Leaf x)) (liftA2BinTreeLO w (Leaf x))
-liftA2BinTreeLO (Node n y z) (Node m v s) = Node n (liftA2BinTreeLO y v) (liftA2BinTreeLO z s) -- there's a choice here on what node to use! Maybe if we had a dot there?
-
-public export
-Applicative BinTreeLeafOnly where
-    pure x = Leaf x
-    fs <*> xs = map {f=BinTreeLeafOnly} (uncurry ($)) $ liftA2BinTreeLO fs xs 
-
--- Is this even possible?
--- probably is, but foldable really means traversing in a linear order
--- with tree in principle we'd have to process each subtree in parallel
--- but we could implement foldable by first making a choice on how to traverse a tree and turn it into a list, and then performing the fold on the resulting list
-public export
-Foldable BinTreeLeafOnly where
-  foldr f z (Leaf leaf) = f leaf z
-  foldr f z (Node _ leftTree rightTree) = ?oo_1 where
-    leftTreeRes : acc
-    leftTreeRes = foldr {t=BinTreeLeafOnly} f z leftTree
-    rightTreeRes = foldr {t=BinTreeLeafOnly} f z rightTree
 
 PathBinTree : Type
 PathBinTree = List Bool

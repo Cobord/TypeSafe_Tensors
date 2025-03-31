@@ -11,10 +11,10 @@ h = [List, Tensor [2,3]]
 -- Generalised tensor, not storing cube-like structures
 public export
 data GenTensor : (shape : Vect n (Type -> Type))
-               -> (contentType : Type)
+               -> (dtype : Type)
                -> Type where
-    GTZ : (val : contentType) -> GenTensor [] contentType
-    GTS : f (GenTensor ds contentType) -> GenTensor (f :: ds) contentType
+    GTZ : (val : dtype) -> GenTensor [] dtype
+    GTS : f (GenTensor ds dtype) -> GenTensor (f :: ds) dtype
 
 
 Tensor' : (shape : Vect n Nat) -> Type -> Type

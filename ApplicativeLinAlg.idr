@@ -35,7 +35,7 @@ Rig a => Algebra BinTreeNodeOnly a where
 -- Dot product in the usual sense
 public export
 dot : {f : Type -> Type} -> {a : Type}
-  -> (Rig a, Applicative f, Algebra f a)
+  -> (Applicative f, Rig a, Algebra f a)
   => f a -> f a -> a
 dot xs ys = reduce $ (\(x, y) => x ~*~ y) <$> (liftA2 xs ys)
 
@@ -58,7 +58,7 @@ dotTree = dot {f=BinTreeLeafOnly}
 -- Multiply a matrix and a vector
 public export
 multiplyMV : {f, g : Type -> Type} -> {a : Type}
-  -> (Rig a, Applicative f, Applicative g, Algebra g a)
+  -> (Applicative f, Applicative g, Rig a, Algebra g a)
   => f (g a) -> g a -> f a
 multiplyMV m v = dot v <$> m
 
@@ -72,7 +72,7 @@ scaleVector a v = (a ~*~) <$> v
 -- Multiply a vector and a matrix
 public export
 multiplyVM : {f, g : Type -> Type} -> {a : Type}
-  -> (Rig a, Applicative f, Applicative g, Algebra f (g a))
+  -> (Applicative f, Applicative g, Rig a, Algebra f (g a))
   => f a -> f (g a) -> g a
 multiplyVM {a} {f} v m = let t : f (a, g a)
                              t = liftA2 v m
@@ -80,11 +80,18 @@ multiplyVM {a} {f} v m = let t : f (a, g a)
                              w = map (uncurry scaleVector) t
                          in reduce w
 
+-- Multiply two matrices
+public export
 matMul : {f, g, h : Type -> Type} -> {a : Type}
-  -> (Rig a, Applicative f, Applicative g, Applicative h, Algebra g a, Algebra h a, Algebra g (h a))
+  -> (Functor f, Applicative g, Applicative h, Rig a, Algebra g (h a))
   => f (g a) -> g (h a) -> f (h a)
-matMul m1 m2 = map (\row => multiplyVM {f=g} {g=h} row m2) m1
+matMul m1 m2 = m1 <&> (\row => multiplyVM row m2)
 
+
+matMulTensor : {i, j, k : Nat} -> {f : Type -> Type} -> {a : Type}
+  -> Rig a => 
+  Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
+matMulTensor m n = fromNestedTensor (matMul (toNestedTensor m) (toNestedTensor n))
 
 v1 : Vector 3 Double
 v1 = fromArray [0, 1, 2]
@@ -95,7 +102,7 @@ m1 = fromArray [ [0, 1, 2, 3]
                , [8, 9, 10, 11]]
 
 v2 : Vector 4 Double
-v2 = vectorMatrixMultiply {g=(Tensor [4])} v1 (toNestedTensor m1)
+v2 = multiplyVM v1 (toNestedTensor m1)
 
 {-
 7
@@ -133,20 +140,21 @@ softmax : {f : Type -> Type}
 softmax {f} xs = let exps = exp <$> xs
                  in exps <&> (/ reduce exps)
  
-{-
-softmax :: (Functor f, Counit f a, Exp a) => f a -> f a
-softmax f = ((/ (counit f)) . exp) <$> f
--}
-
 softmaxVect : {n : Nat} -> Vect n Double -> Vect n Double
-softmaxVect xs = softmax {f=(Vect n)} xs
-
+softmaxVect = softmax
 
 softmaxTreeLeaf : BinTreeLeafOnly Double -> BinTreeLeafOnly Double
-softmaxTreeLeaf xs = softmax {f=BinTreeLeafOnly} xs
+softmaxTreeLeaf = softmax {f=BinTreeLeafOnly}
 
 softmaxTreeNode : BinTreeNodeOnly Double -> BinTreeNodeOnly Double
-softmaxTreeNode xs = softmax {f=BinTreeNodeOnly} xs
+softmaxTreeNode = softmax {f=BinTreeNodeOnly}
+
+
+attention : {f, g : Type -> Type} -> {a : Type}
+  -> (Applicative f, Applicative g, Rig a, Algebra f a, Algebra f (g a))
+  => (f a -> f a) -> f (g a) -> f (g a) -> f (g a) -> f (g a)
+attention softmax q k v = ?attent
+
 
 
 tN1 : BinTreeNodeOnly Double

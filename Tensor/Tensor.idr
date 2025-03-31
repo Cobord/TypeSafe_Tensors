@@ -218,13 +218,6 @@ toList = foldr (::) []
 
 
 
-matMul' : (m : Tensor [i, j] Double)
-        -> (n : Tensor [j, k] Double) 
-        -> Tensor [i, k] Double
-matMul' m n = ?matMul'_rhs
-
-
-
 
 ---------------
 --- Examples
