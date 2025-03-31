@@ -82,6 +82,13 @@ reshapeIndex : {shape : Vect n Nat} -> {newShape : Vect m Nat}
   -> {auto prf : prod shape = prod newShape}
   -> IndexT newShape
   -> IndexT shape
+reshapeIndex [] = ?reshapeIndex_rhs_0
+reshapeIndex (x :: xs) = ?reshapeIndex_rhs_1
+
+
+reshapeIndex' : IndexT [2, 3]
+  -> IndexT [6]
+reshapeIndex' (i :: j :: Nil) = ?yuu :: Nil
 
 vectPositionsEx : Vect 3 (Fin 3)
 vectPositionsEx = positions

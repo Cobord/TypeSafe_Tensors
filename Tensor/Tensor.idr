@@ -20,9 +20,9 @@ IndexTensor -> for easy indexing of tensors
 `n` is also often called rank of a tensor
 -}
 public export
-data Tensor : (shape : Vect n Nat) -> (contentType : Type) -> Type where
-    TZ : (val : contentType) -> Tensor [] contentType
-    TS : Vect d (Tensor ds contentType) -> Tensor (d :: ds) contentType
+data Tensor : (shape : Vect n Nat) -> (dtype : Type) -> Type where
+    TZ : (val : dtype) -> Tensor [] dtype
+    TS : Vect d (Tensor ds dtype) -> Tensor (d :: ds) dtype
 
 public export
 Show a => Show (Tensor shape a) where
@@ -44,10 +44,10 @@ Foldable (Tensor shape) where
   foldr f z (TZ x) = f x z 
   foldr f z (TS xs) = foldr (\t, acc => foldr f acc t) z xs 
 
--- public export
--- Traversable (Tensor shape) where
---   traverse f (TZ x) = TZ <$> f x
---   traverse f (TS xs) = TS <$> traverse (traverse f) xs
+public export
+Traversable (Tensor shape) where
+  traverse fn (TZ val) = TZ <$> fn val
+  traverse fn (TS xs) = TS <$> traverse (traverse fn) xs
 
 -- This equality doesn't hold as stated because:
 -- Tensor (n :: ns) a is a tensor of shape (n :: ns) with elements of type a
@@ -85,16 +85,16 @@ toNestedTensor' t = ?toNestedTensor'_rhs
 --pp2 v = Refl
 
 public export
-Scalar : (contentType : Type) -> Type
-Scalar contentType = Tensor [] contentType
+Scalar : (dtype : Type) -> Type
+Scalar dtype = Tensor [] dtype
 
 public export
-Vector : (size : Nat) -> (contentType : Type) -> Type
-Vector size contentType = Tensor [size] contentType
+Vector : (size : Nat) -> (dtype : Type) -> Type
+Vector size dtype = Tensor [size] dtype
 
 public export
-Matrix : (rows, cols : Nat) -> (contentType : Type) -> Type
-Matrix rows cols contentType = Tensor [rows, cols] contentType
+Matrix : (rows, cols : Nat) -> (dtype : Type) -> Type
+Matrix rows cols dtype = Tensor [rows, cols] dtype
 
 -- unit of a monoidal functor
 public export
@@ -140,7 +140,7 @@ public export
 
 -- The point of this construction is to be able to easily create tensors using lists, without needing to use the inductive form requiRig `TZ` and `TS`. 
 public export
-Array : (shape : Vect rank Nat) -> (contentType : Type) -> Type
+Array : (shape : Vect rank Nat) -> (dtype : Type) -> Type
 Array []        a = a
 Array (m :: ms) a = Vect m (Array ms a)
 

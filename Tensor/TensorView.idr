@@ -10,9 +10,9 @@ import Rig
 -- This only works for cube-shaped tensors, and not the generalised tensors one can start developing
 -- But that's fine, because reshape only works for cube-shaped tensors
 public export
-record TensorView (shape : Vect n Nat) (contentType : Type) where
+record TensorView (shape : Vect n Nat) (dtype : Type) where
     constructor MkTensorView
-    flatData : Vect (prod shape) contentType
+    flatData : Vect (prod shape) dtype
  
 {-
 For a shape of 2 x 3 x 5 tensor = 30 positions (prod shape)
@@ -56,7 +56,7 @@ indexCount {shape = (s :: ss)} (i :: is)
   = let -- thisDim : Fin (S (prod ss))
         t : Nat = prod ss
         thisDim : Fin (S t) = natToFinLT t {prf=prff {a=t}}
-        thisDimMul = thisDim Data.Fin.Arith.(*) i
+        -- thisDimMul = thisDim Data.Fin.Arith.(*) i
         -- rest : Fin (prod ss)
         rest = indexCount is
         -- We can turn thisDim into a Fin
@@ -66,16 +66,16 @@ indexCount {shape = (s :: ss)} (i :: is)
   
 indexTensorView : {shape : Vect n Nat}
   -> (i : IndexT shape)
-  -> TensorView shape contentType
-  -> contentType
+  -> TensorView shape dtype
+  -> dtype
 indexTensorView i (MkTensorView flatData) = index (indexCount i) flatData
 
 
 
-reshape : TensorView shape contentType
+reshape : TensorView shape dtype
   -> (newShape : Vect newShapeLength Nat)
   -> {auto prf : prod shape = prod newShape}
-  -> TensorView newShape contentType
+  -> TensorView newShape dtype
 
 
 

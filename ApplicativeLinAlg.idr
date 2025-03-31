@@ -9,73 +9,81 @@ import Rig
 
 -- Generalised sum operation
 -- F-Algebra in the usual sense
+public export
 interface Algebra (f : Type -> Type) a where
   reduce : f a -> a
 
-interface Comult (f : Type -> Type) a where
-  comult : f a -> f (f a)
-
+public export
 {n : Nat} -> Rig a => Algebra (Vect n) a where
   reduce xs = foldr (~+~) zero xs
 
--- Generalised sum operation on a tensor
--- This will be an instance of Applicative
+public export
 {shape : Vect n Nat} -> Rig a => Algebra (Tensor shape) a where
   reduce xs = foldr (~+~) zero xs 
 
-{shape : Vect n Nat} -> Rig a => Comult (Tensor shape) a where
-  comult t = toNestedTensor' ?eii
-
-gg : Tensor [3] Double -> Tensor [3, 3] Double
-gg (TS xs) = TS $ map ?fn ?gg_rhs_0
-
+public export
 Rig a => Algebra BinTreeLeafOnly a where
   reduce (Leaf leaf) = leaf
   reduce (Node _ leftTree rightTree)
     = (reduce {f=BinTreeLeafOnly} leftTree) ~+~ (reduce {f=BinTreeLeafOnly} rightTree)
 
+public export
 Rig a => Algebra BinTreeNodeOnly a where
   reduce (Leaf _) = zero
   reduce (Node node leftTree rightTree) = node ~+~ (reduce {f=BinTreeNodeOnly} leftTree) ~+~ (reduce {f=BinTreeNodeOnly} rightTree)
 
+-- Dot product in the usual sense
+public export
 dot : {f : Type -> Type} -> {a : Type}
   -> (Rig a, Applicative f, Algebra f a)
   => f a -> f a -> a
 dot xs ys = reduce $ (\(x, y) => x ~*~ y) <$> (liftA2 xs ys)
 
--- [1, 2, 3]
--- can we even do outer product?
--- we wouldn't need reduce, but something like multiply?
-outer : {f : Type -> Type} -> {a : Type}
-  -> (Rig a, Applicative f, Algebra f a)
-  => f a -> f a -> f (f a)
-outer xs ys = let t = liftA2 xs ys
-              in ?outer_rhs 
-  
+public export
+dotVect : {n : Nat} -> {a : Type}
+  -> Rig a => Vect n a -> Vect n a -> a
+dotVect = dot
 
+public export
+dotTensor : {shape : Vect n Nat} -> {a : Type}
+  -> Rig a => Tensor shape a -> Tensor shape a -> a
+dotTensor = dot
+
+public export
+dotTree : {a : Type}
+  -> Rig a => BinTreeLeafOnly a -> BinTreeLeafOnly a -> a
+dotTree = dot {f=BinTreeLeafOnly}
+
+
+-- Multiply a matrix and a vector
+public export
+multiplyMV : {f, g : Type -> Type} -> {a : Type}
+  -> (Rig a, Applicative f, Applicative g, Algebra g a)
+  => f (g a) -> g a -> f a
+multiplyMV m v = dot v <$> m
+
+-- Scale a vector by a scalar
+public export
 scaleVector : {f : Type -> Type} -> {a : Type}
-  -> (Rig a, Applicative f, Algebra f a)
+  -> (Rig a, Functor f)
   => a -> f a -> f a
-scaleVector a v = map (a ~*~) v
+scaleVector a v = (a ~*~) <$> v
 
-matrixVectorMultiply : {f, g : Type -> Type} -> {a : Type}
-  -> (Rig a, Applicative f, Applicative g, Algebra f a)
-  => g (f a) -> f a -> g a
-matrixVectorMultiply m v = map (dot v) m
-
-vectorMatrixMultiply : {f, g : Type -> Type} -> {a : Type}
-  -> (Rig a, Applicative f, Applicative g, Algebra f (g a), Algebra g a)
+-- Multiply a vector and a matrix
+public export
+multiplyVM : {f, g : Type -> Type} -> {a : Type}
+  -> (Rig a, Applicative f, Applicative g, Algebra f (g a))
   => f a -> f (g a) -> g a
-vectorMatrixMultiply {a} {f} v m = let t : f (a, g a)
-                                       t = liftA2 v m
-                                       w : f (g a)
-                                       w = map (uncurry scaleVector) t
-                                   in reduce w
+multiplyVM {a} {f} v m = let t : f (a, g a)
+                             t = liftA2 v m
+                             w : f (g a)
+                             w = map (uncurry scaleVector) t
+                         in reduce w
 
 matMul : {f, g, h : Type -> Type} -> {a : Type}
   -> (Rig a, Applicative f, Applicative g, Applicative h, Algebra g a, Algebra h a, Algebra g (h a))
   => f (g a) -> g (h a) -> f (h a)
-matMul m1 m2 = map (\row => vectorMatrixMultiply {f=g} {g=h} row m2) m1
+matMul m1 m2 = map (\row => multiplyVM {f=g} {g=h} row m2) m1
 
 
 v1 : Vector 3 Double
@@ -156,3 +164,22 @@ tL1 = Node () (Leaf 0.1) (Leaf 0.3)
 
 
 
+
+interface Comult (f : Type -> Type) a where
+  comult : f a -> f (f a)
+
+{shape : Vect n Nat} -> Rig a => Comult (Tensor shape) a where
+  comult t = toNestedTensor' ?eii
+
+gg : Tensor [3] Double -> Tensor [3, 3] Double
+gg (TS xs) = TS $ map ?fn ?gg_rhs_0
+
+-- [1, 2, 3]
+-- can we even do outer product?
+-- we wouldn't need reduce, but something like multiply?
+outer : {f : Type -> Type} -> {a : Type}
+  -> (Rig a, Applicative f, Algebra f a)
+  => f a -> f a -> f (f a)
+outer xs ys = let t = liftA2 xs ys
+              in ?outer_rhs 
+  
