@@ -1,8 +1,11 @@
 module Tree
 
-import Tensor
+import Tensor.Tensor
 
 
+{-
+Finite binary trees with labels on leaves and nodes
+-}
 public export
 data BinTree : (leafType : Type) -> (nodeType : Type) -> Type where
     Leaf : (leaf : leafType)
@@ -118,7 +121,20 @@ Foldable BinTreeLeafOnly where
     leftTreeRes = foldr {t=BinTreeLeafOnly} f z leftTree
     rightTreeRes = foldr {t=BinTreeLeafOnly} f z rightTree
 
+PathBinTree : Type
+PathBinTree = List Bool
 
 
--- Both should produce:
--- MkMatrix [[58, 64], [139, 154]]
+public export
+Functor BinTreeNodeOnly where
+  map f (Leaf leaf) = Leaf leaf -- only one element
+  map f (Node node leftTree rightTree)
+    = Node (f node) (map {f=BinTreeNodeOnly} f leftTree) (map {f=BinTreeNodeOnly} f rightTree) 
+
+-- Swap the left and right subtrees at at specified path
+commute : PathBinTree -> BinTreeLeafOnly l -> BinTreeLeafOnly l
+commute [] (Leaf leaf) = Leaf leaf
+commute [] (Node node l r) = Node node r l
+commute (x :: xs) (Leaf leaf) = Leaf leaf
+commute (False :: xs) (Node node l r) = Node node (commute xs l) r
+commute (True :: xs) (Node node l r) = Node node l (commute xs r)

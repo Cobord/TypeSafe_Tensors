@@ -1,6 +1,7 @@
 module Misc
 
 import Data.Vect
+import Data.Fin.Arith
 
 t : {A, B : Type}
   -> Bool -> Type
@@ -22,9 +23,6 @@ iso2 : {A : Type} -> {B : A -> Type}
 iso2 ((a ** _)) False = a
 iso2 ((a ** b)) True = ?tuu_2
 
-public export
-prod : Vect n Nat -> Nat
-prod = foldr (*) 1
 
-
-
+mm : {m, n : Nat} -> Fin (S m) -> Fin (S n) -> Fin (S (m * n))
+mm = Data.Fin.Arith.(*)
