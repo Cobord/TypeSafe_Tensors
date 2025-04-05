@@ -32,6 +32,12 @@ Rig a => Algebra BinTreeNodeOnly a where
   reduce (Leaf _) = zero
   reduce (Node node leftTree rightTree) = node ~+~ (reduce {f=BinTreeNodeOnly} leftTree) ~+~ (reduce {f=BinTreeNodeOnly} rightTree)
 
+-- Scale a vector by a scalar
+public export
+scaleVector : (Rig a, Functor f)
+  => a -> f a -> f a
+scaleVector a v = (a ~*~) <$> v
+
 -- Dot product in the usual sense
 public export
 dot : {f : Type -> Type} -> {a : Type}
@@ -54,20 +60,12 @@ dotTree : {a : Type}
   -> Rig a => BinTreeLeafOnly a -> BinTreeLeafOnly a -> a
 dotTree = dot {f=BinTreeLeafOnly}
 
-
 -- Multiply a matrix and a vector
 public export
 multiplyMV : {f, g : Type -> Type} -> {a : Type}
   -> (Applicative f, Applicative g, Rig a, Algebra g a)
   => f (g a) -> g a -> f a
 multiplyMV m v = dot v <$> m
-
--- Scale a vector by a scalar
-public export
-scaleVector : {f : Type -> Type} -> {a : Type}
-  -> (Rig a, Functor f)
-  => a -> f a -> f a
-scaleVector a v = (a ~*~) <$> v
 
 -- Multiply a vector and a matrix
 public export
@@ -89,9 +87,14 @@ matMul m1 m2 = m1 <&> (\row => multiplyVM row m2)
 
 
 matMulTensor : {i, j, k : Nat} -> {f : Type -> Type} -> {a : Type}
-  -> Rig a => 
-  Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
+  -> Rig a => Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
 matMulTensor m n = fromNestedTensor (matMul (toNestedTensor m) (toNestedTensor n))
+
+-- ij,kj->ki
+mulMMT : {f, g, h: Type -> Type} -> {a : Type}
+  -> (Functor h, Applicative f, Applicative g, Rig a, Algebra g a)
+  => f (g a) -> h (g a) -> h (f a)
+mulMMT = map . multiplyMV
 
 v1 : Vector 3 Double
 v1 = fromArray [0, 1, 2]
@@ -151,8 +154,12 @@ softmaxTreeNode = softmax {f=BinTreeNodeOnly}
 
 
 attention : {f, g : Type -> Type} -> {a : Type}
-  -> (Applicative f, Applicative g, Rig a, Algebra f a, Algebra f (g a))
-  => (f a -> f a) -> f (g a) -> f (g a) -> f (g a) -> f (g a)
+  -> (Applicative features, Applicative seqlen, Applicative i, Rig a, Algebra features a, Algebra features (g a))
+  => (softmax : (features a -> features a))
+  -> (q : features (seqlen a))
+  -> (k : i (seqlen a))
+  -> (v : features (seqlen a))
+  -> i (seqlen a)
 attention softmax q k v = ?attent
 
 
@@ -165,10 +172,6 @@ tN2 = Node 3 (Node 4 (Leaf ()) (Leaf ())) (Leaf ())
 
 tL1 : BinTreeLeafOnly Double
 tL1 = Node () (Leaf 0.1) (Leaf 0.3)
-
--- tL2 : BinTreeLeafOnly Double
--- tL2 = Node () (Leaf 0.4) (Node (Leaf 0.1) (Leaf 0.3))
-
 
 
 

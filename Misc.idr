@@ -26,3 +26,21 @@ iso2 ((a ** b)) True = ?tuu_2
 
 mm : {m, n : Nat} -> Fin (S m) -> Fin (S n) -> Fin (S (m * n))
 mm = Data.Fin.Arith.(*)
+
+
+testFn : Bool -> Type
+testFn False = Int
+testFn True = String
+
+testFn' : (b : Bool) -> testFn b
+testFn' False = 3
+testFn' True = "Hello"
+
+OutputType : {s, x : Type}
+  -> (s, x) -> Type
+
+rnnCell : {s, x : Type}
+  -> (s, x) -> OutputType (s, x)
+
+
+

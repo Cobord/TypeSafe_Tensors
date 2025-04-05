@@ -1,0 +1,57 @@
+module Data.Container.Morphism
+
+import Data.Container.Definition
+
+||| Dependent lenses
+||| Forward-backward container morphisms
+public export
+record (=%>) (c1, c2 : Container) where
+  constructor (<!)
+  fwd : c1.shp -> c2.shp
+  bwd : (x : c1.shp) -> c2.pos (fwd x) -> c1.pos x
+
+export infixr 1 =%>
+export infix 1 <!
+
+||| Dependent charts
+||| Forward-forward container morphisms
+public export
+record (=&>) (c1, c2 : Container) where
+  constructor (<&!)
+  fwd : c1.shp -> c2.shp
+  fwd' : (x : c1.shp) -> c1.pos x -> c2.pos (fwd x)
+
+export infixr 1 =&>
+export infix 1 <&!
+
+valCont : Container -> Type -> Container
+valCont (shp !> pos) r = (!>) shp (\s => pos s -> r)
+
+-- Chart -> DLens morphism 
+-- Tangent bundle to Contanget bundle, effectively
+valContMap : {c1, c2 : Container} -> {r : Type}
+  ->  (f : c1 =&> c2)
+  ->  (valCont c1 r) =%> (valCont c2 r)
+valContMap {c1=(shp !> pos)} {c2=(shp' !> pos')} (fwd <&! fwd')
+  = fwd <! (\x, k, x' => k (fwd' x x'))
+
+-- ||| A container morphism
+-- public export
+-- record (~%>) (c1, c2 : ContainerF R) where
+--   constructor (<~!)
+--   fwd' : c1.shp' -> c2.shp'
+
+
+-- upd : c1 ~%> c2 -> 
+-- %pair (=%>) fwd bwd
+
+
+
+-- Composition of container morphisms
+-- public export
+-- (⨾) : a =%> b -> b =%> c -> a =%> c
+-- (⨾) x y =
+--     (y.fwd . x.fwd) <!
+--     (\z => x.bwd z . y.bwd (x.fwd z))
+
+-- export infixl 5 ⨾

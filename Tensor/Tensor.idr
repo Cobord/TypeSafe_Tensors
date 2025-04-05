@@ -24,6 +24,8 @@ data Tensor : (shape : Vect n Nat) -> (dtype : Type) -> Type where
     TZ : (val : dtype) -> Tensor [] dtype
     TS : Vect d (Tensor ds dtype) -> Tensor (d :: ds) dtype
 
+%name Tensor t, u, v
+
 public export
 Show a => Show (Tensor shape a) where
   show (TZ x) = show x
@@ -49,7 +51,7 @@ Traversable (Tensor shape) where
   traverse fn (TZ val) = TZ <$> fn val
   traverse fn (TS xs) = TS <$> traverse (traverse fn) xs
 
--- This equality doesn't hold as stated because:
+-- The maps below doesn't hold as equalities because:
 -- Tensor (n :: ns) a is a tensor of shape (n :: ns) with elements of type a
 -- Tensor [n] (Tensor ns a) would be a tensor of shape [n] with elements of type (Tensor ns a)
 -- 
@@ -66,23 +68,15 @@ fromNestedTensor (TS vs) = TS (map (\(TZ jk) => jk) vs)
 
 -- More general version than above
 public export
+toNestedTensor' : {sh1 : Vect n Nat} -> {sh2 : Vect m Nat}
+  -> Tensor (sh1 ++ sh2) a -> Tensor sh1 (Tensor sh2 a)
+toNestedTensor' {sh1 = []} {sh2} t = TZ t
+toNestedTensor' {sh1 = (_ :: _)} {sh2} (TS xs) = TS $ toNestedTensor' <$> xs
+
+public export
 fromNestedTensor' : Tensor sh1 (Tensor sh2 a) -> Tensor (sh1 ++ sh2) a
 fromNestedTensor' (TZ tv) = tv
 fromNestedTensor' (TS xts) = TS $ map fromNestedTensor' xts
-
-public export
-toNestedTensor' : Tensor (sh1 ++ sh2) a -> Tensor sh1 (Tensor sh2 a)
-toNestedTensor' t = ?toNestedTensor'_rhs
-
--- The proof shows these conversions form a round-trip:
---pp : {n : Nat} -> {ns : Vect m Nat} -> {a : Type} ->
---     (v : Tensor (n :: ns) a) -> v = fromNestedTensor (toNestedTensor v)
---pp (TS vs) = Refl
---
----- Alternative proof showing the other direction:
---pp2 : {n : Nat} -> {ns : Vect m Nat} -> {a : Type} ->
---      (v : Vect n (Tensor ns a)) -> v = toNestedTensor (fromNestedTensor v)
---pp2 v = Refl
 
 public export
 Scalar : (dtype : Type) -> Type
@@ -127,16 +121,6 @@ public export
   one = tensorReplicate one
   xs ~+~ ys = map (uncurry (~+~)) $ liftA2 xs ys
   xs ~*~ ys = map (uncurry (~*~)) $ liftA2 xs ys
-
-
-
-
-
-  -- probably can be defined for arbitrary tensors, but it wasn't clear how to pattern match on `shape` in `Tensor shape`
--- {n : Nat} -> Applicative (Tensor [n]) where
---   pure x = TS (replicate n (TZ x))
---   fs <*> xs = map (uncurry ($)) $ liftA2 fs xs 
-
 
 -- The point of this construction is to be able to easily create tensors using lists, without needing to use the inductive form requiRig `TZ` and `TS`. 
 public export
@@ -188,7 +172,7 @@ infixr 9 @@
 (@@) : Tensor shape a -> IndexT shape -> a
 (@@) = flip indexTensor
 
-
+public export
 (+++) : Vect n Nat -> Vect n Nat -> Vect n Nat
 (+++) [] [] = []
 (+++) (x :: xs) (y :: ys) = (x + y) :: ((+++) xs ys)

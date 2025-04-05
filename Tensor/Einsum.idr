@@ -29,12 +29,24 @@ Is einsum abount binding?
 
  Einsum seems to be formed out of a few operations:
  - Transpose -> Covered by Naperian
- - Sum -> Algebra
- - Dot product
+ - Sum -> Covered by Algebra
+ - Dot product -> Covered by Applicative
  - Outer product
 
  Is there anything else?
 -}
+
+
+{-
+x : Tensor [3, 3, 3] Double
+Einsum "iii->i" x = view main diagonal
+Einsum "iii->" x = trace (sum elements along diagonal)
+Einsum "ijk->" x = sum all elements
+Einsum "ijk-kji" x = transpose first and last axis
+
+y : Tensor [3, 4] Double
+Einsum "ii->" x = Invalid -> x is not of the right type
+ -}
 
 AxisName : Type
 AxisName = String
