@@ -4,11 +4,12 @@ import Data.Fin
 import Data.Vect
 
 import Tensor.Tensor
+import Tensor.Naperian
 import Tree
 import Rig
 
--- Generalised sum operation
--- F-Algebra in the usual sense
+||| Generalised sum operation
+||| Categorically, an F-Algebra
 public export
 interface Algebra (f : Type -> Type) a where
   reduce : f a -> a
@@ -91,10 +92,21 @@ matMulTensor : {i, j, k : Nat} -> {f : Type -> Type} -> {a : Type}
 matMulTensor m n = fromNestedTensor (matMul (toNestedTensor m) (toNestedTensor n))
 
 -- ij,kj->ki
-mulMMT : {f, g, h: Type -> Type} -> {a : Type}
+multiplyMMT : {f, g, h: Type -> Type} -> {a : Type}
   -> (Functor h, Applicative f, Applicative g, Rig a, Algebra g a)
   => f (g a) -> h (g a) -> h (f a)
-mulMMT = map . multiplyMV
+multiplyMMT = map . multiplyMV
+
+{-  3 x 4 matrix, (i, j)=(3,4)
+
+
+-}
+
+linearLayer : {i, j : Type -> Type} -> {a : Type}
+  -> (Applicative i, Applicative j, Rig a, Algebra j a)
+  => i (j a) -> i a -> j a -> i a
+linearLayer weights bias input 
+  = (uncurry (~+~)) <$> (liftA2 bias $ multiplyMV weights input)
 
 v1 : Vector 3 Double
 v1 = fromArray [0, 1, 2]
@@ -130,38 +142,6 @@ tree2 = Node () (Node () (Leaf 1) (Leaf 10)) (Node () (Leaf 100) (Leaf 1000))
 
 dd : Double
 dd = dot {f=BinTreeLeafOnly} tree1 tree2
-
-
-interface Exp a where
-  exp : a -> a
-
-Exp Double where
-  exp = Prelude.exp
-
-softmax : {f : Type -> Type}
-  -> (Functor f, Algebra f a, Fractional a, Exp a) => f a -> f a
-softmax {f} xs = let exps = exp <$> xs
-                 in exps <&> (/ reduce exps)
- 
-softmaxVect : {n : Nat} -> Vect n Double -> Vect n Double
-softmaxVect = softmax
-
-softmaxTreeLeaf : BinTreeLeafOnly Double -> BinTreeLeafOnly Double
-softmaxTreeLeaf = softmax {f=BinTreeLeafOnly}
-
-softmaxTreeNode : BinTreeNodeOnly Double -> BinTreeNodeOnly Double
-softmaxTreeNode = softmax {f=BinTreeNodeOnly}
-
-
-attention : {f, g : Type -> Type} -> {a : Type}
-  -> (Applicative features, Applicative seqlen, Applicative i, Rig a, Algebra features a, Algebra features (g a))
-  => (softmax : (features a -> features a))
-  -> (q : features (seqlen a))
-  -> (k : i (seqlen a))
-  -> (v : features (seqlen a))
-  -> i (seqlen a)
-attention softmax q k v = ?attent
-
 
 
 tN1 : BinTreeNodeOnly Double

@@ -24,16 +24,17 @@ record (=&>) (c1, c2 : Container) where
 export infixr 1 =&>
 export infix 1 <&!
 
-valCont : Container -> Type -> Container
-valCont (shp !> pos) r = (!>) shp (\s => pos s -> r)
+val : Container -> Type -> Container
+val (shp !> pos) r = (!>) shp (\s => pos s -> r)
 
 -- Chart -> DLens morphism 
 -- Tangent bundle to Contanget bundle, effectively
 valContMap : {c1, c2 : Container} -> {r : Type}
   ->  (f : c1 =&> c2)
-  ->  (valCont c1 r) =%> (valCont c2 r)
+  ->  (c1 `val` r) =%> (c2 `val` r)
 valContMap {c1=(shp !> pos)} {c2=(shp' !> pos')} (fwd <&! fwd')
   = fwd <! (\x, k, x' => k (fwd' x x'))
+
 
 -- ||| A container morphism
 -- public export

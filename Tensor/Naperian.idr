@@ -19,6 +19,8 @@ Q: Are Naperian functors just containers with constant shape?
 This is about non-ragged shapes.
 Would ragged shapes imply dependent types?
 -}
+
+-- Is every Naperian functor Applicative?
 public export
 interface Functor f => Naperian f where
     Log : Type
