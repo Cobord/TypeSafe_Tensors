@@ -3,8 +3,8 @@ module Tensor.Tensor
 import Data.Fin
 import Data.Vect
 
-
 import Rig
+import Misc
 
 %hide Data.Vect.transpose
 
@@ -109,10 +109,6 @@ public export
 {shape : Vect n Nat} -> Applicative (Tensor shape) where
   pure x = tensorReplicate x
   fs <*> xs = map (uncurry ($)) $ liftA2Tensor fs xs 
-
-public export
-liftA2 : Applicative f => f a -> f b -> f (a, b)
-liftA2 fa fb = (map (,) fa) <*> fb
 
 -- Pointwise Rig structure
 public export
@@ -221,8 +217,9 @@ tTest = TS ?ooo
 tTest2 : Tensor [0, 2] Double
 tTest2 = TS ?oooo
 
-d : Double
-d = t1 @@ [1, 2]
+
+dExample : Double
+dExample = t1 @@ [1, 2]
 
 tt : Tensor [1, 2] Double
 tt = takeTensor [1, 2] t1

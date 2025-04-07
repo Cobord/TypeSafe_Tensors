@@ -3,6 +3,12 @@ module Misc
 import Data.Vect
 import Data.Fin.Arith
 
+
+public export
+liftA2 : Applicative f => f a -> f b -> f (a, b)
+liftA2 fa fb = (map (,) fa) <*> fb
+
+
 -- t : {A, B : Type}
 --   -> Bool -> Type
 -- t False = A
@@ -27,13 +33,13 @@ import Data.Fin.Arith
 mm : {m, n : Nat} -> Fin (S m) -> Fin (S n) -> Fin (S (m * n))
 mm = Data.Fin.Arith.(*)
 
-t : Bool -> Type
-t False = Int
-t True = (String, String, String)
-
-f : (b : Bool) -> t b
-f False = 3
-f True = ?hole2
+-- t : Bool -> Type
+-- t False = Int
+-- t True = (String, String, String)
+-- 
+-- f : (b : Bool) -> t b
+-- f False = 3
+-- f True = ?hole2
 
 OutputType : {s, x : Type}
   -> (s, x) -> Type
