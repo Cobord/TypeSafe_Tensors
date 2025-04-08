@@ -3,11 +3,13 @@ module Attention
 import Data.Vect
 
 import ApplicativeLinAlg
-import Tensor
+import Tensor.Tensor
+import Tensor.TensorUtils
 import Tensor.Naperian
 import Tree
 import Rig
 import Para.Para
+import Softmax
 
 attention : {inputStructure, features : Type -> Type} -> {a : Type}
   -> (Applicative inputStructure, Applicative features, Rig a, Algebra features a, Algebra inputStructure (features a))
@@ -20,40 +22,73 @@ attention softmax queries keys values =
   let attentionMatrix = softmax <$> (queries `multiplyMMT` keys)
   in attentionMatrix `matMul` values
 
-record SelfAttentionParams (inp, features : Type -> Type) (a : Type) where
+record SelfAttentionParams (features : Type -> Type) (a : Type) where
   constructor MkSelfAttentionParams
-  softmax : inp a -> inp a
-  queryMat : features (features a)
-  keyMat : features (features a)
-  valueMat : features (features a)
+  queryMatParam : features (features a)
+  keyMatParam : features (features a)
+  valueMatParam : features (features a)
 
 SAImpl : {inputStructure, features : Type -> Type} -> {a : Type}
   -> (Applicative inputStructure, Applicative features, Rig a, Algebra features a, Algebra inputStructure (features a))
-  => inputStructure (features a)
-  -> SelfAttentionParams inputStructure features a
+  => (inputStructure a -> inputStructure a)
   -> inputStructure (features a)
-SAImpl input (MkSelfAttentionParams softmax queryMat keyMat valueMat)
+  -> SelfAttentionParams features a
+  -> inputStructure (features a)
+SAImpl softmax input (MkSelfAttentionParams queryMat keyMat valueMat)
   = let queries = queryMat `multiplyMMT` input
         keys = keyMat `multiplyMMT` input
         values = valueMat `multiplyMMT` input
     in attention softmax queries keys values
-  
-SelfAttention : {s, d : Type -> Type} -> {a : Type}
-  -> (Applicative d, Applicative s, Rig a, Algebra d a, Algebra s (d a)) 
-  => Para (s (d a)) (s (d a))
-SelfAttention {a} = MkPara (const (SelfAttentionParams s d a)) SAImpl
+
+
+||| Generalised Self Attention
+SelfAttention : {inputStructure, features : Type -> Type} -> {a : Type}
+  -> (Applicative inputStructure, Applicative features, Rig a, Algebra features a, Algebra inputStructure (features a)) 
+  => (inputStructure a -> inputStructure a)
+  -> Para (inputStructure (features a)) (inputStructure (features a))
+SelfAttention {a} softmax = MkPara 
+  (const (SelfAttentionParams features a))
+  (SAImpl softmax)
 
 
 -- Self Attention for matrices
 SelfAttentionMat : {n, d : Nat}
   -> Para (Vect n (Vect d Double)) (Vect n (Vect d Double))
-SelfAttentionMat {n} {d} = SelfAttention {s=Vect n, d=Vect d}
+SelfAttentionMat {n} {d} = SelfAttention {inputStructure=Vect n, features=Vect d} softmax
 
+matParam : {d : Nat}
+  -> SelfAttentionParams (Vect d) Double
+matParam = MkSelfAttentionParams
+  (toArray (the (Tensor [d, d] Double) ones))
+  (toArray (the (Tensor [d, d] Double) ones))
+  (toArray (the (Tensor [d, d] Double) ones))
+
+matImpl : {n, d : Nat}
+  -> (v : Vect n (Vect d Double))
+  -> (p : Param SelfAttentionMat v)
+  -> Vect n (Vect d Double)
+matImpl = Run SelfAttentionMat
 
 
 -- Self Attention for trees
-SelfAttentionTree : Para
-  (BinTreeLeafOnly (BinTreeLeafOnly Double))
-  (BinTreeLeafOnly (BinTreeLeafOnly Double))
-SelfAttentionTree = SelfAttention {s=BinTreeLeafOnly, d=BinTreeLeafOnly}
+SelfAttentionTree : {d : Nat} -> Para
+  (BinTreeLeafOnly (Vect d Double))
+  (BinTreeLeafOnly (Vect d Double))
+SelfAttentionTree {d} = SelfAttention {inputStructure=BinTreeLeafOnly, features=Vect d} (softmax {f=BinTreeLeafOnly})
 
+matrix1 : Vect 4 (Vect 2 Double)
+matrix1 = [ [1, 3], [1, 3], [1, 3], [1, 3] ]
+
+-- This is a left leaning tree of depth 3, where the content of each leaf is [1, 3]
+{-
+        .
+   /      \
+  [1,3]    .
+          /  \
+      [1,3]    . 
+              / \
+            [1,3] [1,3]
+
+ -}
+tree1 : BinTreeLeafOnly (Vect 2 Double)
+tree1 = Node () (Node () (Leaf [1, 3]) (Leaf [1, 3])) (Node () (Leaf [1, 3]) (Leaf [1, 3]))

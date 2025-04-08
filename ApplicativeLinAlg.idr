@@ -8,6 +8,8 @@ import Tensor.Naperian
 import Tree
 import Rig
 
+import Misc
+
 ||| Generalised sum operation
 ||| Categorically, an F-Algebra
 public export
@@ -27,6 +29,15 @@ Rig a => Algebra BinTreeLeafOnly a where
   reduce (Leaf leaf) = leaf
   reduce (Node _ leftTree rightTree)
     = (reduce {f=BinTreeLeafOnly} leftTree) ~+~ (reduce {f=BinTreeLeafOnly} rightTree)
+
+-- can be simplified by uncommenting the Rig (f a) instance in Rig.idr
+public export
+[usualSum'] (Rig a, Applicative f) => Algebra BinTreeLeafOnly (f a) where
+  reduce (Leaf leaf) = leaf
+  reduce (Node node leftTree rightTree)
+    = let lt = reduce {f=BinTreeLeafOnly} leftTree 
+          rt = reduce {f=BinTreeLeafOnly} rightTree
+      in (uncurry (~+~)) <$> (liftA2 lt rt) 
 
 public export
 Rig a => Algebra BinTreeNodeOnly a where
@@ -80,22 +91,32 @@ multiplyVM {a} {f} v m = let t : f (a, g a)
                          in reduce w
 
 -- Multiply two matrices
+-- "ij,jk->ik"
 public export
 matMul : {f, g, h : Type -> Type} -> {a : Type}
   -> (Functor f, Applicative g, Applicative h, Rig a, Algebra g (h a))
   => f (g a) -> g (h a) -> f (h a)
 matMul m1 m2 = m1 <&> (\row => multiplyVM row m2)
 
+-- Refactored implementation using Naperian transpose
+-- Calculates result by dotting rows of m1 with columns of m2.
+public export
+matMul' : {f, g, h : Type -> Type} -> {a : Type}
+  -> (Functor f, Applicative g, Naperian g, Naperian h, Rig a, Algebra g a)
+  => f (g a) -> g (h a) -> f (h a)
+matMul' m1 m2 = m1 <&> \rowA => (dot {f=g} rowA) <$> (transpose m2)
 
 matMulTensor : {i, j, k : Nat} -> {f : Type -> Type} -> {a : Type}
   -> Rig a => Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
 matMulTensor m n = fromNestedTensor (matMul (toNestedTensor m) (toNestedTensor n))
 
 -- ij,kj->ki
+public export
 multiplyMMT : {f, g, h: Type -> Type} -> {a : Type}
-  -> (Functor h, Applicative f, Applicative g, Rig a, Algebra g a)
+  -> (Applicative f, Applicative g, Functor h, Rig a, Algebra g a)
   => f (g a) -> h (g a) -> h (f a)
-multiplyMMT = map . multiplyMV
+multiplyMMT m n = (multiplyMV m) <$> n
+
 
 {-  3 x 4 matrix, (i, j)=(3,4)
 

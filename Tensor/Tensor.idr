@@ -94,7 +94,7 @@ Matrix rows cols dtype = Tensor [rows, cols] dtype
 public export
 tensorReplicate : {shape : Vect n Nat} -> a -> Tensor shape a
 tensorReplicate {shape = []} a = TZ a
-tensorReplicate {shape = (n :: ns)} a = TS (replicate n (tensorReplicate a))
+tensorReplicate {shape = (n :: _)} a = TS (replicate n (tensorReplicate a))
 
 -- generalised zip
 -- laxator of a monoidal functor
@@ -125,9 +125,14 @@ Array []        a = a
 Array (m :: ms) a = Vect m (Array ms a)
 
 public export
-fromArray : {xs : Vect rank Nat} -> Array xs a -> Tensor xs a
-fromArray {xs = []} y = TZ y
-fromArray {xs = (_ :: _)} y = TS (fromArray <$> y)
+fromArray : {shape : Vect rank Nat} -> Array shape a -> Tensor shape a
+fromArray {shape = []} y = TZ y
+fromArray {shape = (_ :: _)} y = TS (fromArray <$> y)
+
+public export
+toArray : {shape : Vect rank Nat} -> Tensor shape a -> Array shape a
+toArray (TZ x) = x
+toArray (TS xs) = toArray <$> xs
 
 {-
 Machinery for indexing tensors

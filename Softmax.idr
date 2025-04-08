@@ -13,9 +13,11 @@ import Rig
 interface Exp a where
   exp : a -> a
 
+public export
 Exp Double where
   exp = Prelude.exp
 
+public export
 softmax : {f : Type -> Type}
   -> (Functor f, Algebra f a, Fractional a, Exp a) => f a -> f a
 softmax {f} xs = let exps = exp <$> xs

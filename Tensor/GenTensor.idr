@@ -5,10 +5,8 @@ import Data.Vect
 import Tensor
 import Tree
 
-h : Vect 2 (Type -> Type)
-h = [List, Tensor [2,3]]
-
--- Generalised tensor, not storing cube-like structures
+||| Generalised tensors
+||| For storing not necessarily cube-like structures
 public export
 data GenTensor : (shape : Vect n (Type -> Type))
                -> (dtype : Type)
@@ -16,9 +14,39 @@ data GenTensor : (shape : Vect n (Type -> Type))
     GTZ : (val : dtype) -> GenTensor [] dtype
     GTS : f (GenTensor ds dtype) -> GenTensor (f :: ds) dtype
 
+%name GenTensor t, u, v
 
+
+data AllShow : (shape : Vect n (Type -> Type))
+             -> (dtype : Type)
+             -> Type where
+  NilShow : Show a => AllShow [] a
+  ConsShow : Show (f (AllShow fs dtype)) => AllShow (f :: fs) dtype
+
+-- findShow : AllShow shape dtype -> GenTensor shape dtype -> Show dtype
+-- findShow NilShow (GTZ val) = 
+-- findShow ConsShow t = ?findShow_rhs_1
+
+-- public export
+-- {shape : Vect n (Type -> Type)} -> (allShow : AllShow shape a) => Show (GenTensor shape a) where
+--   show t = let xt = allShow in ?sss
+  -- show {shape = []} (GTZ val) = show val
+  -- show {shape = (f :: fs)} (GTS fx) = ?asdf_2
+  -- show (GTZ x) = show x
+  -- show (GTS xs) = ?asdf
+
+public export
+{shape : Vect n (Type -> Type)} -> Eq a => Eq (GenTensor shape a) where
+    (GTZ t) == (GTZ u) = t == u
+    (GTS ts) == (GTS us) = ?lafl_2
+
+
+-- This recovers usual tensors in Tensor.Tensor
 Tensor' : (shape : Vect n Nat) -> Type -> Type
-Tensor' shape = GenTensor (map Vect shape)
+Tensor' shape = GenTensor (Vect <$> shape)
+
+h : Vect 2 (Type -> Type)
+h = [List, Tensor [2,3]]
 
 rt : Tensor' [2, 3] Double
 rt = ?ein
