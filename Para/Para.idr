@@ -12,7 +12,9 @@ record Para (a : Type) (b : Type) where
 
 public export
 composePara : Para a b -> Para b c -> Para a c
-composePara (MkPara p f) (MkPara q g) = MkPara (\x => (p' : p x ** q (f x p'))) (\x, (p' ** q') => g (f x p') q')
+composePara (MkPara p f) (MkPara q g) = MkPara
+  (\x => (p' : p x ** q (f x p')))
+  (\x, (p' ** q') => g (f x p') q')
 
 -- composePara_rhs_1 : (p : Vect n Type) -> (q : Vect m Type)
 --   -> (a -> All Prelude.id p -> b)

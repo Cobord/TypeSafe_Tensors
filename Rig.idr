@@ -31,20 +31,21 @@ Rig Nat where
   (~+~) = (+)
   (~*~) = (*)
 
-
-public export
-{n : Nat} -> Rig a => Rig (Vect n a) where
-  zero = replicate n zero
-  one = replicate n one
-  xs ~+~ ys = zipWith (~+~) xs ys
-  xs ~*~ ys = zipWith (~*~) xs ys
-
+||| Pointwise Rig structure
 -- public export
--- (Rig a, Applicative f) => Rig (f a) where
---   zero = pure zero
---   one = pure one
---   xs ~+~ ys = uncurry (~+~) <$> liftA2 xs ys
---   xs ~*~ ys = uncurry (~*~) <$> liftA2 xs ys
+-- {n : Nat} -> Rig a => Rig (Vect n a) where
+--   zero = replicate n zero
+--   one = replicate n one
+--   xs ~+~ ys = zipWith (~+~) xs ys
+--   xs ~*~ ys = zipWith (~*~) xs ys
+
+||| Pointwise Rig structure for Applicative functors
+public export
+(Rig a, Applicative f) => Rig (f a) where
+  zero = pure zero
+  one = pure one
+  xs ~+~ ys = uncurry (~+~) <$> liftA2 xs ys
+  xs ~*~ ys = uncurry (~*~) <$> liftA2 xs ys
 
 public export
 sum : Rig a => Vect n a -> a

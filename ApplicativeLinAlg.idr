@@ -18,17 +18,28 @@ interface Algebra (f : Type -> Type) a where
 
 public export
 {n : Nat} -> Rig a => Algebra (Vect n) a where
-  reduce xs = foldr (~+~) zero xs
+  reduce = foldr (~+~) zero
 
 public export
 {shape : Vect n Nat} -> Rig a => Algebra (Tensor shape) a where
-  reduce xs = foldr (~+~) zero xs 
+  reduce = foldr (~+~) zero 
 
+public export
+[appSum] {shape : Vect n Nat} -> (Rig a, Applicative f)
+  => Algebra (Tensor shape) (f a) where
+  reduce (TZ val) = val
+  reduce (TS xs) = reduce (reduce <$> xs)
+
+aa : Algebra (Tensor [2]) (Tensor [3] a) => a
+aa = ?aa_rhs
+
+||| Just summing up elements of the tree given by the Rig a structure
 public export
 Rig a => Algebra BinTreeLeafOnly a where
   reduce (Leaf leaf) = leaf
   reduce (Node _ leftTree rightTree)
-    = (reduce {f=BinTreeLeafOnly} leftTree) ~+~ (reduce {f=BinTreeLeafOnly} rightTree)
+    = (reduce {f=BinTreeLeafOnly} leftTree) ~+~ 
+      (reduce {f=BinTreeLeafOnly} rightTree)
 
 -- can be simplified by uncommenting the Rig (f a) instance in Rig.idr
 public export
@@ -108,7 +119,7 @@ matMul' m1 m2 = m1 <&> \rowA => (dot {f=g} rowA) <$> (transpose m2)
 
 matMulTensor : {i, j, k : Nat} -> {f : Type -> Type} -> {a : Type}
   -> Rig a => Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
-matMulTensor m n = fromNestedTensor (matMul (toNestedTensor m) (toNestedTensor n))
+matMulTensor m n = fromNestedTensor (matMul' (toNestedTensor m) (toNestedTensor n))
 
 -- ij,kj->ki
 public export
@@ -137,8 +148,8 @@ m1 = fromArray [ [0, 1, 2, 3]
                , [4, 5, 6, 7]
                , [8, 9, 10, 11]]
 
-v2 : Vector 4 Double
-v2 = multiplyVM v1 (toNestedTensor m1)
+-- v2 : Vector 4 Double
+-- v2 = multiplyVM v1 (toNestedTensor m1)
 
 {-
 7

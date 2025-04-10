@@ -77,7 +77,7 @@ SelfAttentionTree : {d : Nat} -> Para
 SelfAttentionTree {d} = SelfAttention {inputStructure=BinTreeLeafOnly, features=Vect d} (softmax {f=BinTreeLeafOnly})
 
 matrix1 : Vect 4 (Vect 2 Double)
-matrix1 = [ [1, 3], [1, 3], [1, 3], [1, 3] ]
+matrix1 = [ [1, 3], [1, 3], [1, 3] , [1, 3]]
 
 -- This is a left leaning tree of depth 3, where the content of each leaf is [1, 3]
 {-

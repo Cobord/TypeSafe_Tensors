@@ -64,6 +64,7 @@ tensorTabulate : {shape : Vect n Nat}
 tensorTabulate {shape = []} f = TZ (f Nil)
 tensorTabulate {shape = (s :: ss)} f = TS $ vectTabulate (\i => tensorTabulate {shape=ss} (\is => f (i :: is)))
 
+public export
 {shape : Vect n Nat} -> Naperian (Tensor shape) where
     Log = IndexT shape
     lookup = flip indexTensor

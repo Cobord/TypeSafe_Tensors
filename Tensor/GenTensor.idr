@@ -8,9 +8,10 @@ import Tree
 ||| Generalised tensors
 ||| For storing not necessarily cube-like structures
 public export
-data GenTensor : (shape : Vect n (Type -> Type))
-               -> (dtype : Type)
-               -> Type where
+data GenTensor :
+     (shape : Vect n (Type -> Type))
+  -> (dtype : Type)
+  -> Type where
     GTZ : (val : dtype) -> GenTensor [] dtype
     GTS : f (GenTensor ds dtype) -> GenTensor (f :: ds) dtype
 
@@ -29,8 +30,8 @@ data AllShow : (shape : Vect n (Type -> Type))
 
 -- public export
 -- {shape : Vect n (Type -> Type)} -> (allShow : AllShow shape a) => Show (GenTensor shape a) where
---   show t = let xt = allShow in ?sss
-  -- show {shape = []} (GTZ val) = show val
+--    show t = let xt = allShow in ?sss
+--   -- show {shape = []} (GTZ val) = show val
   -- show {shape = (f :: fs)} (GTS fx) = ?asdf_2
   -- show (GTZ x) = show x
   -- show (GTS xs) = ?asdf

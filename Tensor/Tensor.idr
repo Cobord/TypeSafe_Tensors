@@ -51,6 +51,7 @@ Traversable (Tensor shape) where
   traverse fn (TZ val) = TZ <$> fn val
   traverse fn (TS xs) = TS <$> traverse (traverse fn) xs
 
+
 -- The maps below doesn't hold as equalities because:
 -- Tensor (n :: ns) a is a tensor of shape (n :: ns) with elements of type a
 -- Tensor [n] (Tensor ns a) would be a tensor of shape [n] with elements of type (Tensor ns a)
@@ -115,8 +116,25 @@ public export
 {shape : Vect n Nat} -> Rig a => Rig (Tensor shape a) where
   zero = tensorReplicate zero
   one = tensorReplicate one
-  xs ~+~ ys = map (uncurry (~+~)) $ liftA2 xs ys
-  xs ~*~ ys = map (uncurry (~*~)) $ liftA2 xs ys
+  xs ~+~ ys = (uncurry (~+~)) <$> liftA2 xs ys
+  xs ~*~ ys = (uncurry (~*~)) <$> liftA2 xs ys
+
+public export
+{shape : Vect n Nat} -> Num a => Num (Tensor shape a) where
+  fromInteger i = tensorReplicate (fromInteger i)
+  xs + ys = (uncurry (+)) <$> liftA2 xs ys
+  xs * ys = (uncurry (*)) <$> liftA2 xs ys
+
+public export
+{shape : Vect n Nat} -> Neg a => Neg (Tensor shape a) where
+  negate t = negate <$> t
+  xs - ys = (uncurry (-)) <$> liftA2 xs ys
+  
+public export
+{shape : Vect n Nat} -> Abs a => Abs (Tensor shape a) where
+  abs t = abs <$> t
+
+
 
 -- The point of this construction is to be able to easily create tensors using lists, without needing to use the inductive form requiRig `TZ` and `TS`. 
 public export
@@ -152,6 +170,7 @@ Show (IndexT shape) where
   show Nil = ""
   show (i :: is) = show i ++ ", " ++ show is
 
+public export
 indexToShape : {n : Nat}
     -> {shape : Vect n Nat}
     -> IndexT shape -> Vect n Nat
@@ -168,8 +187,9 @@ indexTensor (indHere :: restOfIndex) (TS xs)
   = indexTensor restOfIndex (index indHere xs)
 
 
+public export infixr 9 @@
+
 public export
-infixr 9 @@
 (@@) : Tensor shape a -> IndexT shape -> a
 (@@) = flip indexTensor
 
@@ -191,6 +211,7 @@ takeTensor [] (TZ val) = TZ val
 takeTensor (s :: ss) (TS xs) = TS $ (takeTensor ss) <$> takeFin s xs
 
 
+public export
 reshapeTensor : Tensor shape a
               -> (newShape : Vect n Nat)
               -> {auto prf : prod shape = prod newShape}
@@ -203,35 +224,3 @@ toList = foldr (::) []
 
 
 
-
----------------
---- Examples
----------------
-
-t1 : Tensor [3, 4] Double
-t1 = fromArray $ [ [0, 1, 2, 3]
-                 , [4, 5, 6, 7]
-                 , [8, 9, 10, 11]]
-
-
--- Do we need a constraint that all elements of shape are non-zero?
-tTest : Tensor [0, 0] Double
-tTest = TS ?ooo
-
--- With tensors that have a zero in them, we can't index into them since Fin - has no inhabitants
-tTest2 : Tensor [0, 2] Double
-tTest2 = TS ?oooo
-
-
-dExample : Double
-dExample = t1 @@ [1, 2]
-
-tt : Tensor [1, 2] Double
-tt = takeTensor [1, 2] t1
-
-
-s : Vect 4 Nat
-s = [1,2,3,4]
-
-ss : Vect 2 Nat
-ss = take 2 s
