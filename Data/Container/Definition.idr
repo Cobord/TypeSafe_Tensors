@@ -30,6 +30,12 @@ TreeCont x = (f : List Bool) !> ?TreeCont_rhs
 
 
 public export
+infixr 0 ><
+(><) : Container -> Container -> Container
+(><) (shp !> pos) (shp' !> pos') = ((s, s') : (shp, shp')) !> (pos s, pos' s')
+
+
+public export
 record ContainerF where
   ||| Shapes
   shp : Type

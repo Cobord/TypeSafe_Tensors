@@ -16,13 +16,17 @@ Array -> for ease of creation of tensors from lists
 IndexTensor -> for easy indexing of tensors
 -}
 
-{-
-`n` is also often called rank of a tensor
--}
+||| Defines the Tensor datatype
+||| 
+||| `n` is also often called rank of a tensor
 public export
 data Tensor : (shape : Vect n Nat) -> (dtype : Type) -> Type where
     TZ : (val : dtype) -> Tensor [] dtype
     TS : Vect d (Tensor ds dtype) -> Tensor (d :: ds) dtype
+
+exampleTensor : Tensor [2, 3] Double
+
+
 
 %name Tensor t, u, v
 
@@ -152,14 +156,9 @@ toArray : {shape : Vect rank Nat} -> Tensor shape a -> Array shape a
 toArray (TZ x) = x
 toArray (TS xs) = toArray <$> xs
 
-{-
-Machinery for indexing tensors
-Allows us to write `indexTensor` below, and get following functionality
-- example with indexTensor (tensor of shape 3 ,4 ) (2, 3) = val at that point
-- example with indexTensor (tensor of shape 3 ,4 ) (10, 7) = can't even compile
-
--- Given a tensor `Tensor [3, 4] Double` this allows us to index one of its elements, and provide a compile-time guarantee that we won't be out of bounds
--}
+||| Machinery for indexing tensors
+||| Given a tensor `Tensor [3, 4] Double` this allows us to index one of its elements, and provide a compile-time guarantee that we won't be out of bounds
+||| See TensorExamples for examples of this in action
 public export
 data IndexT : (shape : Vect n Nat) -> Type where
   Nil  : IndexT []

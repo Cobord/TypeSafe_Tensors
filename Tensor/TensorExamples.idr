@@ -20,7 +20,6 @@ t2 = fromArray $ [ [0, 1, 2, 3, 4]
 tSum : Tensor [3, 4] Double
 tSum = t1 + t1
 
-
 indexExample : Double
 indexExample = t1 @@ [1, 2]
 

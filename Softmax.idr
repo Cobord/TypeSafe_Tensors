@@ -40,6 +40,6 @@ namedSoftmax : {axis : Type -> Type}
   => Elem axis shape
   -> GenTensor shape a
   -> GenTensor shape a
-namedSoftmax {shape = []} axis t impossible -- elem can't be in vector if vector is empty
+namedSoftmax {shape = []} axis t impossible -- can't be in vector if vector empty
 namedSoftmax {shape = (axis :: ss)} Here (GTS x) = GTS (?sm <$> x)
 namedSoftmax {shape = (s :: ss)} (There later) (GTS x) = GTS ?namedSoftmax_rhs_4
