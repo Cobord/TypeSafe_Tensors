@@ -35,25 +35,25 @@ aa = ?aa_rhs
 
 ||| Just summing up elements of the tree given by the Rig a structure
 public export
-Rig a => Algebra BinTreeLeafOnly a where
+Rig a => Algebra BTreeLeaf a where
   reduce (Leaf leaf) = leaf
   reduce (Node _ leftTree rightTree)
-    = (reduce {f=BinTreeLeafOnly} leftTree) ~+~ 
-      (reduce {f=BinTreeLeafOnly} rightTree)
+    = (reduce {f=BTreeLeaf} leftTree) ~+~ 
+      (reduce {f=BTreeLeaf} rightTree)
 
 -- can be simplified by uncommenting the Rig (f a) instance in Rig.idr
 public export
-[usualSum'] (Rig a, Applicative f) => Algebra BinTreeLeafOnly (f a) where
+[usualSum'] (Rig a, Applicative f) => Algebra BTreeLeaf (f a) where
   reduce (Leaf leaf) = leaf
   reduce (Node node leftTree rightTree)
-    = let lt = reduce {f=BinTreeLeafOnly} leftTree 
-          rt = reduce {f=BinTreeLeafOnly} rightTree
+    = let lt = reduce {f=BTreeLeaf} leftTree 
+          rt = reduce {f=BTreeLeaf} rightTree
       in (uncurry (~+~)) <$> (liftA2 lt rt) 
 
 public export
-Rig a => Algebra BinTreeNodeOnly a where
+Rig a => Algebra BTreeNode a where
   reduce (Leaf _) = zero
-  reduce (Node node leftTree rightTree) = node ~+~ (reduce {f=BinTreeNodeOnly} leftTree) ~+~ (reduce {f=BinTreeNodeOnly} rightTree)
+  reduce (Node node leftTree rightTree) = node ~+~ (reduce {f=BTreeNode} leftTree) ~+~ (reduce {f=BTreeNode} rightTree)
 
 -- Scale a vector by a scalar
 public export
@@ -80,8 +80,8 @@ dotTensor = dot
 
 public export
 dotTree : {a : Type}
-  -> Rig a => BinTreeLeafOnly a -> BinTreeLeafOnly a -> a
-dotTree = dot {f=BinTreeLeafOnly}
+  -> Rig a => BTreeLeaf a -> BTreeLeaf a -> a
+dotTree = dot {f=BTreeLeaf}
 
 -- Multiply a matrix and a vector
 public export
@@ -154,14 +154,14 @@ m1 = fromArray [ [0, 1, 2, 3]
 {-
 7
 -}
-tree0 : BinTreeLeafOnly Double
+tree0 : BTreeLeaf Double
 tree0 = Leaf 7
 
 {-
   /\
  3  4
 -}
-tree1 : BinTreeLeafOnly Double
+tree1 : BTreeLeaf Double
 tree1 = Node () (Leaf 3) (Leaf 4)
 
 {-
@@ -169,20 +169,20 @@ tree1 = Node () (Leaf 3) (Leaf 4)
   /\     /  \ 
  1 10  100  1000
 -}
-tree2 : BinTreeLeafOnly Double
+tree2 : BTreeLeaf Double
 tree2 = Node () (Node () (Leaf 1) (Leaf 10)) (Node () (Leaf 100) (Leaf 1000))
 
 dd : Double
-dd = dot {f=BinTreeLeafOnly} tree1 tree2
+dd = dot {f=BTreeLeaf} tree1 tree2
 
 
-tN1 : BinTreeNodeOnly Double
+tN1 : BTreeNode Double
 tN1 = Node 3 (Leaf ()) (Leaf ())
 
-tN2 : BinTreeNodeOnly Double
+tN2 : BTreeNode Double
 tN2 = Node 3 (Node 4 (Leaf ()) (Leaf ())) (Leaf ())
 
-tL1 : BinTreeLeafOnly Double
+tL1 : BTreeLeaf Double
 tL1 = Node () (Leaf 0.1) (Leaf 0.3)
 
 

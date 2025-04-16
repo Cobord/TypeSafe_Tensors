@@ -26,11 +26,11 @@ softmax {f} xs = let exps = exp <$> xs
 softmaxVect : {n : Nat} -> Vect n Double -> Vect n Double
 softmaxVect = softmax
 
-softmaxTreeLeaf : BinTreeLeafOnly Double -> BinTreeLeafOnly Double
-softmaxTreeLeaf = softmax {f=BinTreeLeafOnly}
+softmaxTreeLeaf : BTreeLeaf Double -> BTreeLeaf Double
+softmaxTreeLeaf = softmax {f=BTreeLeaf}
 
-softmaxTreeNode : BinTreeNodeOnly Double -> BinTreeNodeOnly Double
-softmaxTreeNode = softmax {f=BinTreeNodeOnly}
+softmaxTreeNode : BTreeNode Double -> BTreeNode Double
+softmaxTreeNode = softmax {f=BTreeNode}
 
 
 

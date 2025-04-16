@@ -106,8 +106,8 @@ mapGenTensor {allFunctor = (ConsFunctor x)} f (GTS xs) = GTS (?ho <$> xs)
 --   foldr f z (GTZ val) = f val z
 --   foldr f z (GTS xs) = ?loo_1
 {-
--- List $ Vect n $ BinTreeLeafOnly Double
-exampleGenTensor : GenTensor [# List, # Vect n, # BinTreeLeafOnly] Double
+-- List $ Vect n $ BTreeLeaf Double
+exampleGenTensor : GenTensor [# List, # Vect n, # BTreeLeaf] Double
 exampleGenTensor = ?exampleGenTensor_rhs
 
 
@@ -192,7 +192,7 @@ t0 = GTZ 3
 -- t2 : GenTensor [List, Vect 2] Double
 -- t2 = GTS [GTS [GTZ 14, GTZ 9]]
 
-t3 : GenTensor [BinTreeLeafOnly, Vect 2] Double
+t3 : GenTensor [BTreeLeaf, Vect 2] Double
 t3 = GTS ?eoo 
 
 -- ttt : Tensor' [3, 4] Double
