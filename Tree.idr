@@ -7,21 +7,21 @@ import Tensor.Tensor
 Finite binary trees with labels on leaves and nodes
 -}
 public export
-data BinTree : (leafType : Type) -> (nodeType : Type) -> Type where
+data BTree : (leafType : Type) -> (nodeType : Type) -> Type where
     Leaf : (leaf : leafType)
-        -> BinTree leafType nodeType
+        -> BTree leafType nodeType
     Node : (node : nodeType)
-        -> (leftTree : BinTree leafType nodeType)
-        -> (rightTree : BinTree leafType nodeType)
-        -> BinTree leafType nodeType
+        -> (leftTree : BTree leafType nodeType)
+        -> (rightTree : BTree leafType nodeType)
+        -> BTree leafType nodeType
 
 public export
-Bifunctor BinTree where
+Bifunctor BTree where
     bimap f g (Leaf x) = Leaf (f x)
     bimap f g (Node n leftTree rightTree)
       = Node (g n) (bimap f g leftTree) (bimap f g rightTree)
 
--- {leafType : Type} -> Applicative (\n => BinTree leafType n) where
+-- {leafType : Type} -> Applicative (\n => BTree leafType n) where
 --     pure x = ?ooo
 --     fs <*> xs = ?oii
     -- (Leaf f) <*> (Leaf x) = Leaf (f x)
@@ -31,11 +31,11 @@ Bifunctor BinTree where
 
 public export
 BTreeLeaf : (leafType : Type) -> Type
-BTreeLeaf leafType = BinTree leafType ()
+BTreeLeaf leafType = BTree leafType ()
 
 public export
 BTreeNode : (nodeType : Type) -> Type
-BTreeNode nodeType = BinTree () nodeType
+BTreeNode nodeType = BTree () nodeType
 
 public export
 Functor BTreeLeaf where
@@ -90,7 +90,7 @@ Other shapes
 don't work
 -}
 public export
-data CanRotateRight : (binTree : BTreeLeaf a) -> Type where
+data CanRotateRight : (BTree : BTreeLeaf a) -> Type where
   RotateRight : (leftLeftTree : BTreeLeaf a)
              -> (leftRightTree : BTreeLeaf a)
              -> (rightTree : BTreeLeaf a)
@@ -122,8 +122,8 @@ rotateRight (Node n (Node n' leftLeftTree leftRightTree) rightTree) x
 
 
 
-PathBinTree : Type
-PathBinTree = List Bool
+PathBTree : Type
+PathBTree = List Bool
 
 
 public export
@@ -133,7 +133,7 @@ Functor BTreeNode where
     = Node (f node) (map {f=BTreeNode} f leftTree) (map {f=BTreeNode} f rightTree) 
 
 -- Swap the left and right subtrees at at specified path
-commute : PathBinTree -> BTreeLeaf l -> BTreeLeaf l
+commute : PathBTree -> BTreeLeaf l -> BTreeLeaf l
 commute [] (Leaf leaf) = Leaf leaf
 commute [] (Node node l r) = Node node r l
 commute (x :: xs) (Leaf leaf) = Leaf leaf
