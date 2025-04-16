@@ -8,34 +8,103 @@ import Tree
 
 %hide Builtin.infixr.(#)
 
-export prefix 0 #
-||| FunctorI standing for FunctorImplicit
-record FunctorI where
-  constructor (#)
-  fff : Type -> Type
-  {auto 0 prf : Functor fff}
-
 ||| Generalised tensors
 ||| For storing not necessarily cube-like structures
 public export
-data GenTensor : (shape : Vect n FunctorI) -> (dtype : Type) -> Type where
+data GenTensor : (shape : Vect n (Type -> Type)) -> (dtype : Type) -> Type where
     GTZ : (val : dtype) -> GenTensor [] dtype
-    GTS : Functor f => f (GenTensor ds dtype) -> GenTensor ((# f) :: ds) dtype
+    GTS : f (GenTensor ds dtype) -> GenTensor (f :: ds) dtype
 
 %name GenTensor t, u, v
+
+public export
+data AllEq : (shape : Vect n (Type -> Type)) -> (dtype : Type) -> Type where
+  NilEq : Eq a => AllEq [] a
+  ConsEq : Eq (f (GenTensor fs dtype)) => AllEq (f :: fs) dtype
+
+public export
+genTensorEq : (allEq : AllEq shape a) => GenTensor shape a -> GenTensor shape a -> Bool
+genTensorEq (GTZ x) (GTZ y) {allEq = NilEq} = x == y
+genTensorEq (GTS xs) (GTS ys) {allEq = ConsEq} = xs == ys
+
+(allEq : AllEq shape a) => Eq (GenTensor shape a) where
+  (==) = genTensorEq
 
 public export
 data AllShow : (shape : Vect n (Type -> Type)) -> (dtype : Type) -> Type where
   NilShow : Show a => AllShow [] a
   ConsShow : Show (f (GenTensor fs dtype)) => AllShow (f :: fs) dtype
 
-Functor (GenTensor shape) where
-  map f (GTZ val) = GTZ (f val)
-  map f (GTS xs) = GTS ((map f) <$> xs)
+public export
+genTensorShow : (allShow : AllShow shape a) => GenTensor shape a -> String
+genTensorShow {allShow = NilShow} (GTZ val) = show val
+genTensorShow {allShow = ConsShow} (GTS xs) = show xs
 
-Foldable (GenTensor shape) where
-  foldr f z (GTZ val) = f val z
-  foldr f z (GTS xs) = ?loo_1
+(allShow : AllShow shape a) => Show (GenTensor shape a) where
+  show = genTensorShow
+
+-- public export
+-- data AllFunctor : (shape : Vect n (Type -> Type)) -> (dtype : Type) -> Type where
+--   NilFunctor : AllFunctor [] a
+--   ConsFunctor : Functor f => f (GenTensor fs dtype) -> AllFunctor (f :: fs) dtype
+-- 
+-- mapGenFunctor : (allFunctor : AllFunctor shape a) => (f : a -> b) -> GenTensor shape a -> GenTensor shape b
+-- mapGenFunctor {allFunctor = NilFunctor} fn (GTZ val) = GTZ (fn val)
+-- mapGenFunctor {allFunctor = (ConsFunctor ft)} fn (GTS xs)
+--   = GTS (?holeFunctor <$> xs) -- (mapGenFunctor fn) works but needs to be extracted to the type level...
+
+export prefix 0 #
+||| FunctorI standing for FunctorImplicit
+record Prop (prop : (Type -> Type) -> Type) where
+  constructor (#)
+  F : Type -> Type
+  {auto 0 prf : prop F}
+
+public export
+data AllFunctor : (shape : Vect n (Prop Functor)) -> (dtype : Type) -> Type where
+    NilFunctor : AllFunctor [] a
+    ConsFunctor : Functor f => f (AllFunctor ds dtype) -> AllFunctor ((# f) :: ds) dtype
+
+public export
+data AllFoldable : (shape : Vect n (Prop Foldable)) -> (dtype : Type) -> Type where
+    NilFoldable : AllFoldable [] a
+    ConsFoldable : Foldable f => f (AllFoldable ds dtype) -> AllFoldable ((# f) :: ds) dtype
+
+
+public export
+getF : Vect n (Prop p) -> Vect n (Type -> Type)
+getF [] = []
+getF ((# f) :: fs) = f :: getF fs
+
+
+mapGenTensor : (allFunctor : AllFunctor shape a) => (f : a -> b) -> GenTensor (getF shape) a -> GenTensor (getF shape) b
+mapGenTensor {allFunctor = NilFunctor} f (GTZ val) = GTZ (f val)
+mapGenTensor {allFunctor = (ConsFunctor x)} f (GTS xs) = GTS (?ho <$> xs)
+ 
+(allFunctor : AllFunctor shape a) => Functor (GenTensor (getF shape)) where
+  map f = ?ooo
+-- (allFunctor : AllFunctor shape a) => Functor (GenTensor shape) where
+--   map = mapGenFunctor
+--   map {allFunctor = NilFunctor} fn (GTZ val) = GTZ (fn val)
+--   map {allFunctor = (ConsFunctor _)} fn (GTS xs)
+--     = GTS ((map fn) <$> xs)
+-- (map fn) should work but it says it can't find an implementation for Functor (GenTensor ds)??
+
+-- Functor (GenTensor shape) where
+--   map f (GTZ val) = GTZ (f val)
+--   map f (GTS xs) = GTS ((map f) <$> xs)
+
+-- data AllFoldable : (shape : Vect n (Type -> Type)) -> (dtype : Type) -> Type where
+--   NilFoldable : AllFoldable [] a
+--   ConsFoldable : Foldable f => f (GenTensor fs dtype) -> AllFoldable (f :: fs) dtype
+-- 
+-- foldrGenFoldable : (allFoldable : AllFoldable shape a) => (f : a -> b -> b) -> (z : b) -> GenTensor shape a -> b
+-- foldrGenFoldable {allFoldable = NilFoldable} f z (GTZ val) = f val z
+-- foldrGenFoldable {allFoldable = (ConsFoldable ft)} f z (GTS xs) = foldr (?hole1) z xs -- \t, acc => foldr f acc t should work but same problem as in Functor. Needs to be extracted to the type level...
+
+-- Foldable (GenTensor shape) where
+--   foldr f z (GTZ val) = f val z
+--   foldr f z (GTS xs) = ?loo_1
 {-
 -- List $ Vect n $ BinTreeLeafOnly Double
 exampleGenTensor : GenTensor [# List, # Vect n, # BinTreeLeafOnly] Double
@@ -64,7 +133,7 @@ data AllEq : (shape : Vect n (Type -> Type))
 public export
 {shape : Vect n (Type -> Type)} -> (allEq : AllEq shape a) => Eq (GenTensor shape a) where
   (==) (GTZ x) (GTZ y) {allEq = NilEq}  = x == y
-  (==) (GTS xs) (GTS ys) {allEq = ConsEq @{sb}}  = ?poo_3
+  (==) (GTS {f} xs) (GTS {f} ys) {allEq = ConsEq @{sb}}  = ?poo_3
   -- (==) {allEq} (GTZ x) (GTZ y) = ?ooo -- x == y
   -- (GTS xs) == (GTS ys) = ?oooo_2
     -- (GTZ t) == (GTZ u) = t == u

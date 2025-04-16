@@ -12,3 +12,5 @@ zeros = tensorReplicate zero
 public export
 ones : Rig a => {shape : Vect n Nat} -> Tensor shape a
 ones = tensorReplicate one
+
+
