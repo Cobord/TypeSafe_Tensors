@@ -5,7 +5,7 @@ import Data.Container.Definition
 ||| Dependent lenses
 ||| Forward-backward container morphisms
 public export
-record (=%>) (c1, c2 : Container) where
+record (=%>) (c1, c2 : Cont) where
   constructor (<!)
   fwd : c1.shp -> c2.shp
   bwd : (x : c1.shp) -> c2.pos (fwd x) -> c1.pos x
@@ -16,7 +16,7 @@ export infix 1 <!
 ||| Dependent charts
 ||| Forward-forward container morphisms
 public export
-record (=&>) (c1, c2 : Container) where
+record (=&>) (c1, c2 : Cont) where
   constructor (<&!)
   fwd : c1.shp -> c2.shp
   fwd' : (x : c1.shp) -> c1.pos x -> c2.pos (fwd x)
@@ -24,12 +24,12 @@ record (=&>) (c1, c2 : Container) where
 export infixr 1 =&>
 export infix 1 <&!
 
-val : Container -> Type -> Container
+val : Cont -> Type -> Cont
 val (shp !> pos) r = (!>) shp (\s => pos s -> r)
 
 -- Chart -> DLens morphism 
 -- Tangent bundle to Contanget bundle, effectively
-valContMap : {c1, c2 : Container} -> {r : Type}
+valContMap : {c1, c2 : Cont} -> {r : Type}
   ->  (f : c1 =&> c2)
   ->  (c1 `val` r) =%> (c2 `val` r)
 valContMap {c1=(shp !> pos)} {c2=(shp' !> pos')} (fwd <&! fwd')
@@ -38,7 +38,7 @@ valContMap {c1=(shp !> pos)} {c2=(shp' !> pos')} (fwd <&! fwd')
 
 -- ||| A container morphism
 -- public export
--- record (~%>) (c1, c2 : ContainerF R) where
+-- record (~%>) (c1, c2 : ContF R) where
 --   constructor (<~!)
 --   fwd' : c1.shp' -> c2.shp'
 

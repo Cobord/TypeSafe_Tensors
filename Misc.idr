@@ -5,6 +5,7 @@ import Data.Fin.Arith
 import Data.Vect.Quantifiers
 
 
+%hide Builtin.infixr.(#)
 
 public export
 liftA2 : Applicative f => f a -> f b -> f (a, b)
@@ -81,22 +82,29 @@ lk : (a :  Type ** List (Interface1 a => a))
 lk = (Nat ** [3, 5])
 
 private prefix 0 #
-record FunctorImplicit where
+record ApplF (lprop : Vect m ((Type -> Type) -> Type)) where
   constructor (#)
-  ffff : Type -> Type
-  {auto 0 prf : Functor ffff}
+  F : Type -> Type
+  {auto 0 prf : All (\p => p F) lprop}
 
-ex1 : List FunctorImplicit
+interface MyInterface f where
+  tttt : (a -> b) -> (f a -> f b)
+
+
+ex0 : List (ApplF [Functor, Applicative])
+ex0 = [# Vect 4]
+
+ex1 : List (ApplF [Functor, Applicative])
 ex1 = [# List, # Vect 4]
 
-ex2 : List FunctorImplicit
+ex2 : List (ApplF [Functor, Applicative])
 ex2 = [# Maybe, # List, # Vect 100]
 
 data Repr : Type -> Type where
   MkRepr : (a -> Int) -> Repr a
 
 failing
-  shouldNotTypeCheck : List FunctorImplicit
+  shouldNotTypeCheck : List (ApplF [Functor, Applicative])
   shouldNotTypeCheck = [# Repr]
 
   aIntt : Int

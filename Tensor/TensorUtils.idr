@@ -14,3 +14,6 @@ ones : Rig a => {shape : Vect n Nat} -> Tensor shape a
 ones = tensorReplicate one
 
 
+public export
+eye : Rig a => {n : Nat} -> Tensor [n, n] a
+eye = ?eye_rhs

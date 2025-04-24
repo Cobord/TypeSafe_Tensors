@@ -4,9 +4,10 @@ import Data.Vect
 import Data.Vect.Elem
 
 import Tensor
-import GenTensor
+import Tensor
 
 import ApplicativeLinAlg
+import Algebra
 import Tree
 import Rig
 
@@ -38,8 +39,8 @@ namedSoftmax : {axis : Type -> Type}
   -> {shape : Vect n (Type -> Type)} -> {a : Type}
   -> Functor axis
   => Elem axis shape
-  -> GenTensor shape a
-  -> GenTensor shape a
+  -> Tensor shape a
+  -> Tensor shape a
 namedSoftmax {shape = []} axis t impossible -- can't be in vector if vector empty
 namedSoftmax {shape = (axis :: ss)} Here (GTS x) = GTS (?sm <$> x)
 namedSoftmax {shape = (s :: ss)} (There later) (GTS x) = GTS ?namedSoftmax_rhs_4

@@ -1,4 +1,4 @@
-module Tree
+module Data.Tree
 
 import Tensor.Tensor
 
@@ -14,6 +14,16 @@ data BTree : (leafType : Type) -> (nodeType : Type) -> Type where
         -> (leftTree : BTree leafType nodeType)
         -> (rightTree : BTree leafType nodeType)
         -> BTree leafType nodeType
+
+%name BTree bt, bt', bt''
+
+public export
+Leaf' : BTree () n
+Leaf' = Leaf ()
+
+public export
+Node' : BTree l () -> BTree l () -> BTree l ()
+Node' = Node ()
 
 public export
 Bifunctor BTree where
@@ -44,18 +54,18 @@ Functor BTreeLeaf where
       = Node x (map {f=BTreeLeaf} f leftTree) (map {f=BTreeLeaf} f rightTree)
 
 public export
-liftA2BinTreeLO : BTreeLeaf a -> BTreeLeaf b -> BTreeLeaf (a, b)
-liftA2BinTreeLO (Leaf a) (Leaf b) = Leaf (a, b)
-liftA2BinTreeLO l@(Leaf x) (Node n z w)
-  = Node n (liftA2BinTreeLO l z) (liftA2BinTreeLO l w)
-liftA2BinTreeLO (Node n z w) (Leaf x)
-  = Node n (liftA2BinTreeLO z (Leaf x)) (liftA2BinTreeLO w (Leaf x))
-liftA2BinTreeLO (Node n y z) (Node m v s) = Node n (liftA2BinTreeLO y v) (liftA2BinTreeLO z s) -- there's a choice here on what node to use! Maybe if we had a dot there?
+liftA2BTreeLeaf : BTreeLeaf a -> BTreeLeaf b -> BTreeLeaf (a, b)
+liftA2BTreeLeaf (Leaf a) (Leaf b) = Leaf (a, b)
+liftA2BTreeLeaf l@(Leaf x) (Node n z w)
+  = Node n (liftA2BTreeLeaf l z) (liftA2BTreeLeaf l w)
+liftA2BTreeLeaf (Node n z w) (Leaf x)
+  = Node n (liftA2BTreeLeaf z (Leaf x)) (liftA2BTreeLeaf w (Leaf x))
+liftA2BTreeLeaf (Node n y z) (Node m v s) = Node n (liftA2BTreeLeaf y v) (liftA2BTreeLeaf z s) -- there's a choice here on what node to use! Maybe if we had a dot there?
 
 public export
 Applicative BTreeLeaf where
     pure x = Leaf x
-    fs <*> xs = map {f=BTreeLeaf} (uncurry ($)) $ liftA2BinTreeLO fs xs 
+    fs <*> xs = map {f=BTreeLeaf} (uncurry ($)) $ liftA2BTreeLeaf fs xs 
 
 -- Is this even possible?
 -- probably is, but foldable really means traversing in a linear order
@@ -131,6 +141,18 @@ Functor BTreeNode where
   map f (Leaf leaf) = Leaf leaf -- only one element
   map f (Node node leftTree rightTree)
     = Node (f node) (map {f=BTreeNode} f leftTree) (map {f=BTreeNode} f rightTree) 
+
+
+-- Does this work only when the shapes match fully?
+public export
+liftA2BTreeNode : BTreeNode n -> BTreeNode m -> BTreeNode (n, m)
+liftA2BTreeNode (Node n lt rt) (Node m lt' rt') = Node (n, m) (liftA2BTreeNode lt lt') (liftA2BTreeNode rt rt')
+liftA2BTreeNode _ _ = Leaf ()
+
+public export
+Applicative BTreeNode where
+  pure a = Leaf () -- Is this correct?
+  fs <*> xs = map {f=BTreeNode} (uncurry ($)) $ liftA2BTreeNode fs xs 
 
 -- Swap the left and right subtrees at at specified path
 commute : PathBTree -> BTreeLeaf l -> BTreeLeaf l

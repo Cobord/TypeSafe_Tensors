@@ -36,11 +36,6 @@ transpose : (Naperian f, Naperian g) => f (g a) -> g (f a)
 transpose {f} {g} x = tabulate <$> tabulate (flip (lookup . (lookup x)))
 
 
-listLookup : List a -> Nat -> a
-listLookup xs 0 = ?listLookup_rhs_0
-listLookup xs (S k) = ?listLookup_rhs_1
-
-
 vectTabulate : {n : Nat} -> (Fin n -> a) -> Vect n a
 vectTabulate {n = 0} f = []
 vectTabulate {n = (S k)} f = f FZ :: vectTabulate {n=k} (\i => f (FS i))
@@ -71,6 +66,7 @@ public export
     tabulate = tensorTabulate
 
 -- using Naperian instance
+public export
 transposeMatrix : {i, j : Nat} -> Tensor [i, j] a -> Tensor [j, i] a
 transposeMatrix = fromNestedTensor . transpose . toNestedTensor
 
@@ -87,6 +83,11 @@ reshapeIndex : {shape : Vect n Nat} -> {newShape : Vect m Nat}
   -> IndexT shape
 reshapeIndex [] = ?reshapeIndex_rhs_0
 reshapeIndex (x :: xs) = ?reshapeIndex_rhs_1
+
+
+mapNats : {t, t' : Vect n Nat} -> {auto prf : prod t = prod t'}
+  -> Fin (prod t) -> Fin (prod t')
+mapNats i = ?mapNats_rhs
 
 
 reshapeIndex' : IndexT [2, 3]

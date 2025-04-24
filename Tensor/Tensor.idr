@@ -24,10 +24,6 @@ data Tensor : (shape : Vect n Nat) -> (dtype : Type) -> Type where
     TZ : (val : dtype) -> Tensor [] dtype
     TS : Vect d (Tensor ds dtype) -> Tensor (d :: ds) dtype
 
-exampleTensor : Tensor [2, 3] Double
-
-
-
 %name Tensor t, u, v
 
 public export
@@ -103,7 +99,6 @@ tensorReplicate {shape = (n :: _)} a = TS (replicate n (tensorReplicate a))
 
 -- generalised zip
 -- laxator of a monoidal functor
-
 public export
 liftA2Tensor : Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
 liftA2Tensor (TZ a) (TZ b) = TZ (a, b)
@@ -140,7 +135,7 @@ public export
 
 
 
--- The point of this construction is to be able to easily create tensors using lists, without needing to use the inductive form requiRig `TZ` and `TS`. 
+-- The point of this construction is to be able to easily create tensors using lists, without needing to use the inductive form requiring `TZ` and `TS`. 
 public export
 Array : (shape : Vect rank Nat) -> (dtype : Type) -> Type
 Array []        a = a
@@ -156,66 +151,79 @@ toArray : {shape : Vect rank Nat} -> Tensor shape a -> Array shape a
 toArray (TZ x) = x
 toArray (TS xs) = toArray <$> xs
 
-||| Machinery for indexing tensors
-||| Given a tensor `Tensor [3, 4] Double` this allows us to index one of its elements, and provide a compile-time guarantee that we won't be out of bounds
-||| See TensorExamples for examples of this in action
-public export
-data IndexT : (shape : Vect n Nat) -> Type where
-  Nil  : IndexT []
-  (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
+namespace IndexT
+  ||| Machinery for indexing tensors
+  ||| Given a tensor `Tensor [3, 4] Double` this allows us to index one of its elements, and provide a compile-time guarantee that we won't be out of bounds
+  ||| See TensorExamples for examples of this in action
+  public export
+  data IndexT : (shape : Vect n Nat) -> Type where
+    Nil  : IndexT []
+    (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
 
-public export
-Show (IndexT shape) where
-  show Nil = ""
-  show (i :: is) = show i ++ ", " ++ show is
+  public export
+  Show (IndexT shape) where
+    show Nil = ""
+    show (i :: is) = show i ++ ", " ++ show is
 
-public export
-indexToShape : {n : Nat}
-    -> {shape : Vect n Nat}
-    -> IndexT shape -> Vect n Nat
-indexToShape [] = []
-indexToShape (s :: ss) = finToNat s :: indexToShape ss
+  -- Couterpart of 'index' for Vectors
+  public export
+  indexTensor : (index : IndexT shape)
+              -> Tensor shape a
+              -> a
+  indexTensor [] (TZ val) = val
+  indexTensor (indHere :: restOfIndex) (TS xs)
+    = indexTensor restOfIndex (index indHere xs)
 
--- Couterpart of 'index' for Vectors
-public export
-indexTensor : (index : IndexT shape)
+
+  -- Why can't I use @ here?
+  public export infixr 9 @@
+
+  public export
+  (@@) : Tensor shape a -> IndexT shape -> a
+  (@@) = flip indexTensor
+
+-- public export
+-- (+++) : Vect n Nat -> Vect n Nat -> Vect n Nat
+-- (+++) [] [] = []
+-- (+++) (x :: xs) (y :: ys) = (x + y) :: ((+++) xs ys)
+
+
+namespace SliceT
+  ||| Machinery for slicing tensors
+  ||| Crucially, different from the indexing one in the definition of (::)
+  ||| Here we have Fin (S m) instead of Fin m
+  public export
+  data SliceT : (shape : Vect n Nat) -> Type where
+    Nil : SliceT []
+    (::) : Fin (S m) -> SliceT ms -> SliceT (m :: ms)
+
+  public export
+  sliceToShape : {shape : Vect n Nat} -> SliceT shape -> Vect n Nat
+  sliceToShape Nil = []
+  sliceToShape (s :: ss) = finToNat s :: sliceToShape ss
+
+  public export -- analogus to take in Data.Vect, but for Fin
+  takeFin : (s : Fin (S n)) -> Vect n a -> Vect (finToNat s) a
+  takeFin FZ _ = []
+  takeFin (FS s) (x :: xs) = x :: takeFin s xs
+
+  public export --
+  takeTensor : (slice : SliceT shape)
             -> Tensor shape a
-            -> a
-indexTensor [] (TZ val) = val
-indexTensor (indHere :: restOfIndex) (TS xs)
-  = indexTensor restOfIndex (index indHere xs)
+            -> Tensor (sliceToShape slice) a
+  takeTensor Nil (TZ val) = TZ val
+  takeTensor (s :: ss) (TS xs) = TS $ (takeTensor ss) <$> takeFin s xs
 
 
-public export infixr 9 @@
-
-public export
-(@@) : Tensor shape a -> IndexT shape -> a
-(@@) = flip indexTensor
-
-public export
-(+++) : Vect n Nat -> Vect n Nat -> Vect n Nat
-(+++) [] [] = []
-(+++) (x :: xs) (y :: ys) = (x + y) :: ((+++) xs ys)
-
-public export -- analogus to take in Data.Vect, but for Fin
-takeFin : (s : Fin n) -> Vect n a -> Vect (finToNat s) a
-takeFin FZ _ = []
-takeFin (FS s) (x :: xs) = x :: takeFin s xs
-
-public export --
-takeTensor : (slice : IndexT shape)
-          -> Tensor shape a
-          -> Tensor (indexToShape slice) a
-takeTensor [] (TZ val) = TZ val
-takeTensor (s :: ss) (TS xs) = TS $ (takeTensor ss) <$> takeFin s xs
-
-
-public export
-reshapeTensor : Tensor shape a
+namespace ReshapeT
+  ||| Machinery for reshaping tensors
+  ||| Still WIP
+  public export
+  reshapeTensor : Tensor shape a
               -> (newShape : Vect n Nat)
               -> {auto prf : prod shape = prod newShape}
               -> Tensor newshape a
-reshapeTensor t newShape = ?reshapeTensor_rhs
+  reshapeTensor t newShape = ?reshapeTensor_rhs
 
 public export
 toList : Tensor shape a -> List a

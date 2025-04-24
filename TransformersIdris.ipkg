@@ -21,11 +21,12 @@ modules = ApplicativeLinAlg,
           Misc,
           Rig,
           Tensor.Einsum,
-          Tensor.GenTensor,
+          Tensor.GeneralisedTensor.Tensor,
+          Tensor.GeneralisedTensor.TensorExamples,
           Tensor.Naperian,
           Tensor.Tensor,
           Tensor.TensorView,
-          Tree
+          Data.Tree
 
 -- main file (i.e. file to load at REPL)
 -- main =
