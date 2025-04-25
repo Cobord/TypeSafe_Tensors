@@ -17,16 +17,20 @@ authors = "Bruno Gavranovic"
 
 -- modules to install
 modules = ApplicativeLinAlg,
-          IevaExamples.IevaExamples,
+          Data.Tree,
           Misc,
           Rig,
-          Tensor.Einsum,
+          Tensor.ContainerTensor.Tensor,
+          Tensor.ContainerTensor.TensorExamples,
+          Tensor.CubicalTensor.Tensor,
+          Tensor.CubicalTensor.TensorExamples,
+          Tensor.CubicalTensor.TensorUtils,
+          Tensor.CubicalTensor.TensorView,
           Tensor.GeneralisedTensor.Tensor,
           Tensor.GeneralisedTensor.TensorExamples,
           Tensor.Naperian,
-          Tensor.Tensor,
-          Tensor.TensorView,
-          Data.Tree
+          Tensor.Einsum,
+          IevaExamples.IevaExamples
 
 -- main file (i.e. file to load at REPL)
 -- main =

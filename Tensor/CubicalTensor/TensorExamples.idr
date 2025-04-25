@@ -1,9 +1,9 @@
-module Tensor.TensorExamples
+module Tensor.CubicalTensor.TensorExamples
 
 import Data.Fin
 import Data.Vect
 
-import Tensor.Tensor
+import Tensor.CubicalTensor.Tensor
 import Tensor.Naperian
 ---------------
 --- Examples

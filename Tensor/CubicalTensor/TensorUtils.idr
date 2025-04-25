@@ -3,7 +3,7 @@ module Tensor.TensorUtils
 import Data.Vect 
 
 import Rig
-import Tensor.Tensor
+import Tensor.CubicalTensor.Tensor
 
 public export
 zeros : Rig a => {shape : Vect n Nat} -> Tensor shape a

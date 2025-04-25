@@ -3,7 +3,7 @@ module Tensor.TensorView
 import Data.Vect
 import Data.Fin.Arith
 
-import Tensor.Tensor
+import Tensor.CubicalTensor.Tensor
 import Rig
 
 

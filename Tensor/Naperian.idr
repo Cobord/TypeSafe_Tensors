@@ -2,7 +2,7 @@ module Tensor.Naperian
 
 import Data.Vect
 
-import Tensor.Tensor
+import Tensor.CubicalTensor.Tensor
 import Rig
 
 %hide Data.Vect.transpose
@@ -23,7 +23,7 @@ Would ragged shapes imply dependent types?
 -- Is every Naperian functor Applicative?
 public export
 interface Functor f => Naperian f where
-    Log : Type
+    Log : Type -- perhaps a better name is Shape
     lookup : f a -> Log -> a -- this and the line below
     tabulate : (Log -> a) -> f a -- are an isomorphism
 

@@ -2,7 +2,7 @@ module Tensor.Einsum
 
 import Data.Vect
 
-import Tensor.Tensor
+import Tensor.CubicalTensor.Tensor
 import Tensor.Naperian
 
 {-
