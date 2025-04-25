@@ -43,11 +43,11 @@ absExample = abs negExample
 
 -- Safe indexing, t1 @ [7, 5] would not compile
 indexExample : Double
--- indexExample = t1 @@ [1, 2]
+indexExample = t1 @@ [1, 2]
 
 -- Safe slicing, takeTensor [10, 2] t1 would not compile
 takeExample : Tensor' [2, 1] Double
--- takeExample = takeTensor [2, 1] t1
+takeExample = takeTensor [2, 1] t1
 
 
 

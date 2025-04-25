@@ -22,11 +22,11 @@ data FinTreeNode : (b : BTreeShape) -> Type where
   Root : {l, r : BTreeShape} -> FinTreeNode (NodeS l r)
 
   -- Represents a position located within the *left* subtree 'l'.
-  -- It takes a position 'FinTreeNode l' and "lifts" it into the parent context '(NodeS l r)'.
+  -- It takes a position 'FinTreeNode l' and "lifts" it into the parent contExt '(NodeS l r)'.
   GoL  : {l, r : BTreeShape} -> FinTreeNode l -> FinTreeNode (NodeS l r)
 
   -- Represents a position located within the *right* subtree 'r'.
-  -- It takes a position 'FinTreeNode r' and "lifts" it into the parent context '(NodeS l r)'.
+  -- It takes a position 'FinTreeNode r' and "lifts" it into the parent contExt '(NodeS l r)'.
   GoR  : {l, r : BTreeShape} -> FinTreeNode r -> FinTreeNode (NodeS l r)
 
 ||| Positions corresponding to leaves within a BTreeShape shape.
@@ -82,46 +82,55 @@ TreeLeafCont = (b : BTreeShape) !> FinTreeLeaf b
 ||| Extension of a container
 ||| This allows us to talk about the content, or payload of a container
 public export
-ext : Cont -> Type -> Type
-ext (shp !> pos) x = (s : shp ** pos s -> x)
+record Ext (c : Cont) (x : Type) where
+  constructor (<|)
+  shapeExt : c.shp
+  valuesExt : c.pos shapeExt -> x
+-- public export
+-- Ext : Cont -> Type -> Type
+-- Ext (shp !> pos) x = (s : shp ** pos s -> x)
 
+-- previously called ExtMap
 public export
-extMap : (c : Cont) -> (a -> b) -> ext c a -> ext c b
-extMap (shp !> pos) f ((s ** v)) = (s ** f . v)
-
+Functor (Ext c) where
+  map {c=shp !> pos} f ((s <| v)) = (s <| f . v)
 
 ||| Isomorphic to Pair
 public export
 Pair' : Type -> Type
-Pair' = ext PairCont
+Pair' = Ext PairCont
 
 ||| Isomorphic to Vect
 public export
 Vect' : (n : Nat) -> Type -> Type
-Vect' n = ext (VectCont n)
+Vect' n = Ext (VectCont n)
 
 ||| Isomorphic to Maybe
 public export
 Maybe' : Type -> Type
-Maybe' = ext MaybeCont
+Maybe' = Ext MaybeCont
 
 ||| Isomorphic to List
 public export
 List' : Type -> Type
-List' = ext ListCont
+List' = Ext ListCont
+
+-- Starting with (Fin l -> x) and an extra x, we produce a map (Fin (S l) -> x) 
+-- whose first element is the extra x 
+addBeginning : x -> (Fin l -> x) -> (Fin (S l) -> x)
+addBeginning x _ FZ = x
+addBeginning _ c (FS k') = c k'
 
 public export
 fromList : List x -> List' x
-fromList [] = (0 ** absurd)
-fromList (x :: xs) = let (l ** c) = fromList xs
-                     in (S l ** \k => case k of
-                                         FZ => x
-                                         FS k' => c k')
+fromList [] = (0 <| absurd)
+fromList (x :: xs) = let (l <| c) = fromList xs
+                     in (S l <| addBeginning x c)
 
 ||| Isomorphic to Trees with data at only nodes
 public export
 TreeNode' : Type -> Type
-TreeNode' = ext TreeNodeCont
+TreeNode' = Ext TreeNodeCont
 
 fromTreeHelper : FinTreeNode LeafS -> a
 fromTreeHelper Root impossible
@@ -130,11 +139,11 @@ fromTreeHelper (GoR x) impossible
 
 public export
 fromTree : BTreeNode a -> TreeNode' a
-fromTree (Leaf ()) = (LeafS ** fromTreeHelper)
+fromTree (Leaf ()) = (LeafS <| fromTreeHelper)
 fromTree (Node node leftTree rightTree)
-  = let (lts ** ltc) = fromTree leftTree
-        (rts ** rtc) = fromTree rightTree
-    in (NodeS lts rts ** \pos =>
+  = let (lts <| ltc) = fromTree leftTree
+        (rts <| rtc) = fromTree rightTree
+    in (NodeS lts rts <| \pos =>
           case pos of
             Root => node
             GoL posL => ltc posL
@@ -143,7 +152,7 @@ fromTree (Node node leftTree rightTree)
 
 ||| Isomorphic to Trees with data only at leaves
 TreeLeaf' : Type -> Type
-TreeLeaf' = ext TreeLeafCont
+TreeLeaf' = Ext TreeLeafCont
 
 
 hhh : FinTreeLeaf (NodeS LeafS LeafS) -> Int
@@ -151,10 +160,10 @@ hhh (GoLLeaf AtLeaf) = 3
 hhh (GoRLeaf AtLeaf) = 4
 
 t : TreeLeaf' Int
-t = (NodeS LeafS LeafS ** hhh)
+t = (NodeS LeafS LeafS <| hhh)
 
 vv : Vect' 9 Int
-vv = (() ** ?vv_rhs)
+vv = (() <| ?vv_rhs)
 
 ll : List' Int
 ll = fromList [1,2,3,4]
