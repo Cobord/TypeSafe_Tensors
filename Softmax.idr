@@ -3,8 +3,7 @@ module Softmax
 import Data.Vect
 import Data.Vect.Elem
 
-import Tensor
-import Tensor
+import Tensor.CubicalTensor.Tensor
 
 import ApplicativeLinAlg
 import Algebra
@@ -35,12 +34,12 @@ softmaxTreeNode = softmax {f=BTreeNode}
 
 
 
-namedSoftmax : {axis : Type -> Type}
-  -> {shape : Vect n (Type -> Type)} -> {a : Type}
-  -> Functor axis
-  => Elem axis shape
-  -> Tensor shape a
-  -> Tensor shape a
-namedSoftmax {shape = []} axis t impossible -- can't be in vector if vector empty
-namedSoftmax {shape = (axis :: ss)} Here (GTS x) = GTS (?sm <$> x)
-namedSoftmax {shape = (s :: ss)} (There later) (GTS x) = GTS ?namedSoftmax_rhs_4
+-- namedSoftmax : {axis : Type -> Type}
+--   -> {shape : Vect n ApplF} -> {a : Type}
+--   -> Functor axis
+--   => Elem axis shape
+--   -> Tensor shape a
+--   -> Tensor shape a
+-- namedSoftmax {shape = []} axis t impossible -- can't be in vector if vector empty
+-- namedSoftmax {shape = (axis :: ss)} Here (GTS x) = GTS (?sm <$> x)
+-- namedSoftmax {shape = (s :: ss)} (There later) (GTS x) = GTS ?namedSoftmax_rhs_4

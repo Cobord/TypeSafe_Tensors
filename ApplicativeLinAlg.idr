@@ -3,7 +3,7 @@ module ApplicativeLinAlg
 import Data.Fin
 import Data.Vect
 
-import Tensor.Tensor
+import Tensor.CubicalTensor.Tensor
 import Tensor.Naperian
 import Tree
 import Rig

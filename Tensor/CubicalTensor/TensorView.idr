@@ -1,4 +1,4 @@
-module Tensor.TensorView
+module Tensor.CubicalTensor.TensorView
 
 import Data.Vect
 import Data.Fin.Arith

@@ -60,7 +60,7 @@ Traversable (Tensor shape) where
 
 public export
 toNestedTensor : Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
-toNestedTensor (TS vs) = TS (map TZ vs)
+toNestedTensor (TS vs) = TS (TZ <$> vs)
 
 public export
 fromNestedTensor : Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
@@ -91,24 +91,25 @@ public export
 Matrix : (rows, cols : Nat) -> (dtype : Type) -> Type
 Matrix rows cols dtype = Tensor [rows, cols] dtype
 
--- unit of a monoidal functor
-public export
-tensorReplicate : {shape : Vect n Nat} -> a -> Tensor shape a
-tensorReplicate {shape = []} a = TZ a
-tensorReplicate {shape = (n :: _)} a = TS (replicate n (tensorReplicate a))
-
--- generalised zip
--- laxator of a monoidal functor
-public export
-liftA2Tensor : Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
-liftA2Tensor (TZ a) (TZ b) = TZ (a, b)
-liftA2Tensor (TS as) (TS bs) = TS (zipWith liftA2Tensor as bs) 
-
-
-public export
-{shape : Vect n Nat} -> Applicative (Tensor shape) where
-  pure x = tensorReplicate x
-  fs <*> xs = map (uncurry ($)) $ liftA2Tensor fs xs 
+namespace ApplicativeT
+  -- unit of a monoidal functor
+  public export
+  tensorReplicate : {shape : Vect n Nat} -> a -> Tensor shape a
+  tensorReplicate {shape = []} a = TZ a
+  tensorReplicate {shape = (n :: _)} a = TS (replicate n (tensorReplicate a))
+  
+  -- generalised zip
+  -- laxator of a monoidal functor
+  public export
+  liftA2Tensor : Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
+  liftA2Tensor (TZ a) (TZ b) = TZ (a, b)
+  liftA2Tensor (TS as) (TS bs) = TS (zipWith liftA2Tensor as bs) 
+  
+  
+  public export
+  {shape : Vect n Nat} -> Applicative (Tensor shape) where
+    pure x = tensorReplicate x
+    fs <*> xs = map (uncurry ($)) $ liftA2Tensor fs xs 
 
 -- Pointwise Rig structure
 public export

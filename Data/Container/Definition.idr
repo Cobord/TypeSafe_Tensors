@@ -4,6 +4,7 @@ import Data.Fin
 import Data.Vect
 
 import Data.Tree
+import Misc
 
 %hide Data.Vect.fromList
 %hide Builtin.fst
@@ -58,7 +59,7 @@ PairCont : Cont
 PairCont = (_ : Unit) !> Bool
 
 public export
-VectCont : (n : Nat) -> Cont
+VectCont : Nat -> Cont
 VectCont n = (_ : Unit) !> Fin n
 
 public export
@@ -85,16 +86,24 @@ public export
 record Ext (c : Cont) (x : Type) where
   constructor (<|)
   shapeExt : c.shp
-  valuesExt : c.pos shapeExt -> x
+  indexCont : c.pos shapeExt -> x
 -- public export
 -- Ext : Cont -> Type -> Type
 -- Ext (shp !> pos) x = (s : shp ** pos s -> x)
+
+-- Container 'c' "full off" `off` a type 'x'
+public export
+fof : Cont -> Type -> Type
+fof c x = Ext c x 
 
 -- previously called ExtMap
 public export
 Functor (Ext c) where
   map {c=shp !> pos} f ((s <| v)) = (s <| f . v)
 
+-- Applicative (Ext c) where
+--   pure x = ?hooo <| \_ => x --(s <| \_ => x)b
+--   (<*>) = ?hooop --(s <| \_ => x)
 ||| Isomorphic to Pair
 public export
 Pair' : Type -> Type
@@ -103,7 +112,7 @@ Pair' = Ext PairCont
 ||| Isomorphic to Vect
 public export
 Vect' : (n : Nat) -> Type -> Type
-Vect' n = Ext (VectCont n)
+Vect' n x = (VectCont n) `fof` x
 
 ||| Isomorphic to Maybe
 public export
@@ -115,17 +124,16 @@ public export
 List' : Type -> Type
 List' = Ext ListCont
 
--- Starting with (Fin l -> x) and an extra x, we produce a map (Fin (S l) -> x) 
--- whose first element is the extra x 
-addBeginning : x -> (Fin l -> x) -> (Fin (S l) -> x)
-addBeginning x _ FZ = x
-addBeginning _ c (FS k') = c k'
-
 public export
 fromList : List x -> List' x
 fromList [] = (0 <| absurd)
 fromList (x :: xs) = let (l <| c) = fromList xs
                      in (S l <| addBeginning x c)
+
+
+public export
+fromVect : {n : Nat} -> Vect n x -> Vect' n x
+fromVect {n} v = () <| \i => index i v
 
 ||| Isomorphic to Trees with data at only nodes
 public export
@@ -162,8 +170,6 @@ hhh (GoRLeaf AtLeaf) = 4
 t : TreeLeaf' Int
 t = (NodeS LeafS LeafS <| hhh)
 
-vv : Vect' 9 Int
-vv = (() <| ?vv_rhs)
 
 ll : List' Int
 ll = fromList [1,2,3,4]

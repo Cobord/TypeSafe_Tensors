@@ -1,4 +1,4 @@
-module Tensor.TensorUtils
+module Tensor.CubicalTensor.TensorUtils
 
 import Data.Vect 
 

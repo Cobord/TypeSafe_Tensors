@@ -11,6 +11,14 @@ public export
 liftA2 : Applicative f => f a -> f b -> f (a, b)
 liftA2 fa fb = ((,) <$> fa) <*> fb
 
+-- Starting with (Fin l -> x) and an extra x, we produce a map (Fin (S l) -> x) 
+-- whose first element is the extra x 
+public export
+addBeginning : x -> (Fin l -> x) -> (Fin (S l) -> x)
+addBeginning x _ FZ = x
+addBeginning _ c (FS k') = c k'
+
+
 
 -- t : {A, B : Type}
 --   -> Bool -> Type
