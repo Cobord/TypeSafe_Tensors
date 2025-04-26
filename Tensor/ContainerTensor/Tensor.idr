@@ -58,18 +58,15 @@ namespace ApplicativeTensor
     = TS $ uncurry (liftA2Cont {allAppl=allAppl'}) <$> (liftA2 x y)
 
   public export
-  {shape : Vect n Cont} -> {allAppl : AllAppl shape} -> Applicative (Tensor shape) where
+  {shape : Vect n Cont} -> (allAppl : AllAppl shape) => Applicative (Tensor shape) where
     pure = tensorReplicate {allAppl=allAppl}
     fs <*> xs = map (uncurry ($)) $ liftA2Cont {allAppl=allAppl} fs xs 
 
 public export
-{shape : Vect n Cont} -> {allAppl : AllAppl shape} -> Num a => Num (Tensor shape a) where
-  fromInteger {allAppl = []} i = tensorReplicate {allAppl=[]} $ fromInteger i 
-  fromInteger {allAppl = (Cons x)} i = ?tuuu_1 -- tensorReplicate $ let t = Prelude.fromInteger i in ?vlll
-  -- i = tensorReplicate (let t = Prelude.fromInteger i in ?ahhh) -- tensorReplicate (fromInteger i)
-  xs + ys = ?vnaj1 -- (uncurry (+)) <$> liftA2 xs ys
-  xs * ys = ?vnaj2 -- (uncurry (*)) <$> liftA2 xs ys
-
+{shape : Vect n Cont} -> (allAppl : AllAppl shape) => Num a => Num (Tensor shape a) where
+  fromInteger i = pure (fromInteger i)
+  xs + ys = (uncurry (+)) <$> liftA2 xs ys
+  xs * ys = (uncurry (*)) <$> liftA2 xs ys
 
 public export
 Array : (shape : Vect rank Cont) -> (dtype : Type) -> Type
@@ -101,6 +98,15 @@ record Tensor' (shape : Vect n Nat) a where
 --     -> Tensor (VectCont <$> shape) a
 --     -> Tensor' shape a
 
+public export
+{shape : Vect n Nat} ->
+{allAppl : AllAppl (VectCont <$> shape)} ->
+Num a =>
+Num (Tensor' shape a) where
+  fromInteger i = MkT $ fromInteger {ty=(Tensor (VectCont <$> shape) a)} i
+  (MkT xs) + (MkT ys) = MkT $ (+) {ty=(Tensor (VectCont <$> shape) a)} xs ys
+  (MkT xs) * (MkT ys) = MkT $ (*) {ty=(Tensor (VectCont <$> shape) a)} xs ys
+
 
 public export
 Array' : (shape : Vect n Nat) -> (dtype : Type) -> Type
@@ -109,9 +115,10 @@ Array' (s :: ss) dtype = Vect s (Array' ss dtype)
 
 fromArrayHelper : {shape : Vect n Nat}
   -> Array' shape a
-  -> Tensor (map (\n => (!>) () (\_ => Fin n)) shape) a
+  -> Tensor (VectCont <$> shape) a
 fromArrayHelper {shape=[]} x = TZ x
-fromArrayHelper {shape=(s :: ss)} x = TS $ fromVect $ fromArrayHelper <$> x
+fromArrayHelper {shape=(s :: ss)} x
+  = TS $ GetVect' $ fromVect $ fromArrayHelper <$> x
 
 public export
 fromArray' : {shape : Vect n Nat} -> Array' shape a -> Tensor' shape a
@@ -211,7 +218,7 @@ vv = fromVect [1,2,3]
 
 -- Same as index from Data.Vect!
 indexVect : Fin n -> Vect' n a -> a
-indexVect x xs = indexCont xs x 
+indexVect x (MkVect' v) = indexCont v x
 
 
 

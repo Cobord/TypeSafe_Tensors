@@ -35,11 +35,12 @@ public export
 transpose : (Naperian f, Naperian g) => f (g a) -> g (f a)
 transpose {f} {g} x = tabulate <$> tabulate (flip (lookup . (lookup x)))
 
-
+public export
 vectTabulate : {n : Nat} -> (Fin n -> a) -> Vect n a
 vectTabulate {n = 0} f = []
 vectTabulate {n = (S k)} f = f FZ :: vectTabulate {n=k} (\i => f (FS i))
 
+public export
 vectPositions : {n : Nat} -> Vect n (Fin n)
 vectPositions {n = 0} = []
 vectPositions {n = (S k)} = FZ :: (FS <$> vectPositions)

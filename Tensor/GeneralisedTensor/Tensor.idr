@@ -33,33 +33,35 @@ data Tensor : (shape : Vect n ApplF)
 
 %name Tensor t, u, v
 
-public export
-data AllEq : (shape : Vect n ApplF) -> (dtype : Type) -> Type where
-  NilEq : Eq a => AllEq [] a
-  ConsEq : Applicative f => Eq (f (Tensor fs dtype)) => AllEq ((# f) :: fs) dtype
+namespace EqT
+  public export
+  data AllEq : (shape : Vect n ApplF) -> (dtype : Type) -> Type where
+    NilEq : Eq a => AllEq [] a
+    ConsEq : Applicative f => Eq (f (Tensor fs dtype)) => AllEq ((# f) :: fs) dtype
 
-public export
-genTensorEq : (allEq : AllEq shape a) => Tensor shape a -> Tensor shape a -> Bool
-genTensorEq (GTZ x) (GTZ y) {allEq = NilEq} = x == y
-genTensorEq (GTS xs) (GTS ys) {allEq = ConsEq} = xs == ys
+  public export
+  genTensorEq : (allEq : AllEq shape a) => Tensor shape a -> Tensor shape a -> Bool
+  genTensorEq (GTZ x) (GTZ y) {allEq = NilEq} = x == y
+  genTensorEq (GTS xs) (GTS ys) {allEq = ConsEq} = xs == ys
 
-public export
-(allEq : AllEq shape a) => Eq (Tensor shape a) where
-  (==) = genTensorEq
+  public export
+  (allEq : AllEq shape a) => Eq (Tensor shape a) where
+    (==) = genTensorEq
 
-public export
-data AllShow : (shape : Vect n ApplF) -> (dtype : Type) -> Type where
-  NilShow : Show a => AllShow [] a
-  ConsShow : Applicative f => Show (f (Tensor fs dtype)) => AllShow ((# f) :: fs) dtype
+namespace ShowT
+  public export
+  data AllShow : (shape : Vect n ApplF) -> (dtype : Type) -> Type where
+    NilShow : Show a => AllShow [] a
+    ConsShow : Applicative f => Show (f (Tensor fs dtype)) => AllShow ((# f) :: fs) dtype
 
-public export
-genTensorShow : (allShow : AllShow shape a) => Tensor shape a -> String
-genTensorShow {allShow = NilShow} (GTZ val) = show val
-genTensorShow {allShow = ConsShow} (GTS xs) = show xs
+  public export
+  genTensorShow : (allShow : AllShow shape a) => Tensor shape a -> String
+  genTensorShow {allShow = NilShow} (GTZ val) = show val
+  genTensorShow {allShow = ConsShow} (GTS xs) = show xs
 
-public export
-(allShow : AllShow shape a) => Show (Tensor shape a) where
-  show = genTensorShow
+  public export
+  (allShow : AllShow shape a) => Show (Tensor shape a) where
+    show = genTensorShow
 
 public export
 Functor (Tensor shape) where
@@ -67,23 +69,24 @@ Functor (Tensor shape) where
   map f (GTS xs) = GTS $ (map f) <$> xs
 
 
-||| Unit of a monoidal functor
-public export
-tensorReplicate : {shape : Vect n ApplF} -> a -> Tensor shape a
-tensorReplicate {shape = []} a = GTZ a
-tensorReplicate {shape = ((# _) :: _)} a = GTS (pure (tensorReplicate a))
-
-||| Generalised zip
-||| Laxator of a monoidal functor
-public export
-liftA2Tensor : Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
-liftA2Tensor (GTZ a) (GTZ b) = GTZ (a, b)
-liftA2Tensor (GTS as) (GTS bs) = GTS $ (uncurry liftA2Tensor) <$> (liftA2 as bs)
-
-public export
-{shape : Vect n ApplF} -> Applicative (Tensor shape) where
-  pure = tensorReplicate
-  fs <*> xs = (uncurry ($)) <$> liftA2Tensor fs xs 
+namespace ApplicativeT
+  ||| Unit of a monoidal functor
+  public export
+  tensorReplicate : {shape : Vect n ApplF} -> a -> Tensor shape a
+  tensorReplicate {shape = []} a = GTZ a
+  tensorReplicate {shape = ((# _) :: _)} a = GTS (pure (tensorReplicate a))
+  
+  ||| Generalised zip
+  ||| Laxator of a monoidal functor
+  public export
+  liftA2Tensor : Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
+  liftA2Tensor (GTZ a) (GTZ b) = GTZ (a, b)
+  liftA2Tensor (GTS as) (GTS bs) = GTS $ (uncurry liftA2Tensor) <$> (liftA2 as bs)
+  
+  public export
+  {shape : Vect n ApplF} -> Applicative (Tensor shape) where
+    pure = tensorReplicate
+    fs <*> xs = (uncurry ($)) <$> liftA2Tensor fs xs 
 
 public export
 {shape : Vect n ApplF} -> Num a => Num (Tensor shape a) where

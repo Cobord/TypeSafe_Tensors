@@ -3,6 +3,7 @@ module Tensor.ContainerTensor.TensorExamples
 import Data.Vect
 import Data.Fin
 
+import Data.Container.Definition
 import Tensor.ContainerTensor.Tensor
 import Algebra
 import Tree
@@ -30,9 +31,12 @@ t2 = fromArray' $ [ [0, 1, 2, 3, 4]
                   , [5, 6, 7, 8, 9]]
 
 
+allAppl : AllAppl (VectCont <$> [3, 4])
+-- allAppl = let t = Cons in ?allAppl_rhs
+
 -- Safe elementwise addition, t1 + t2 would not compile
 tSum : Tensor' [3, 4] Double
-tSum = t1 + t1
+-- tSum = t1 + t1
 
 tMul : Tensor' [2, 5] Double
-tMul = t2 * t2
+-- tMul = t2 * t2

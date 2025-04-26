@@ -12,10 +12,12 @@ import Tensor.Naperian
 t0 : Tensor [7] Double
 t0 = fromArray [1,2,3,4,5,6,7]
 
+
 t1 : Tensor [3, 4] Double
 t1 = fromArray $ [ [0, 1, 2, 3]
                  , [4, 5, 6, 7]
                  , [8, 9, 10, 11]]
+
 
 t2 : Tensor [2, 5] Double
 t2 = fromArray $ [ [0, 1, 2, 3, 4]

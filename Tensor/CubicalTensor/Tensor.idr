@@ -121,7 +121,7 @@ public export
 
 public export
 {shape : Vect n Nat} -> Num a => Num (Tensor shape a) where
-  fromInteger i = tensorReplicate (fromInteger i)
+  fromInteger i = pure (fromInteger i)
   xs + ys = (uncurry (+)) <$> liftA2 xs ys
   xs * ys = (uncurry (*)) <$> liftA2 xs ys
 
