@@ -8,6 +8,8 @@ import Data.Container.Definition
 import Tensor.Naperian
 import Misc
 import Data.Tree
+import Algebra
+import Rig
 
 %hide Data.Vect.fromList
 
@@ -20,17 +22,17 @@ data BTreeShape : Type where
 
 ||| Positions corresponding to internal nodes within a BTreeShape shape.
 public export
-data FinTreeNode : (b : BTreeShape) -> Type where
-  Root : {l, r : BTreeShape} -> FinTreeNode (NodeS l r)
-  GoL  : {l, r : BTreeShape} -> FinTreeNode l -> FinTreeNode (NodeS l r)
-  GoR  : {l, r : BTreeShape} -> FinTreeNode r -> FinTreeNode (NodeS l r)
+data FinBTreeNode : (b : BTreeShape) -> Type where
+  Root : {l, r : BTreeShape} -> FinBTreeNode (NodeS l r)
+  GoL  : {l, r : BTreeShape} -> FinBTreeNode l -> FinBTreeNode (NodeS l r)
+  GoR  : {l, r : BTreeShape} -> FinBTreeNode r -> FinBTreeNode (NodeS l r)
 
 ||| Positions corresponding to leaves within a BTreeShape shape.
 public export
-data FinTreeLeaf : (b : BTreeShape) -> Type where
-  AtLeaf : FinTreeLeaf LeafS
-  GoLLeaf : {l, r : BTreeShape} -> FinTreeLeaf l -> FinTreeLeaf (NodeS l r)
-  GoRLeaf : {l, r : BTreeShape} -> FinTreeLeaf r -> FinTreeLeaf (NodeS l r)
+data FinBTreeLeaf : (b : BTreeShape) -> Type where
+  AtLeaf : FinBTreeLeaf LeafS
+  GoLLeaf : {l, r : BTreeShape} -> FinBTreeLeaf l -> FinBTreeLeaf (NodeS l r)
+  GoRLeaf : {l, r : BTreeShape} -> FinBTreeLeaf r -> FinBTreeLeaf (NodeS l r)
 
 -- Examples
 public export
@@ -51,13 +53,13 @@ ListCont = (n : Nat) !> (Fin n)
 
 ||| Trees with data stored at nodes
 public export
-TreeNodeCont : Cont
-TreeNodeCont = (b : BTreeShape) !> FinTreeNode b
+BTreeNodeCont : Cont
+BTreeNodeCont = (b : BTreeShape) !> FinBTreeNode b
 
 ||| Trees with data stored at leaves
 public export
-TreeLeafCont : Cont
-TreeLeafCont = (b : BTreeShape) !> FinTreeLeaf b
+BTreeLeafCont : Cont
+BTreeLeafCont = (b : BTreeShape) !> FinBTreeLeaf b
 
 
 ||| Isomorphic to Pair
@@ -65,15 +67,10 @@ public export
 Pair' : Type -> Type
 Pair' = Ext PairCont
 
-public export
-VectOld : (n : Nat) -> Type -> Type
-VectOld n x = (VectCont n) `fof` x
-
 ||| Isomorphic to Vect
 public export
-record Vect' (n : Nat) (x : Type) where
-  constructor MkVect'
-  GetVect' : (VectCont n) `fof` x
+Vect' : (n : Nat) -> Type -> Type
+Vect' n x = (VectCont n) `fof` x
 
 ||| Isomorphic to Maybe
 public export
@@ -93,106 +90,124 @@ fromList (x :: xs) = let (l <| c) = fromList xs
 
 
 public export
-fromVectOld : Vect n x -> VectOld n x
-fromVectOld v = () <| \i => index i v
-
-public export
 fromVect : Vect n x -> Vect' n x
-fromVect v = MkVect' $ () <| \i => index i v
+fromVect v = () <| \i => index i v
 
 public export
 toVect : {n : Nat} -> Vect' n x -> Vect n x
-toVect (MkVect' (_ <| indexCont)) = vectTabulate indexCont
+toVect (_ <| indexCont) = vectTabulate indexCont
 
 
-public export
-Functor (Vect' n) where
-  map f (MkVect' a) = MkVect' $ map {f=(Ext (VectCont n))} f a
+-- public export
+-- Functor (Vect' n) where
+--   map f a = map {f=(Ext (VectCont n))} f a
 
-public export
-{n : Nat} -> Applicative (Vect' n) where
-  pure a = fromVect (pure a)
-  fs <*> vs = fromVect $ toVect fs <*> toVect vs 
+-- public export
+-- {n : Nat} -> Applicative (Vect' n) where
+--   pure a = fromVect (pure a)
+--   fs <*> vs = fromVect $ toVect fs <*> toVect vs 
 
 public export
 {n : Nat} -> Applicative (Ext (VectCont n)) where
-  pure a = GetVect' $ fromVect $ pure a
-  fs <*> vs = GetVect' $ fromVect $ toVect (MkVect' fs) <*> toVect (MkVect' vs)
+  pure a = fromVect $ pure a
+  fs <*> vs = fromVect $ toVect fs <*> toVect vs
 
 
 ||| Isomorphic to Trees with data at only nodes
 public export
-TreeNode' : Type -> Type
-TreeNode' = Ext TreeNodeCont
+BTreeNode' : Type -> Type
+BTreeNode' = Ext BTreeNodeCont
 
 ||| Isomorphic to Trees with data only at leaves
 public export
-TreeLeaf' : Type -> Type
-TreeLeaf' = Ext TreeLeafCont
+BTreeLeaf' : Type -> Type
+BTreeLeaf' = Ext BTreeLeafCont
 
-namespace TreeNodeInstances
+namespace BTreeLeafInstances
+    public export
+    liftA2BBTreeLeaf' : BTreeLeaf' a -> BTreeLeaf' b -> BTreeLeaf' (a, b)
+    liftA2BBTreeLeaf' (LeafS <| v) (LeafS <| v') = LeafS <| (\x => (v x, v' x))
+    liftA2BBTreeLeaf' (LeafS <| v) (NodeS l' r' <| v') =
+      NodeS l' r' <| \pos =>
+        case pos of
+          GoLLeaf posL' => (v AtLeaf, v' (GoLLeaf posL'))
+          GoRLeaf posR' => (v AtLeaf, v' (GoRLeaf posR'))
+    liftA2BBTreeLeaf' (NodeS l r <| v) (LeafS <| v') =
+      NodeS l r <| \pos =>
+        case pos of
+          GoLLeaf posL => (v (GoLLeaf posL), v' AtLeaf)
+          GoRLeaf posR => (v (GoRLeaf posR), v' AtLeaf)
+    liftA2BBTreeLeaf' (NodeS l r <| v) (NodeS l' r' <| v') =
+      let (ls <| fl) = liftA2BBTreeLeaf' (l <| v . GoLLeaf) (l' <| v' . GoLLeaf)
+          (rs <| fr) = liftA2BBTreeLeaf' (r <| v . GoRLeaf) (r' <| v' . GoRLeaf)
+      in (NodeS ls rs <| \pos =>
+           case pos of
+             GoLLeaf posL => fl posL
+             GoRLeaf posR => fr posR)
 
-  impossibleCase : FinTreeNode LeafS -> (a, b)
+    public export
+    Applicative BTreeLeaf' where
+      pure a = LeafS <| \_ => a
+      fs <*> vs = uncurry ($) <$> liftA2BBTreeLeaf' fs vs 
+
+
+    ||| Just summing up elements of the tree given by the Rig a structure
+    public export
+    Rig a => Algebra BTreeLeaf' a where
+      reduce (LeafS <| v) = v AtLeaf
+      reduce ((NodeS l r) <| v) =
+        let leftSubtree = l <| \posL => v (GoLLeaf posL)
+            rightSubtree = r <| \posR => v (GoRLeaf posR)
+        in reduce {f=BTreeLeaf'} leftSubtree ~+~
+           reduce {f=BTreeLeaf'} rightSubtree
+
+
+namespace BTreeNodeInstances
+
+  impossibleCase : FinBTreeNode LeafS -> (a, b)
   impossibleCase Root impossible
   impossibleCase (GoL x) impossible
   impossibleCase (GoR x) impossible
 
-  ||| Extract the function for the left subtree
-  getLeftFunc : {l, r : BTreeShape}
-    -> (FinTreeNode (NodeS l r) -> x) -> (FinTreeNode l -> x)
-  getLeftFunc {l} {r} f = \posL => f (GoL {l=l} {r=r} posL)
-
-  ||| Extract the function for the right subtree
-  getRightFunc : {l, r : BTreeShape}
-    -> (FinTreeNode (NodeS l r) -> x) -> (FinTreeNode r -> x)
-  getRightFunc {l} {r} f = \posR => f (GoR {l=l} {r=r} posR)
-
-  ||| Combine two TreeNode' structures, pairing values at corresponding nodes.
+  ||| Combine two BTreeNode' structures, pairing values at corresponding nodes.
   ||| The resulting shape is the intersection of the input shapes.
   public export
-  liftA2TreeNode' : TreeNode' a -> TreeNode' b -> TreeNode' (a, b)
-  liftA2TreeNode' ((NodeS l1 r1) <| f1) ((NodeS l2 r2) <| f2) =
-    let (ls <| fl) : TreeNode' (a, b) = liftA2TreeNode' (l1 <| getLeftFunc f1) (l2 <| getLeftFunc f2)
+  liftA2BTreeNode' : BTreeNode' a -> BTreeNode' b -> BTreeNode' (a, b)
+  liftA2BTreeNode' ((NodeS l1 r1) <| f1) ((NodeS l2 r2) <| f2) =
+    let (ls <| fl) = liftA2BTreeNode' (l1 <| f1 . GoL) (l2 <| f2 . GoL)
+        (rs <| fr) = liftA2BTreeNode' (r1 <| f1 . GoR) (r2 <| f2 . GoR)
 
-        (rs <| fr) : TreeNode' (a, b) = liftA2TreeNode' (r1 <| getRightFunc f1) (r2 <| getRightFunc f2)
-
-        resultFunc : FinTreeNode (NodeS ls rs) -> (a, b)
+        resultFunc : FinBTreeNode (NodeS ls rs) -> (a, b)
         resultFunc Root = (f1 Root, f2 Root)
         resultFunc (GoL posL) = fl posL
         resultFunc (GoR posR) = fr posR
     in (NodeS ls rs <| resultFunc)
-  liftA2TreeNode' _ _ = LeafS <| impossibleCase
+  liftA2BTreeNode' _ _ = LeafS <| impossibleCase
 
   public export
-  Applicative TreeNode' where
+  Applicative BTreeNode' where
     pure a = NodeS LeafS LeafS <| \_ => a
-    fs <*> vs = uncurry ($) <$> liftA2TreeNode' fs vs 
+    fs <*> vs = uncurry ($) <$> liftA2BTreeNode' fs vs 
 
+  public export
+  Rig a => Algebra BTreeNode' a where
+    reduce (LeafS <| v) = zero
+    reduce ((NodeS l r) <| v) = v Root ~+~
+        reduce {f=BTreeNode'} (l <| v . GoL) ~+~
+        reduce {f=BTreeNode'} (r <| v . GoR)
+  
 
-namespace TreeLeafInstances
-    public export
-    liftA2BTreeLeaf' : TreeLeaf' a -> TreeLeaf' b -> TreeLeaf' (a, b)
-    liftA2BTreeLeaf' (LeafS <| v) (LeafS <| v') = LeafS <| (\x => (v x, v' x))
-    liftA2BTreeLeaf' (LeafS <| v) (NodeS l' r' <| v') = NodeS l' r' <| ?aaa
-    liftA2BTreeLeaf' (NodeS l r <| v) (LeafS <| v') = ?liftA2BTreeLeaf'_rhs_4
-    liftA2BTreeLeaf' (NodeS l r <| v) (NodeS l' r' <| v') = ?liftA2BTreeLeaf'_rhs_6 <| ?vlvlvl
-
-    public export
-    Applicative TreeLeaf' where
-      pure a = LeafS <| \_ => a
-      fs <*> vs = uncurry ($) <$> liftA2BTreeLeaf' fs vs 
-
-fromTreeHelper : FinTreeNode LeafS -> a
+fromTreeHelper : FinBTreeNode LeafS -> a
 fromTreeHelper Root impossible
 fromTreeHelper (GoL x) impossible
 fromTreeHelper (GoR x) impossible
 
 public export
-fromTreeNode : BTreeNode a -> TreeNode' a
-fromTreeNode (Leaf ()) = (LeafS <| fromTreeHelper)
-fromTreeNode (Node node leftTree rightTree)
-  = let (lts <| ltc) = fromTreeNode leftTree
-        (rts <| rtc) = fromTreeNode rightTree
+fromBTreeNode : BTreeNode a -> BTreeNode' a
+fromBTreeNode (Leaf ()) = (LeafS <| fromTreeHelper)
+fromBTreeNode (Node node leftTree rightTree)
+  = let (lts <| ltc) = fromBTreeNode leftTree
+        (rts <| rtc) = fromBTreeNode rightTree
     in (NodeS lts rts <| \pos =>
           case pos of
             Root => node
@@ -200,11 +215,11 @@ fromTreeNode (Node node leftTree rightTree)
             GoR posR => rtc posR)
 
 public export
-fromTreeLeaf : BTreeLeaf a -> TreeLeaf' a
-fromTreeLeaf (Leaf leaf) = LeafS <| \_ => leaf
-fromTreeLeaf (Node node lt rt) =
-  let (shL <| fnL) = fromTreeLeaf lt
-      (shR <| fnR) = fromTreeLeaf rt
+fromBTreeLeaf : BTreeLeaf a -> BTreeLeaf' a
+fromBTreeLeaf (Leaf leaf) = LeafS <| \_ => leaf
+fromBTreeLeaf (Node node lt rt) =
+  let (shL <| fnL) = fromBTreeLeaf lt
+      (shR <| fnR) = fromBTreeLeaf rt
   in (NodeS shL shR <| \pos =>
         case pos of
           GoLLeaf posL => fnL posL

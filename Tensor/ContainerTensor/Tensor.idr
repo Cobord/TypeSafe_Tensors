@@ -195,7 +195,7 @@ fromArrayHelper : {shape : Vect n Nat}
   -> Tensor (vectApplV shape) a
 fromArrayHelper {shape=[]} x = TZ x
 fromArrayHelper {shape=(s :: ss)} x
-  = TS $ GetVect' $ fromVect $ fromArrayHelper <$> x
+  = TS $ fromVect $ fromArrayHelper <$> x
 
 public export
 fromArray' : {shape : Vect n Nat} -> Array' shape a -> Tensor' shape a
@@ -266,7 +266,7 @@ namespace IndexT
 
 
 -- TODO
--- exCont2 : Tensor [TreeNodeCont, ListCont] Int
+-- exCont2 : Tensor [BTreeNodeCont, ListCont] Int
 -- exCont2 = fromArray $ fromTree $ Node (fromList [1,2,3,4,5]) Leaf' Leaf'
 
 -- TODO
@@ -275,7 +275,7 @@ namespace IndexT
 
 
 -- TODO
--- exCont3 : Tensor [TreeLeafCont, ListCont] Int
+-- exCont3 : Tensor [BTreeLeafCont, ListCont] Int
 -- exCont3 = fromArray ?exCont3_rhs
 
 exampleList : List' Int
@@ -291,7 +291,7 @@ vv = fromVect [1,2,3]
 
 -- Same as index from Data.Vect!
 indexVect : Fin n -> Vect' n a -> a
-indexVect x (MkVect' v) = indexCont v x
+indexVect x v = indexCont v x
 
 
 

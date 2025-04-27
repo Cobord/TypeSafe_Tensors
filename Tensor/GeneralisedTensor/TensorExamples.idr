@@ -81,15 +81,15 @@ ex4 : Tensor [# List, # BTreeLeaf] Double
 ex4 = ex2 + ex3
 
 
-exTreeNode1 : Tensor [# List, # BTreeNode] Double
-exTreeNode1 = fromGenArray $ [Leaf' 
+exBTreeNode1 : Tensor [# List, # BTreeNode] Double
+exBTreeNode1 = fromGenArray $ [Leaf' 
                              , Node 3 (Node 4 Leaf' Leaf') Leaf' ]
 
-exTreeNode2 : Tensor [# List, # BTreeNode] Double
-exTreeNode2 = fromGenArray $ [Node 100 Leaf' Leaf']
+exBTreeNode2 : Tensor [# List, # BTreeNode] Double
+exBTreeNode2 = fromGenArray $ [Node 100 Leaf' Leaf']
 
-exTreeNode3 : Tensor [# List, # BTreeNode] Double
-exTreeNode3 = exTreeNode1 * exTreeNode2
+exBTreeNode3 : Tensor [# List, # BTreeNode] Double
+exBTreeNode3 = exBTreeNode1 * exBTreeNode2
 
 
 listEx : Tensor [# List] Double
@@ -99,7 +99,7 @@ exDot : Tensor [] Double
 exDot = dot listEx listEx
 
 exDot2 : Tensor [] Double
-exDot2 = dot exTreeNode2 exTreeNode2
+exDot2 = dot exBTreeNode2 exBTreeNode2
 
 exShow : String
 exShow = show listEx

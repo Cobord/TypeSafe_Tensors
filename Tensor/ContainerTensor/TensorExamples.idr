@@ -22,14 +22,14 @@ t0 = fromArray' [1,2,3,4,5,6,7]
 
 
 t1 : Tensor' [3, 4] Double
-t1 = fromArray' $ [ [0, 1, 2, 3]
-                  , [4, 5, 6, 7]
-                  , [8, 9, 10, 11]]
+t1 = fromArray' [ [0, 1, 2, 3]
+                , [4, 5, 6, 7]
+                , [8, 9, 10, 11]]
 
 
 t2 : Tensor' [2, 5] Double
-t2 = fromArray' $ [ [0, 1, 2, 3, 4]
-                  , [5, 6, 7, 8, 9]]
+t2 = fromArray' [ [0, 1, 2, 3, 4]
+                , [5, 6, 7, 8, 9]]
 
 
 
@@ -56,22 +56,35 @@ absExample = abs negExample
 --- Generalised tensor examples
 ----------------------------------------
 
--- Some ergonomics here can be improved
-t0gen : Tensor [VectCont 7] Double
-t0gen = fromArray $ fromVectOld [1,2,3,4,5,6,7]
+
+-- With "Tensor" we can do everything that we could do with "Tensor'"
+t0again : Tensor [VectCont 7] Double
+t0again = fromArray $ fromVect [1,2,3,4,5,6,7]
+
+t1again : Tensor [VectCont 3, VectCont 4] Double
+t1again = fromArray $ fromVect $ fromVect <$> [ [0, 1, 2, 3]
+                                              , [4, 5, 6, 7]
+                                              , [8, 9, 10, 11]]
+
+
+-- But we can do more! Instead of having a vector with n elements, we can have a tree with leaves as elements.
+ex1 : Tensor [BTreeLeafCont] Double
+ex1 = fromArray $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 47)) (Leaf 2)
+
+-- Or a tree with nodes as elements
+ex2 : Tensor [BTreeNodeCont] Double
+ex2 = fromArray $ fromBTreeNode $ Node 127 Leaf' (Node 14 Leaf' Leaf')
+
+-- Or elements themselves can be vectors!
+ex3 : Tensor [BTreeLeafCont, VectCont 2] Double
+ex3 = fromArray $ fromBTreeLeaf $ (Leaf $ fromVect [1,2]) -- fromVect <$> (Node' (Node' (Leaf [1,2]) (Leaf [3,4])) (Leaf [5,6]))
+
+-- We can index into those structures
+-- GoRLeaf (GoLLeaf AtLeaf) would not compile
+indexTreeExample : Double
+indexTreeExample = ex1 @@ [GoLLeaf (GoLLeaf AtLeaf)]
 
 
 -- Dot product
 tDot : Tensor [] Double
--- tDot = dot t0gen t0gen
-
-
-ex2 : Tensor [TreeLeafCont] Double
-ex2 = fromArray $ fromTreeLeaf $ Node' (Leaf 1) (Leaf 2)
-
-ex3 : Tensor [TreeNodeCont] Double
-ex3 = fromArray $ fromTreeNode $ Node 127 Leaf' Leaf'
-
-
-ex4 : Tensor [VectCont 2, TreeNodeCont] Double
-ex4 = fromArray $ ?hole -- fromTreeNode $ Node 127 Leaf' Leaf'
+tDot = dot ex1 ex1

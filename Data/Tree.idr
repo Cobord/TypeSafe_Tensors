@@ -1,6 +1,7 @@
 module Data.Tree
 
 ||| Finite binary trees with labels on leaves and nodes
+||| Inductive definition
 public export
 data BTree : (leafType : Type) -> (nodeType : Type) -> Type where
     Leaf : (leaf : leafType)
