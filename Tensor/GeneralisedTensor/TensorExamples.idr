@@ -65,6 +65,7 @@ exampleStandardTensor = fromGenArray $ [ [1,2,3]
 ex1 : Tensor [# List, # Vect 2] Double
 ex1 = fromGenArray $ [[1,2], [3,4], [5,6], [12, 14]]
 
+-- Note that these can't be transposed! They're jagged, and List isn't Naperian, and neither is BTreeLeaf
 ex2 : Tensor [# List, # BTreeLeaf] Double
 ex2 = fromGenArray $ [ Node' (Leaf 3) (Leaf 4)
                      , Leaf 8
@@ -102,7 +103,3 @@ exDot2 = dot exTreeNode2 exTreeNode2
 
 exShow : String
 exShow = show listEx
-
-
-test : {f : Type -> Type} -> Applicative f => Tensor [# f, # f] Double
-test = fromGenArray $ ?test_rhs

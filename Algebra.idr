@@ -2,7 +2,6 @@ module Algebra
 
 import Data.Vect
 
-
 import Tensor
 import Tree
 import Rig

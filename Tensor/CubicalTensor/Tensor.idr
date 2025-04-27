@@ -26,58 +26,62 @@ data Tensor : (shape : Vect n Nat) -> (dtype : Type) -> Type where
 
 %name Tensor t, u, v
 
-public export
-Show a => Show (Tensor shape a) where
-  show (TZ x) = show x
-  show (TS xs) = show xs
+namespace TensorInterfaces
+  public export
+  Show a => Show (Tensor shape a) where
+    show (TZ x) = show x
+    show (TS xs) = show xs
 
-public export
-Eq a => Eq (Tensor shape a) where
-  (TZ v1) == (TZ v2) = v1 == v2
-  (TS xs) == (TS ys) = xs == ys
+  public export
+  Eq a => Eq (Tensor shape a) where
+    (TZ v1) == (TZ v2) = v1 == v2
+    (TS xs) == (TS ys) = xs == ys
 
-public export
-Functor (Tensor shape) where
-  map f (TZ x) = TZ (f x)
-  map f (TS xs) = TS (map (map f) xs)
+  public export
+  Functor (Tensor shape) where
+    map f (TZ x) = TZ (f x)
+    map f (TS xs) = TS (map (map f) xs)
 
-public export
-Foldable (Tensor shape) where
-  foldr f z (TZ x) = f x z 
-  foldr f z (TS xs) = foldr (\t, acc => foldr f acc t) z xs 
+  public export
+  Foldable (Tensor shape) where
+    foldr f z (TZ x) = f x z 
+    foldr f z (TS xs) = foldr (\t, acc => foldr f acc t) z xs 
 
-public export
-Traversable (Tensor shape) where
-  traverse fn (TZ val) = TZ <$> fn val
-  traverse fn (TS xs) = TS <$> traverse (traverse fn) xs
-
-
--- The maps below doesn't hold as equalities because:
--- Tensor (n :: ns) a is a tensor of shape (n :: ns) with elements of type a
--- Tensor [n] (Tensor ns a) would be a tensor of shape [n] with elements of type (Tensor ns a)
--- 
--- We can define functions that convert between these representations:
-
-public export
-toNestedTensor : Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
-toNestedTensor (TS vs) = TS (TZ <$> vs)
-
-public export
-fromNestedTensor : Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
-fromNestedTensor (TS vs) = TS (map (\(TZ jk) => jk) vs)
+  public export
+  Traversable (Tensor shape) where
+    traverse fn (TZ val) = TZ <$> fn val
+    traverse fn (TS xs) = TS <$> traverse (traverse fn) xs
 
 
--- More general version than above
-public export
-toNestedTensor' : {sh1 : Vect n Nat} -> {sh2 : Vect m Nat}
-  -> Tensor (sh1 ++ sh2) a -> Tensor sh1 (Tensor sh2 a)
-toNestedTensor' {sh1 = []} {sh2} t = TZ t
-toNestedTensor' {sh1 = (_ :: _)} {sh2} (TS xs) = TS $ toNestedTensor' <$> xs
+namespace NestedTensorStuff
+  -- The maps below doesn't hold as equalities because:
+  -- Tensor (n :: ns) a is a tensor of shape (n :: ns) with elements of type a
+  -- Tensor [n] (Tensor ns a) would be a tensor of shape [n] with elements of type (Tensor ns a)
+  -- 
+  -- We can define functions that convert between these representations:
 
-public export
-fromNestedTensor' : Tensor sh1 (Tensor sh2 a) -> Tensor (sh1 ++ sh2) a
-fromNestedTensor' (TZ tv) = tv
-fromNestedTensor' (TS xts) = TS $ map fromNestedTensor' xts
+  public export
+  toNestedTensor : Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
+  toNestedTensor (TS vs) = TS (TZ <$> vs)
+
+  public export
+  fromNestedTensor : Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
+  fromNestedTensor (TS vs) = TS (map (\(TZ jk) => jk) vs)
+
+
+  -- More general version than above
+  public export
+  toNestedTensor' : {sh1 : Vect n Nat} -> {sh2 : Vect m Nat}
+    -> Tensor (sh1 ++ sh2) a -> Tensor sh1 (Tensor sh2 a)
+  toNestedTensor' {sh1 = []} {sh2} t = TZ t
+  toNestedTensor' {sh1 = (_ :: _)} {sh2} (TS xs) = TS $ toNestedTensor' <$> xs
+
+  public export
+  fromNestedTensor' : Tensor sh1 (Tensor sh2 a) -> Tensor (sh1 ++ sh2) a
+  fromNestedTensor' (TZ tv) = tv
+  fromNestedTensor' (TS xts) = TS $ map fromNestedTensor' xts
+
+
 
 public export
 Scalar : (dtype : Type) -> Type
@@ -109,48 +113,50 @@ namespace ApplicativeT
   public export
   {shape : Vect n Nat} -> Applicative (Tensor shape) where
     pure x = tensorReplicate x
-    fs <*> xs = map (uncurry ($)) $ liftA2Tensor fs xs 
+    fs <*> xs = uncurry ($) <$> liftA2Tensor fs xs 
 
--- Pointwise Rig structure
-public export
-{shape : Vect n Nat} -> Rig a => Rig (Tensor shape a) where
-  zero = tensorReplicate zero
-  one = tensorReplicate one
-  xs ~+~ ys = (uncurry (~+~)) <$> liftA2 xs ys
-  xs ~*~ ys = (uncurry (~*~)) <$> liftA2 xs ys
+namespace NumericT
+  -- Pointwise Rig structure
+  public export
+  {shape : Vect n Nat} -> Rig a => Rig (Tensor shape a) where
+    zero = tensorReplicate zero
+    one = tensorReplicate one
+    xs ~+~ ys = (uncurry (~+~)) <$> liftA2 xs ys
+    xs ~*~ ys = (uncurry (~*~)) <$> liftA2 xs ys
 
-public export
-{shape : Vect n Nat} -> Num a => Num (Tensor shape a) where
-  fromInteger i = pure (fromInteger i)
-  xs + ys = (uncurry (+)) <$> liftA2 xs ys
-  xs * ys = (uncurry (*)) <$> liftA2 xs ys
+  public export
+  {shape : Vect n Nat} -> Num a => Num (Tensor shape a) where
+    fromInteger i = pure (fromInteger i)
+    xs + ys = (uncurry (+)) <$> liftA2 xs ys
+    xs * ys = (uncurry (*)) <$> liftA2 xs ys
 
-public export
-{shape : Vect n Nat} -> Neg a => Neg (Tensor shape a) where
-  negate t = negate <$> t
-  xs - ys = (uncurry (-)) <$> liftA2 xs ys
-  
-public export
-{shape : Vect n Nat} -> Abs a => Abs (Tensor shape a) where
-  abs t = abs <$> t
+  public export
+  {shape : Vect n Nat} -> Neg a => Neg (Tensor shape a) where
+    negate t = negate <$> t
+    xs - ys = (uncurry (-)) <$> liftA2 xs ys
+
+  public export
+  {shape : Vect n Nat} -> Abs a => Abs (Tensor shape a) where
+    abs t = abs <$> t
 
 
 
--- The point of this construction is to be able to easily create tensors using lists, without needing to use the inductive form requiring `TZ` and `TS`. 
-public export
-Array : (shape : Vect rank Nat) -> (dtype : Type) -> Type
-Array []        a = a
-Array (m :: ms) a = Vect m (Array ms a)
+namespace ArrayT
+  -- The point of this construction is to be able to easily create tensors using lists, without needing to use the inductive form requiring `TZ` and `TS`. 
+  public export
+  Array : (shape : Vect rank Nat) -> (dtype : Type) -> Type
+  Array []        a = a
+  Array (m :: ms) a = Vect m (Array ms a)
 
-public export
-fromArray : {shape : Vect rank Nat} -> Array shape a -> Tensor shape a
-fromArray {shape = []} y = TZ y
-fromArray {shape = (_ :: _)} y = TS (fromArray <$> y)
+  public export
+  fromArray : {shape : Vect rank Nat} -> Array shape a -> Tensor shape a
+  fromArray {shape = []} y = TZ y
+  fromArray {shape = (_ :: _)} y = TS (fromArray <$> y)
 
-public export
-toArray : {shape : Vect rank Nat} -> Tensor shape a -> Array shape a
-toArray (TZ x) = x
-toArray (TS xs) = toArray <$> xs
+  public export
+  toArray : {shape : Vect rank Nat} -> Tensor shape a -> Array shape a
+  toArray (TZ x) = x
+  toArray (TS xs) = toArray <$> xs
 
 namespace IndexT
   ||| Machinery for indexing tensors
@@ -183,10 +189,6 @@ namespace IndexT
   (@@) : Tensor shape a -> IndexT shape -> a
   (@@) = flip indexTensor
 
--- public export
--- (+++) : Vect n Nat -> Vect n Nat -> Vect n Nat
--- (+++) [] [] = []
--- (+++) (x :: xs) (y :: ys) = (x + y) :: ((+++) xs ys)
 
 
 namespace SliceT
@@ -225,10 +227,6 @@ namespace ReshapeT
               -> {auto prf : prod shape = prod newShape}
               -> Tensor newshape a
   reshapeTensor t newShape = ?reshapeTensor_rhs
-
-public export
-toList : Tensor shape a -> List a
-toList = foldr (::) []
 
 
 

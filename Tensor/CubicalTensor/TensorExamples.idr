@@ -30,6 +30,12 @@ tSum = t1 + t1
 tMul : Tensor [2, 5] Double
 tMul = t2 * t2
 
+negExample : Tensor [3, 4] Double
+negExample = negate t1
+
+absExample : Tensor [3, 4] Double
+absExample = abs negExample
+
 transposet1 : Tensor [4, 3] Double
 transposet1 = transposeMatrix t1
 
@@ -40,11 +46,4 @@ indexExample = t1 @@ [1, 2]
 -- Safe slicing, takeTensor [10, 2] t1 would not compile
 takeExample : Tensor [2, 1] Double
 takeExample = takeTensor [2, 1] t1
-
-
-negExample : Tensor [3, 4] Double
-negExample = negate t1
-
-absExample : Tensor [3, 4] Double
-absExample = abs negExample
 
