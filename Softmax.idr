@@ -3,6 +3,8 @@ module Softmax
 import Data.Vect
 import Data.Vect.Elem
 
+import Data.Container.Definition
+import Data.Container.Instances
 import Tensor.ContainerTensor.Tensor
 import ApplicativeLinAlg
 import Algebra
@@ -23,9 +25,14 @@ softmax {f} xs = let exps = exp <$> xs
                  in exps <&> (/ reduce exps)
 
 softmax' : {shape : ApplV conts}
-  -> Fractional a => Exp a => Tensor shape a -> Tensor shape a
+  -> Fractional a => Exp a => AllAlgebra shape a => 
+  Tensor shape a -> Tensor shape a
 softmax' t = let exps = exp <$> t
-             in exps <&> ?softmax'_rhs
+             in exps <&> (/ reduce exps)
+
+
+softmaxVect' : {n : Nat} -> Tensor [VectCont n] Double -> Tensor [VectCont n] Double
+softmaxVect' x = let t = softmax' x in ?softmaxVect'_rhs
 
  
 softmaxVect : {n : Nat} -> Vect n Double -> Vect n Double

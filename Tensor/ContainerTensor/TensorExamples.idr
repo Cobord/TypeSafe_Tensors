@@ -87,4 +87,4 @@ indexTreeExample = ex1 @@ [GoLLeaf (GoLLeaf AtLeaf)]
 
 -- Dot product
 tDot : Tensor [] Double
-tDot = dot ex1 ex1
+tDot = dot t0again t0again

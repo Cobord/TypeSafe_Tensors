@@ -34,68 +34,65 @@ data FinBTreeLeaf : (b : BTreeShape) -> Type where
   GoLLeaf : {l, r : BTreeShape} -> FinBTreeLeaf l -> FinBTreeLeaf (NodeS l r)
   GoRLeaf : {l, r : BTreeShape} -> FinBTreeLeaf r -> FinBTreeLeaf (NodeS l r)
 
--- Examples
-public export
-PairCont : Cont
-PairCont = (_ : Unit) !> Bool
-
-public export
-VectCont : Nat -> Cont
-VectCont n = (_ : Unit) !> Fin n
-
-public export
-MaybeCont : Cont
-MaybeCont = (b : Bool) !> (if b then Unit else Void)
-
-public export
-ListCont : Cont
-ListCont = (n : Nat) !> (Fin n)
-
-||| Trees with data stored at nodes
-public export
-BTreeNodeCont : Cont
-BTreeNodeCont = (b : BTreeShape) !> FinBTreeNode b
-
-||| Trees with data stored at leaves
-public export
-BTreeLeafCont : Cont
-BTreeLeafCont = (b : BTreeShape) !> FinBTreeLeaf b
-
-
-||| Isomorphic to Pair
-public export
-Pair' : Type -> Type
-Pair' = Ext PairCont
-
-||| Isomorphic to Vect
-public export
-Vect' : (n : Nat) -> Type -> Type
-Vect' n x = (VectCont n) `fof` x
-
-||| Isomorphic to Maybe
-public export
-Maybe' : Type -> Type
-Maybe' = Ext MaybeCont
-
-||| Isomorphic to List
-public export
-List' : Type -> Type
-List' = Ext ListCont
-
-public export
-fromList : List x -> List' x
-fromList [] = (0 <| absurd)
-fromList (x :: xs) = let (l <| c) = fromList xs
-                     in (S l <| addBeginning x c)
+namespace MainContainerExamples
+  -- Examples
+  public export
+  PairCont : Cont
+  PairCont = (_ : Unit) !> Bool
+  
+  public export
+  VectCont : Nat -> Cont
+  VectCont n = (_ : Unit) !> Fin n
+  
+  public export
+  MaybeCont : Cont
+  MaybeCont = (b : Bool) !> (if b then Unit else Void)
+  
+  public export
+  ListCont : Cont
+  ListCont = (n : Nat) !> (Fin n)
+  
+  ||| Trees with data stored at nodes
+  public export
+  BTreeNodeCont : Cont
+  BTreeNodeCont = (b : BTreeShape) !> FinBTreeNode b
+  
+  ||| Trees with data stored at leaves
+  public export
+  BTreeLeafCont : Cont
+  BTreeLeafCont = (b : BTreeShape) !> FinBTreeLeaf b
 
 
-public export
-fromVect : Vect n x -> Vect' n x
-fromVect v = () <| \i => index i v
-
-public export
-toVect : {n : Nat} -> Vect' n x -> Vect n x
-toVect (_ <| indexCont) = vectTabulate indexCont
+namespace ExtensionsOfMainContainerExamples
+  ||| Isomorphic to Pair
+  public export
+  Pair' : Type -> Type
+  Pair' = Ext PairCont
+  
+  ||| Isomorphic to Vect
+  public export
+  Vect' : (n : Nat) -> Type -> Type
+  Vect' n x = (VectCont n) `fof` x
+  
+  ||| Isomorphic to Maybe
+  public export
+  Maybe' : Type -> Type
+  Maybe' = Ext MaybeCont
+  
+  ||| Isomorphic to List
+  public export
+  List' : Type -> Type
+  List' = Ext ListCont
+  
+  ||| Isomorphic to Trees with data at only nodes
+  public export
+  BTreeNode' : Type -> Type
+  BTreeNode' = Ext BTreeNodeCont
+  
+  ||| Isomorphic to Trees with data only at leaves
+  public export
+  BTreeLeaf' : Type -> Type
+  BTreeLeaf' = Ext BTreeLeafCont
 
 
 -- public export
@@ -107,21 +104,22 @@ toVect (_ <| indexCont) = vectTabulate indexCont
 --   pure a = fromVect (pure a)
 --   fs <*> vs = fromVect $ toVect fs <*> toVect vs 
 
-public export
-{n : Nat} -> Applicative (Ext (VectCont n)) where
-  pure a = fromVect $ pure a
-  fs <*> vs = fromVect $ toVect fs <*> toVect vs
+namespace VectInstances
+  public export
+  {n : Nat} -> Applicative (Ext (VectCont n)) where
+    pure a = fromVect $ pure a
+    fs <*> vs = fromVect $ toVect fs <*> toVect vs
 
 
-||| Isomorphic to Trees with data at only nodes
-public export
-BTreeNode' : Type -> Type
-BTreeNode' = Ext BTreeNodeCont
+  ||| Helper to sum elements of a vector represented by a function Fin n -> a
+  reduceVect : {n : Nat} -> Rig a => (Fin n -> a) -> a
+  reduceVect {n = Z} _ = zero
+  reduceVect {n = S k} v = v FZ ~+~ reduceVect (v . FS)
 
-||| Isomorphic to Trees with data only at leaves
-public export
-BTreeLeaf' : Type -> Type
-BTreeLeaf' = Ext BTreeLeafCont
+  public export
+  {n : Nat} -> Rig a => Algebra (Ext (VectCont n)) a where
+    reduce (() <| v) = reduceVect v
+
 
 namespace BTreeLeafInstances
     public export
@@ -197,30 +195,53 @@ namespace BTreeNodeInstances
         reduce {f=BTreeNode'} (r <| v . GoR)
   
 
-fromTreeHelper : FinBTreeNode LeafS -> a
-fromTreeHelper Root impossible
-fromTreeHelper (GoL x) impossible
-fromTreeHelper (GoR x) impossible
 
-public export
-fromBTreeNode : BTreeNode a -> BTreeNode' a
-fromBTreeNode (Leaf ()) = (LeafS <| fromTreeHelper)
-fromBTreeNode (Node node leftTree rightTree)
-  = let (lts <| ltc) = fromBTreeNode leftTree
-        (rts <| rtc) = fromBTreeNode rightTree
-    in (NodeS lts rts <| \pos =>
+namespace ConversionFunctions
+  public export
+  fromList : List x -> List' x
+  fromList [] = (0 <| absurd)
+  fromList (x :: xs) = let (l <| c) = fromList xs
+                       in (S l <| addBeginning x c)
+  
+  
+  public export
+  fromVect : Vect n x -> Vect' n x
+  fromVect v = () <| \i => index i v
+  
+  public export
+  toVect : {n : Nat} -> Vect' n x -> Vect n x
+  toVect (_ <| indexCont) = vectTabulate indexCont
+  
+  
+  
+  
+  
+  
+  
+  fromTreeHelper : FinBTreeNode LeafS -> a
+  fromTreeHelper Root impossible
+  fromTreeHelper (GoL x) impossible
+  fromTreeHelper (GoR x) impossible
+  
+  public export
+  fromBTreeNode : BTreeNode a -> BTreeNode' a
+  fromBTreeNode (Leaf ()) = (LeafS <| fromTreeHelper)
+  fromBTreeNode (Node node leftTree rightTree)
+    = let (lts <| ltc) = fromBTreeNode leftTree
+          (rts <| rtc) = fromBTreeNode rightTree
+      in (NodeS lts rts <| \pos =>
+            case pos of
+              Root => node
+              GoL posL => ltc posL
+              GoR posR => rtc posR)
+  
+  public export
+  fromBTreeLeaf : BTreeLeaf a -> BTreeLeaf' a
+  fromBTreeLeaf (Leaf leaf) = LeafS <| \_ => leaf
+  fromBTreeLeaf (Node node lt rt) =
+    let (shL <| fnL) = fromBTreeLeaf lt
+        (shR <| fnR) = fromBTreeLeaf rt
+    in (NodeS shL shR <| \pos =>
           case pos of
-            Root => node
-            GoL posL => ltc posL
-            GoR posR => rtc posR)
-
-public export
-fromBTreeLeaf : BTreeLeaf a -> BTreeLeaf' a
-fromBTreeLeaf (Leaf leaf) = LeafS <| \_ => leaf
-fromBTreeLeaf (Node node lt rt) =
-  let (shL <| fnL) = fromBTreeLeaf lt
-      (shR <| fnR) = fromBTreeLeaf rt
-  in (NodeS shL shR <| \pos =>
-        case pos of
-          GoLLeaf posL => fnL posL
-          GoRLeaf posR => fnR posR)
+            GoLLeaf posL => fnL posL
+            GoRLeaf posR => fnR posR)
