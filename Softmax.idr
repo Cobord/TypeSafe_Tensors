@@ -10,13 +10,7 @@ import ApplicativeLinAlg
 import Algebra
 import Tree
 import Rig
-
-interface Exp a where
-  exp : a -> a
-
-public export
-Exp Double where
-  exp = Prelude.exp
+import Misc
 
 public export
 softmax : {f : Type -> Type}
@@ -24,17 +18,6 @@ softmax : {f : Type -> Type}
 softmax {f} xs = let exps = exp <$> xs
                  in exps <&> (/ reduce exps)
 
-softmax' : {shape : ApplV conts}
-  -> Fractional a => Exp a => AllAlgebra shape a => 
-  Tensor shape a -> Tensor shape a
-softmax' t = let exps = exp <$> t
-             in exps <&> (/ reduce exps)
-
-
-softmaxVect' : {n : Nat} -> Tensor [VectCont n] Double -> Tensor [VectCont n] Double
-softmaxVect' x = let t = softmax' x in ?softmaxVect'_rhs
-
- 
 softmaxVect : {n : Nat} -> Vect n Double -> Vect n Double
 softmaxVect = softmax
 
@@ -43,6 +26,32 @@ softmaxTreeLeaf = softmax {f=BTreeLeaf}
 
 softmaxTreeNode : BTreeNode Double -> BTreeNode Double
 softmaxTreeNode = softmax {f=BTreeNode}
+
+--- Tensor softmax
+
+softmax' : {shape : ApplV conts}
+  -> Fractional a => Exp a => AllAlgebra shape a => 
+  Tensor shape a -> Tensor shape a
+softmax' t = let exps = exp <$> t
+             in exps <&> (/ reduce exps)
+
+public export
+softmax1 : {s : Cont} -> {ss : ApplV conts} ->
+  {auto prf : Applicative (Ext s)} ->
+  Fractional (Tensor ss a) => Exp (Tensor ss a) => AllAlgebra [s] (Tensor ss a) =>
+  Tensor (s :: ss) a -> Tensor (s :: ss) a
+softmax1 = fromNestedTensor . softmax' . toNestedTensor
+
+
+softmaxVect' : {n : Nat} -> Tensor [VectCont n] Double -> Tensor [VectCont n] Double
+softmaxVect' = softmax'
+
+softmaxBTreeLeaf' : Tensor [BTreeLeafCont] Double -> Tensor [BTreeLeafCont] Double
+softmaxBTreeLeaf' = softmax'
+
+softmaxBTreeNode' : Tensor [BTreeNodeCont] Double -> Tensor [BTreeNodeCont] Double
+softmaxBTreeNode' = softmax'
+ 
 
 
 

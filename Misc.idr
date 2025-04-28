@@ -7,6 +7,8 @@ import Data.Vect.Quantifiers
 
 %hide Builtin.infixr.(#)
 
+
+
 public export
 liftA2 : Applicative f => f a -> f b -> f (a, b)
 liftA2 fa fb = ((,) <$> fa) <*> fb
@@ -17,6 +19,16 @@ public export
 addBeginning : x -> (Fin l -> x) -> (Fin (S l) -> x)
 addBeginning x _ FZ = x
 addBeginning _ c (FS k') = c k'
+
+public export
+interface Exp a where
+  exp : a -> a
+
+public export
+Exp Double where
+  exp = Prelude.exp
+
+
 
 
 
@@ -117,7 +129,6 @@ failing
 
   aIntt : Int
   aIntt = 3
-
 
 
 

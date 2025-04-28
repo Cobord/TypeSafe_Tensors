@@ -96,6 +96,16 @@ namespace NumericT
   {shape : ApplV conts} -> Abs a => Abs (Tensor shape a) where
     abs = (abs <$>)
 
+  public export
+  {shape : ApplV conts} -> Fractional a => Fractional (Tensor shape a) where
+    t / v = (uncurry (/)) <$> liftA2 t v
+
+  public export
+  {shape : ApplV conts} -> Exp a => Exp (Tensor shape a) where
+    exp = (exp <$>)
+
+
+
 namespace AlgebraT
   public export
   data AllAlgebra : (shape : ApplV conts) -> (dtype : Type) -> Type where
@@ -103,7 +113,7 @@ namespace AlgebraT
     (::) : {c : Cont} -> 
       {auto prf : Applicative (Ext c)} ->
       {cs : ApplV conts} ->
-      Algebra (Ext c) (Tensor cs a)
+      (alg : Algebra (Ext c) (Tensor cs a))
       => AllAlgebra cs a -> AllAlgebra (c :: cs) a
 
   public export
@@ -112,14 +122,62 @@ namespace AlgebraT
   reduceTensor {allAlgebra = ((::) cs)} (TS xs) = reduceTensor @{cs} (reduce xs)
 
   public export
-  {shape : ApplV conts} -> (allAlgebra : AllAlgebra shape a) => Algebra (Tensor shape) a where
+  {shape : ApplV conts} -> (allAlgebra : AllAlgebra shape a) =>
+  Algebra (Tensor shape) a where
     reduce = reduceTensor
+
+  -- public export
+  -- [appSumTensor] {shape : ApplV conts} -> Rig a => Applicative (Ext c)
+  --   => Algebra (Tensor shape) ((Ext c) a) where
+  --   reduce (TZ val) = val
+  --   reduce (TS xs) = let t = reduce <$> xs in ?vnnn -- reduce (reduce <$> xs)
 
 public export
 dot : {shape : ApplV conts} -> {a : Type}
   -> Rig a => AllAlgebra shape a
   => Tensor shape a -> Tensor shape a -> Tensor [] a
 dot xs ys = TZ $ reduce $ (\(x, y) => x ~*~ y) <$> liftA2Tensor xs ys
+
+-- Multiply a matrix and a vector
+public export
+multiplyMV : {a : Type} -> Rig a =>
+  {auto prff : Applicative (Ext f)} ->
+  {auto prfg : Applicative (Ext g)} ->
+  AllAlgebra [g] a =>
+  Tensor [f, g] a -> Tensor [g] a -> Tensor [f] a
+multiplyMV (TS m) v = TS (dot v <$> m)
+
+-- Multiply a vector and a matrix
+public export
+multiplyVM : {a : Type} -> {f, g : Cont} -> Rig a =>
+  {auto prff : Applicative (Ext f)} ->
+  {auto prfg : Applicative (Ext g)} ->
+  (allAlgebra : AllAlgebra [f, g] a) =>
+  Tensor [f] a -> Tensor [f, g] a -> Tensor [g] a
+multiplyVM {allAlgebra = ((::) aa)} (TS v) (TS m)
+  = let t = liftA2 v m
+        w = (\((TZ val), v') => (val ~*~) <$> v') <$> t
+    in reduce {f=(Ext f)} w
+
+public export
+matMul : {f, g, h : Cont} -> {a : Type} -> Rig a =>
+  {auto prff : Applicative (Ext f)} ->
+  {auto prfg : Applicative (Ext g)} ->
+  {auto prfh : Applicative (Ext h)} ->
+  (allAlgebra : AllAlgebra [g, h] a) =>
+  Tensor [f, g] a -> Tensor [g, h] a -> Tensor [f, h] a
+matMul (TS m1) m2 = TS $ m1 <&> (\row => multiplyVM row m2)
+
+-- ij,kj->ki
+public export
+multiplyMMT : {f, g, h : Cont} -> {a : Type} -> Rig a =>
+  {auto prff : Applicative (Ext f)} ->
+  {auto prfg : Applicative (Ext g)} ->
+  {auto prfh : Applicative (Ext h)} ->
+  (allAlgebra : AllAlgebra [g] a) =>
+  Tensor [f, g] a -> Tensor [h, g] a -> Tensor [h, f] a
+multiplyMMT m (TS n) = TS (multiplyMV m <$> n)
+
 
 public export
 Array : (shape : ApplV conts) -> (dtype : Type) -> Type
@@ -131,9 +189,17 @@ fromArray : {shape : ApplV conts} -> Array shape a -> Tensor shape a
 fromArray {shape = []} x = TZ x
 fromArray {shape = (c :: _)} xs = TS $ fromArray <$> xs
 
--- public export
--- toNestedTensor : Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
--- toNestedTensor (TS vs) = TS (TZ <$> vs)
+public export
+toNestedTensor : {n : Cont} -> {ns : ApplV conts} ->
+  {auto prf : Applicative (Ext n)} ->
+  Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
+toNestedTensor (TS vs) = TS (TZ <$> vs)
+
+public export
+fromNestedTensor : {n : Cont} -> {ns : ApplV conts} ->
+  {auto prf : Applicative (Ext n)} ->
+  Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
+fromNestedTensor (TS vs) = TS $ ((\(TZ jk) => jk) <$> vs)
 
 
 -- This recovers usual tensors in Tensor.Tensor

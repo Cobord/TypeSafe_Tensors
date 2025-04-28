@@ -13,8 +13,8 @@ import Misc
 
 -- Scale a vector by a scalar
 public export
-scaleVector : (Rig a, Functor f)
-  => a -> f a -> f a
+scaleVector : Rig a => Functor f =>
+  a -> f a -> f a
 scaleVector a v = (a ~*~) <$> v
 
 -- Dot product in the usual sense
@@ -58,8 +58,9 @@ multiplyVM : {f, g : Type -> Type} -> {a : Type}
 multiplyVM {a} {f} v m = let t : f (a, g a)
                              t = liftA2 v m
                              w : f (g a)
-                             w = map (uncurry scaleVector) t
+                             w = (uncurry scaleVector) <$> t
                          in reduce w
+-- counit $ fmap (uncurry (~*~)) . uncurry pair <$> pair (pure <$> v) m
 
 -- Multiply two matrices
 -- "ij,jk->ik"

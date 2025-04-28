@@ -13,12 +13,6 @@ import Softmax
 import Algebra
 
 
-attentionT : (Tensor [inputStructure, features] a)
-          -> (Tensor [inputStructure, features] a)
-          -> (Tensor [inputStructure, features] a)
-          -> Tensor [inputStructure, features] a
-attentionT q k v = ?hmmm
-
 attention : {inputStructure, features : Type -> Type} -> {a : Type}
   -> (Applicative inputStructure, Applicative features, Rig a, Algebra features a, Algebra inputStructure (features a))
   => (softmax : inputStructure a -> inputStructure a)

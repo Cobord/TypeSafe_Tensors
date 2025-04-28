@@ -104,6 +104,58 @@ namespace ExtensionsOfMainContainerExamples
 --   pure a = fromVect (pure a)
 --   fs <*> vs = fromVect $ toVect fs <*> toVect vs 
 
+
+
+namespace ConversionFunctions
+  public export
+  fromList : List x -> List' x
+  fromList [] = (0 <| absurd)
+  fromList (x :: xs) = let (l <| c) = fromList xs
+                       in (S l <| addBeginning x c)
+  
+  
+  public export
+  fromVect : Vect n x -> Vect' n x
+  fromVect v = () <| \i => index i v
+  
+  public export
+  toVect : {n : Nat} -> Vect' n x -> Vect n x
+  toVect (_ <| indexCont) = vectTabulate indexCont
+  
+  
+  
+  
+  
+  
+  
+  fromTreeHelper : FinBTreeNode LeafS -> a
+  fromTreeHelper Root impossible
+  fromTreeHelper (GoL x) impossible
+  fromTreeHelper (GoR x) impossible
+  
+  public export
+  fromBTreeNode : BTreeNode a -> BTreeNode' a
+  fromBTreeNode (Leaf ()) = (LeafS <| fromTreeHelper)
+  fromBTreeNode (Node node leftTree rightTree)
+    = let (lts <| ltc) = fromBTreeNode leftTree
+          (rts <| rtc) = fromBTreeNode rightTree
+      in (NodeS lts rts <| \pos =>
+            case pos of
+              Root => node
+              GoL posL => ltc posL
+              GoR posR => rtc posR)
+  
+  public export
+  fromBTreeLeaf : BTreeLeaf a -> BTreeLeaf' a
+  fromBTreeLeaf (Leaf leaf) = LeafS <| \_ => leaf
+  fromBTreeLeaf (Node node lt rt) =
+    let (shL <| fnL) = fromBTreeLeaf lt
+        (shR <| fnR) = fromBTreeLeaf rt
+    in (NodeS shL shR <| \pos =>
+          case pos of
+            GoLLeaf posL => fnL posL
+            GoRLeaf posR => fnR posR)
+
 namespace VectInstances
   public export
   {n : Nat} -> Applicative (Ext (VectCont n)) where
@@ -194,54 +246,3 @@ namespace BTreeNodeInstances
         reduce {f=BTreeNode'} (l <| v . GoL) ~+~
         reduce {f=BTreeNode'} (r <| v . GoR)
   
-
-
-namespace ConversionFunctions
-  public export
-  fromList : List x -> List' x
-  fromList [] = (0 <| absurd)
-  fromList (x :: xs) = let (l <| c) = fromList xs
-                       in (S l <| addBeginning x c)
-  
-  
-  public export
-  fromVect : Vect n x -> Vect' n x
-  fromVect v = () <| \i => index i v
-  
-  public export
-  toVect : {n : Nat} -> Vect' n x -> Vect n x
-  toVect (_ <| indexCont) = vectTabulate indexCont
-  
-  
-  
-  
-  
-  
-  
-  fromTreeHelper : FinBTreeNode LeafS -> a
-  fromTreeHelper Root impossible
-  fromTreeHelper (GoL x) impossible
-  fromTreeHelper (GoR x) impossible
-  
-  public export
-  fromBTreeNode : BTreeNode a -> BTreeNode' a
-  fromBTreeNode (Leaf ()) = (LeafS <| fromTreeHelper)
-  fromBTreeNode (Node node leftTree rightTree)
-    = let (lts <| ltc) = fromBTreeNode leftTree
-          (rts <| rtc) = fromBTreeNode rightTree
-      in (NodeS lts rts <| \pos =>
-            case pos of
-              Root => node
-              GoL posL => ltc posL
-              GoR posR => rtc posR)
-  
-  public export
-  fromBTreeLeaf : BTreeLeaf a -> BTreeLeaf' a
-  fromBTreeLeaf (Leaf leaf) = LeafS <| \_ => leaf
-  fromBTreeLeaf (Node node lt rt) =
-    let (shL <| fnL) = fromBTreeLeaf lt
-        (shR <| fnR) = fromBTreeLeaf rt
-    in (NodeS shL shR <| \pos =>
-          case pos of
-            GoLLeaf posL => fnL posL
-            GoRLeaf posR => fnR posR)

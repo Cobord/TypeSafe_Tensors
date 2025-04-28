@@ -66,7 +66,7 @@ namespace NestedTensorStuff
 
   public export
   fromNestedTensor : Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
-  fromNestedTensor (TS vs) = TS (map (\(TZ jk) => jk) vs)
+  fromNestedTensor (TS vs) = TS ((\(TZ jk) => jk) <$> vs)
 
 
   -- More general version than above

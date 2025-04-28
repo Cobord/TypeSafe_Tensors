@@ -10,6 +10,9 @@ import Tensor.ContainerTensor.Tensor
 import Algebra
 import Data.Tree
 import Rig
+import Softmax
+import Misc
+
 
 ----------------------------------------
 --- Examples with cube-shaped tensors
@@ -88,3 +91,20 @@ indexTreeExample = ex1 @@ [GoLLeaf (GoLLeaf AtLeaf)]
 -- Dot product
 tDot : Tensor [] Double
 tDot = dot t0again t0again
+
+
+attention : {inputStructure, features : Cont} -> {a : Type} ->
+  Fractional a => Rig a => Exp a =>
+  {auto prfi : Applicative (Ext inputStructure)} ->
+  {auto prff : Applicative (Ext features)} ->
+  AllAlgebra [features] a =>
+  AllAlgebra [inputStructure, features] a =>
+  (softmax : Tensor [inputStructure] a -> Tensor [inputStructure] a) ->
+  (Tensor [inputStructure, features] a) ->
+  (Tensor [inputStructure, features] a) ->
+  (Tensor [inputStructure, features] a) ->
+  Tensor [inputStructure, features] a
+attention softmax q k v =
+  let attentionMatrix : Tensor [inputStructure, inputStructure] a
+      attentionMatrix = (q `multiplyMMT` k) -- missing softmax1
+  in attentionMatrix `matMul` v
