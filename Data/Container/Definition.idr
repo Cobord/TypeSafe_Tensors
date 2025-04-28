@@ -27,6 +27,13 @@ export typebind infixr 0 !>
 
 %name Cont c, c', c''
 
+
+Const2 : Type -> Type -> Cont
+Const2 x y = (_ : x) !> y
+
+Const : Type -> Cont
+Const x = (_ : x) !> x
+
 ||| Extension of a container
 ||| This allows us to talk about the content, or payload of a container
 public export
@@ -48,6 +55,15 @@ fof c x = Ext c x
 public export
 Functor (Ext c) where
   map {c=shp !> pos} f ((s <| v)) = (s <| f . v)
+
+||| For containers where shape is Unit
+||| Their extensions are Naperian
+public export
+{l : Type} -> Naperian (Ext ((!>) () (\_ => l))) where
+  Log = l
+  lookup = indexCont
+  tabulate t = () <| t
+
 
 -- No Applicative instance for (Ext c) in general
 

@@ -5,6 +5,7 @@ import Data.Vect
 
 import Rig
 import Misc
+import Tensor.Naperian
 
 %hide Data.Vect.transpose
 
@@ -51,6 +52,7 @@ namespace TensorInterfaces
   Traversable (Tensor shape) where
     traverse fn (TZ val) = TZ <$> fn val
     traverse fn (TS xs) = TS <$> traverse (traverse fn) xs
+
 
 
 namespace NestedTensorStuff
@@ -188,6 +190,24 @@ namespace IndexT
   public export
   (@@) : Tensor shape a -> IndexT shape -> a
   (@@) = flip indexTensor
+
+
+  -- AI generated, not checked if correct
+  tensorTabulate : {shape : Vect n Nat}
+    -> (IndexT shape -> a) -> Tensor shape a
+  tensorTabulate {shape = []} f = TZ (f Nil)
+  tensorTabulate {shape = (s :: ss)} f = TS $ vectTabulate (\i => tensorTabulate {shape=ss} (\is => f (i :: is)))
+  
+  public export
+  {shape : Vect n Nat} -> Naperian (Tensor shape) where
+      Log = IndexT shape
+      lookup = flip indexTensor
+      tabulate = tensorTabulate
+
+  -- using Naperian instance
+  public export
+  transposeMatrix : {i, j : Nat} -> Tensor [i, j] a -> Tensor [j, i] a
+  transposeMatrix = fromNestedTensor . transpose . toNestedTensor
 
 
 

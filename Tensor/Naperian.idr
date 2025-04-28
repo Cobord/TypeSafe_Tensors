@@ -2,7 +2,6 @@ module Tensor.Naperian
 
 import Data.Vect
 
-import Tensor.CubicalTensor.Tensor
 import Rig
 
 %hide Data.Vect.transpose
@@ -15,12 +14,12 @@ Vect n is Naperian, and are represented by Fin n
 
 BTree in general is not Naperian, but if we restrict to trees of a particular shape, then they are Naperian
 
-Q: Are Naperian functors just containers with constant shape?
+Q: Are Naperian functors just containers with unit shape?
 This is about non-ragged shapes.
-Would ragged shapes imply dependent types?
+* Would ragged shapes imply dependent types?
+* Is every Naperian functor Applicative?
 -}
 
--- Is every Naperian functor Applicative?
 public export
 interface Functor f => Naperian f where
     Log : Type -- perhaps a better name is Shape
@@ -54,36 +53,19 @@ pairLookup : Pair a a -> Bool -> a
 pairLookup p False = fst p
 pairLookup p True = snd p
 
--- AI generated, not checked if correct
-tensorTabulate : {shape : Vect n Nat}
-  -> (IndexT shape -> a) -> Tensor shape a
-tensorTabulate {shape = []} f = TZ (f Nil)
-tensorTabulate {shape = (s :: ss)} f = TS $ vectTabulate (\i => tensorTabulate {shape=ss} (\is => f (i :: is)))
-
-public export
-{shape : Vect n Nat} -> Naperian (Tensor shape) where
-    Log = IndexT shape
-    lookup = flip indexTensor
-    tabulate = tensorTabulate
-
--- using Naperian instance
-public export
-transposeMatrix : {i, j : Nat} -> Tensor [i, j] a -> Tensor [j, i] a
-transposeMatrix = fromNestedTensor . transpose . toNestedTensor
-
-reshapeTensorNap : {shape : Vect n Nat} -> {newShape : Vect m Nat}
-  -> Tensor shape a
-  -> (newShape : Vect n Nat)
-  -> {auto prf : prod shape = prod newShape}
-  -> Tensor newShape a
-reshapeTensorNap t newShape = let tR = lookup t in tabulate ?aa
-
-reshapeIndex : {shape : Vect n Nat} -> {newShape : Vect m Nat}
-  -> {auto prf : prod shape = prod newShape}
-  -> IndexT newShape
-  -> IndexT shape
-reshapeIndex [] = ?reshapeIndex_rhs_0
-reshapeIndex (x :: xs) = ?reshapeIndex_rhs_1
+-- reshapeTensorNap : {shape : Vect n Nat} -> {newShape : Vect m Nat}
+--   -> Tensor shape a
+--   -> (newShape : Vect n Nat)
+--   -> {auto prf : prod shape = prod newShape}
+--   -> Tensor newShape a
+-- reshapeTensorNap t newShape = let tR = lookup t in tabulate ?aa
+-- 
+-- reshapeIndex : {shape : Vect n Nat} -> {newShape : Vect m Nat}
+--   -> {auto prf : prod shape = prod newShape}
+--   -> IndexT newShape
+--   -> IndexT shape
+-- reshapeIndex [] = ?reshapeIndex_rhs_0
+-- reshapeIndex (x :: xs) = ?reshapeIndex_rhs_1
 
 
 mapNats : {t, t' : Vect n Nat} -> {auto prf : prod t = prod t'}
@@ -91,15 +73,15 @@ mapNats : {t, t' : Vect n Nat} -> {auto prf : prod t = prod t'}
 mapNats i = ?mapNats_rhs
 
 
-reshapeIndex' : IndexT [2, 3]
-  -> IndexT [6]
-reshapeIndex' (i :: j :: Nil) = ?yuu :: Nil
+-- reshapeIndex' : IndexT [2, 3]
+--   -> IndexT [6]
+-- reshapeIndex' (i :: j :: Nil) = ?yuu :: Nil
 
 vectPositionsEx : Vect 3 (Fin 3)
 vectPositionsEx = positions
 
-tensorPositionsEx : Tensor [3, 3, 3] (IndexT [3, 3, 3])
-tensorPositionsEx = positions
+-- tensorPositionsEx : Tensor [3, 3, 3] (IndexT [3, 3, 3])
+-- tensorPositionsEx = positions
 
   -- not sure how to represent Pair, it's curried?
 -- Naperian (Pair) where

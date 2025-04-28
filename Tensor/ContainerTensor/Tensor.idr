@@ -9,6 +9,7 @@ import Data.Tree
 import Rig
 import Misc
 import Algebra
+import Tensor.Naperian
 
 %hide Data.Vect.fromList
 %hide Builtin.infixr.(#)
@@ -131,6 +132,9 @@ namespace AlgebraT
   --   => Algebra (Tensor shape) ((Ext c) a) where
   --   reduce (TZ val) = val
   --   reduce (TS xs) = let t = reduce <$> xs in ?vnnn -- reduce (reduce <$> xs)
+
+
+
 
 public export
 dot : {shape : ApplV conts} -> {a : Type}
@@ -328,6 +332,63 @@ namespace IndexT
   (@@@) : {shape : Vect n Nat}
     -> (t : Tensor' shape a) -> IndexT (vectApplV shape) (GetT t) -> a
   (@@@) (MkT t) i = indexTensor t i
+
+
+namespace NaperianT
+  public export
+  data AllNaperian : (shape : ApplV conts) -> Type where
+    Nil : AllNaperian []
+    (::) : {c : Cont} -> 
+      {auto prf : Applicative (Ext c)} ->
+      {cs : ApplV conts} ->
+      (naperian : Naperian (Ext c))
+      => AllNaperian cs -> AllNaperian (c :: cs)
+
+  namespace IndexTNaperian
+    ||| Datatype for indeixng Tensors made out of containers whose extensions are Naperian
+    ||| Meaning we don't need the tensor *term* to be able to index into it, just the type
+    public export
+    data IndexTNaperian : (shape : ApplV conts) -> (allNaperian : AllNaperian shape) -> Type where
+      Nil : IndexTNaperian [] []
+      (::) : {c : Cont} ->
+        (napC : Naperian (Ext c)) =>
+        {cs : ApplV conts} ->
+        {allNapsCs : AllNaperian cs} ->
+        (i : Log {f=Ext c}) ->
+        {auto prf : Applicative (Ext c)} ->
+        IndexTNaperian cs allNapsCs ->
+        IndexTNaperian (c :: cs) ((::) {naperian=napC} allNapsCs)
+
+  tensorTabulate : {shape : ApplV conts} -> (allNaperian : AllNaperian shape) -> (IndexTNaperian shape allNaperian -> a) -> Tensor shape a
+  tensorTabulate {shape = []} [] f = TZ $ f []
+  tensorTabulate {shape = (_ :: _)} ((::) applS) f
+    = TS $ tabulate $ \i => tensorTabulate applS $ \is => f (i :: is)
+
+  public export
+  {conts : Vect n ApplC} -> {shape : ApplV conts} -> (allNaperian : AllNaperian shape) =>
+  Naperian (Tensor shape) where
+    Log = IndexTNaperian shape allNaperian
+    lookup {allNaperian = []} (TZ val) [] = val
+    lookup {allNaperian = ((::) _)} (TS xs) (i :: is) = lookup (lookup xs i) is
+    tabulate {allNaperian} = tensorTabulate allNaperian
+
+  -- indexTensor (TS xs) (i :: is) = indexTensor (indexCont xs i) is 
+  public export
+  prodShapes : {conts : Vect n ApplC} -> {shape : ApplV conts} -> (allNaperian : AllNaperian shape) -> Vect n Type
+  prodShapes [] = []
+  prodShapes ((::) {c} ns) = Log {f=Ext c} :: prodShapes ns
+
+  public export -- Is this the best way?
+  TupleType : Vect n Type -> Type
+  TupleType [] = Unit
+  TupleType (x :: xs) = (x, TupleType xs)
+
+  ltt : {shape : ApplV conts} -> (allNaperian : AllNaperian shape) -> TupleType (prodShapes allNaperian) -> Tensor shape a -> a
+  ltt {shape = []} allNaperian i (TZ val) = ?ltt_rhs_0
+  ltt {shape = (c :: cs)} allNaperian i (TS x) = ?ltt_rhs_1
+    -- = let g = indexTensor t
+    --   in ?ltt_rhs
+
 
 
 
