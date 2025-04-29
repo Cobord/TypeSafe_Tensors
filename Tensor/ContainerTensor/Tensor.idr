@@ -133,11 +133,17 @@ namespace AlgebraT
   Algebra (Tensor shape) a where
     reduce = reduceTensor
 
-  -- public export
-  -- [appSumTensor] {shape : ApplV conts} -> Rig a => Applicative (Ext c)
-  --   => Algebra (Tensor shape) ((Ext c) a) where
-  --   reduce (TZ val) = val
-  --   reduce (TS xs) = let t = reduce <$> xs in ?vnnn -- reduce (reduce <$> xs)
+  public export
+  [appSumTensor] {shape : ApplV conts} 
+    -> {a : Type}
+    -> Rig a
+    => Applicative (Ext c)
+    => (allAlg : AllAlgebra shape a)
+    => Algebra (Tensor shape) ((Ext c) a) where
+      reduce {allAlg = []} (TZ val) = val
+      reduce {shape=(c::cs)} {allAlg = ((::) alg)} (TS xs) -- = ?fvhvh_2
+        = let t = reduce {f=(Tensor cs)} <$> xs
+          in ?ghhh -- reduce (reduce <$> xs)
 
 
 
@@ -148,12 +154,6 @@ dot : {shape : ApplV conts} -> {a : Type}
   => Tensor shape a -> Tensor shape a -> Tensor [] a
 dot xs ys = TZ $ reduce $ (\(x, y) => x ~*~ y) <$> liftA2Tensor xs ys
 
-
-tEx : Tensor [BTreeLeafCont] Int
-tEx = ?hooo
-
-tDott : Tensor [] Int
-tDott = dot tEx tEx
 
 -- Multiply a matrix and a vector
 public export
@@ -362,6 +362,15 @@ namespace IndexT
 -- TODO
 -- exCont3 : Tensor [BTreeLeafCont, ListCont] Int
 -- exCont3 = fromArray ?exCont3_rhs
+
+
+public export
+tensorMapFirstAxis : {x, y : Cont}
+  -> Applicative (Ext x) => Applicative (Ext y)
+  => {ss : ApplV conts}
+  -> (f : Tensor [x] (Tensor ss a) -> Tensor [y] (Tensor ss a))
+  -> Tensor (x :: ss) a -> Tensor (y :: ss) a
+tensorMapFirstAxis f ta = fromNestedTensor $ f $ toNestedTensor ta
 
 exampleList : List' Int
 exampleList = fromList [1,2,3,4]

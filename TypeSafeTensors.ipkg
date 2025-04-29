@@ -1,4 +1,4 @@
-package TransformersIdris
+package TypeSafeTensors
 -- version =
 authors = "Bruno Gavranovic"
 -- maintainers =

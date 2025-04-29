@@ -29,20 +29,26 @@ softmaxTreeNode = softmax {f=BTreeNode}
 
 --- Tensor softmax
 
-softmax' : {shape : ApplV conts}
-  -> Fractional a => Exp a => AllAlgebra shape a => 
-  Tensor shape a -> Tensor shape a
+softmax' : {i : Cont}
+  -> Applicative (Ext i) => (allAlg : AllAlgebra [i] a)
+  => Fractional a => Exp a
+  => Tensor [i] a -> Tensor [i] a
 softmax' t = let exps = exp <$> t
              in exps <&> (/ reduce exps)
 
+-- This should be done by a more general map operation over a specific axis
 public export
 softmax1 : {s : Cont} -> {ss : ApplV conts} ->
   Applicative (Ext s) =>
   Fractional (Tensor ss a) =>
   Exp (Tensor ss a) => 
-  AllAlgebra [s] (Tensor ss a) =>
+  (allAlgebra : AllAlgebra [s] (Tensor ss a)) =>
   Tensor (s :: ss) a -> Tensor (s :: ss) a
-softmax1 = fromNestedTensor . softmax' . toNestedTensor
+softmax1 {allAlgebra} x
+   = let sm = softmax' {i=s} {a=(Tensor ss a)}
+         t = tensorMapFirstAxis {x=s, y=s} sm x
+    in t
+             
 
 
 -- softmaxVect' : {n : Nat} -> Tensor [VectCont n] Double -> Tensor [VectCont n] Double

@@ -118,7 +118,7 @@ attention : {inputStructure, features : Cont} -> {a : Type} ->
   Applicative (Ext inputStructure) =>
   Applicative (Ext features) =>
   AllAlgebra [features] a =>
-  AllAlgebra [inputStructure, features] a =>
+  Algebra (Ext inputStructure) (Algebra (Ext features) a) =>
   (softmax : Tensor [inputStructure] a -> Tensor [inputStructure] a) ->
   (Tensor [inputStructure, features] a) ->
   (Tensor [inputStructure, features] a) ->
@@ -127,4 +127,5 @@ attention : {inputStructure, features : Cont} -> {a : Type} ->
 attention softmax q k v =
   let attentionMatrix : Tensor [inputStructure, inputStructure] a
       attentionMatrix = (q `multiplyMMT` k) -- missing softmax1
-  in attentionMatrix `matMul` v
+      sm = softmax1 {s=inputStructure} {ss=[inputStructure]} {a=a}
+  in ?holre -- attentionMatrix `matMul` v

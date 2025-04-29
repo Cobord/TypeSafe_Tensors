@@ -153,7 +153,7 @@ interface Comult (f : Type -> Type) a where
   comult : f a -> f (f a)
 
 {shape : Vect n Nat} -> Rig a => Comult (Tensor shape) a where
-  comult t = toNestedTensor' ?eii
+  comult t = ?eii
 
 gg : Tensor [3] Double -> Tensor [3, 3] Double
 gg (TS xs) = TS $ map ?fn ?gg_rhs_0
