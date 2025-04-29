@@ -18,6 +18,13 @@ export infixr 6 ~+~
 export infixr 7 ~*~
 
 public export
+Rig Int where
+  zero = 0
+  one = 1
+  (~+~) = (+)
+  (~*~) = (*)
+
+public export
 Rig Double where
   zero = 0
   one = 1

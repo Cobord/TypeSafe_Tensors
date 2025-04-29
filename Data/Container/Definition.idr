@@ -56,6 +56,13 @@ public export
 Functor (Ext c) where
   map {c=shp !> pos} f ((s <| v)) = (s <| f . v)
 
+liftA2ConstCont : Ext (Const2 () l) a -> Ext (Const2 () l) b -> Ext (Const2 () l) (a, b)
+liftA2ConstCont (() <| va) (() <| vb) = () <| (\x => (va x, vb x))
+
+{l : Type} -> Applicative (Ext (Const2 () l)) where
+  pure a = () <| (\_ => a)
+  fs <*> xs = uncurry ($) <$> liftA2ConstCont fs xs 
+
 ||| For containers where shape is Unit
 ||| Their extensions are Naperian
 public export

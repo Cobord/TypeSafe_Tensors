@@ -2,26 +2,23 @@ module Tensor.Naperian
 
 import Data.Vect
 
-import Rig
-
 %hide Data.Vect.transpose
 
 -- Needed to define transposition
 {-
-Lists are not Naperian, because their shape isn't uniform (they can be of different lengths)
-Stream is Naperian, and is represented by Nat
-Vect n is Naperian, and are represented by Fin n
+Lists -> not Naperian! Their shape isn't uniform (they can be of different lengths)
+Stream -> Naperian, and is represented by Nat
+Vect n ->Naperian, and are represented by Fin n
 
 BTree in general is not Naperian, but if we restrict to trees of a particular shape, then they are Naperian
 
 Q: Are Naperian functors just containers with unit shape?
 This is about non-ragged shapes.
 * Would ragged shapes imply dependent types?
-* Is every Naperian functor Applicative?
 -}
 
 public export
-interface Functor f => Naperian f where
+interface Applicative f => Naperian f where
     Log : Type -- perhaps a better name is Shape
     lookup : f a -> Log -> a -- this and the line below
     tabulate : (Log -> a) -> f a -- are an isomorphism
@@ -31,7 +28,7 @@ positions : Naperian f => f (Log {f=f})
 positions = tabulate id
 
 public export
-transpose : (Naperian f, Naperian g) => f (g a) -> g (f a)
+transpose : Naperian f => Naperian g => f (g a) -> g (f a)
 transpose {f} {g} x = tabulate <$> tabulate (flip (lookup . (lookup x)))
 
 public export
@@ -44,14 +41,15 @@ vectPositions : {n : Nat} -> Vect n (Fin n)
 vectPositions {n = 0} = []
 vectPositions {n = (S k)} = FZ :: (FS <$> vectPositions)
 
+public export
 {n : Nat} -> Naperian (Vect n) where
     Log = Fin n
     lookup = flip index
     tabulate = vectTabulate
 
-pairLookup : Pair a a -> Bool -> a
-pairLookup p False = fst p
-pairLookup p True = snd p
+
+vectPositionsEx : Vect 3 (Fin 3)
+vectPositionsEx = positions
 
 -- reshapeTensorNap : {shape : Vect n Nat} -> {newShape : Vect m Nat}
 --   -> Tensor shape a
@@ -68,17 +66,14 @@ pairLookup p True = snd p
 -- reshapeIndex (x :: xs) = ?reshapeIndex_rhs_1
 
 
-mapNats : {t, t' : Vect n Nat} -> {auto prf : prod t = prod t'}
-  -> Fin (prod t) -> Fin (prod t')
-mapNats i = ?mapNats_rhs
+-- mapNats : {t, t' : Vect n Nat} -> {auto prf : prod t = prod t'}
+--   -> Fin (prod t) -> Fin (prod t')
+-- mapNats i = ?mapNats_rhs
 
 
 -- reshapeIndex' : IndexT [2, 3]
 --   -> IndexT [6]
 -- reshapeIndex' (i :: j :: Nil) = ?yuu :: Nil
-
-vectPositionsEx : Vect 3 (Fin 3)
-vectPositionsEx = positions
 
 -- tensorPositionsEx : Tensor [3, 3, 3] (IndexT [3, 3, 3])
 -- tensorPositionsEx = positions

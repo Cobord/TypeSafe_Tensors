@@ -7,11 +7,14 @@ import Data.Container.Definition
 import Data.Container.Instances
 
 import Tensor.ContainerTensor.Tensor
+import Tensor.ContainerTensor.TensorUtils
+-- import Tensor.ContainerTensor.NaperianTensor
 import Algebra
 import Data.Tree
 import Rig
 import Softmax
 import Misc
+
 
 
 ----------------------------------------
@@ -21,7 +24,7 @@ import Misc
 -- a more general, non-cubical tensor
 
 t0 : Tensor' [7] Double
-t0 = fromArray' [1,2,3,4,5,6,7]
+t0 = range -- [0..6]
 
 
 t1 : Tensor' [3, 4] Double
@@ -43,9 +46,19 @@ tSum = t1 + t1
 tMul : Tensor' [2, 5] Double
 tMul = (t2 * t2) <&> (+7)
 
--- Safe indexing, t1 @ [7, 5] would not compile
+-- Safe indexing
 indexExample : Double
 indexExample = t1 @@@ [1, 2]
+
+failing
+   -- We cannot index outside of the tensor's shape
+   indexExampleFail : Double
+   indexExampleFail = t1 @@@ [7, 2]
+
+-- Safe transposition
+-- t1Transposed : Tensor' [4, 3] Double
+-- t1Transposed = transposeMatrix t1
+
 
 
 negExample : Tensor' [3, 4] Double
@@ -77,6 +90,13 @@ ex1 = fromArray $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 47)) (Leaf 2)
 -- Or a tree with nodes as elements
 ex2 : Tensor [BTreeNodeCont] Double
 ex2 = fromArray $ fromBTreeNode $ Node 127 Leaf' (Node 14 Leaf' Leaf')
+{- 
+    127
+  /     \
+ *      14     
+       / \
+       *  * 
+-}
 
 -- Or elements themselves can be vectors!
 ex3 : Tensor [BTreeLeafCont, VectCont 2] Double
@@ -89,14 +109,14 @@ indexTreeExample = ex1 @@ [GoLLeaf (GoLLeaf AtLeaf)]
 
 
 -- Dot product
-tDot : Tensor [] Double
-tDot = dot t0again t0again
+-- tDot : Tensor [] Double
+-- tDot = dot t0again t0again
 
 
 attention : {inputStructure, features : Cont} -> {a : Type} ->
   Fractional a => Rig a => Exp a =>
-  {auto prfi : Applicative (Ext inputStructure)} ->
-  {auto prff : Applicative (Ext features)} ->
+  Applicative (Ext inputStructure) =>
+  Applicative (Ext features) =>
   AllAlgebra [features] a =>
   AllAlgebra [inputStructure, features] a =>
   (softmax : Tensor [inputStructure] a -> Tensor [inputStructure] a) ->

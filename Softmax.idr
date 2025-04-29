@@ -37,20 +37,22 @@ softmax' t = let exps = exp <$> t
 
 public export
 softmax1 : {s : Cont} -> {ss : ApplV conts} ->
-  {auto prf : Applicative (Ext s)} ->
-  Fractional (Tensor ss a) => Exp (Tensor ss a) => AllAlgebra [s] (Tensor ss a) =>
+  Applicative (Ext s) =>
+  Fractional (Tensor ss a) =>
+  Exp (Tensor ss a) => 
+  AllAlgebra [s] (Tensor ss a) =>
   Tensor (s :: ss) a -> Tensor (s :: ss) a
 softmax1 = fromNestedTensor . softmax' . toNestedTensor
 
 
-softmaxVect' : {n : Nat} -> Tensor [VectCont n] Double -> Tensor [VectCont n] Double
-softmaxVect' = softmax'
-
-softmaxBTreeLeaf' : Tensor [BTreeLeafCont] Double -> Tensor [BTreeLeafCont] Double
-softmaxBTreeLeaf' = softmax'
-
-softmaxBTreeNode' : Tensor [BTreeNodeCont] Double -> Tensor [BTreeNodeCont] Double
-softmaxBTreeNode' = softmax'
+-- softmaxVect' : {n : Nat} -> Tensor [VectCont n] Double -> Tensor [VectCont n] Double
+-- softmaxVect' = softmax'
+-- 
+-- softmaxBTreeLeaf' : Tensor [BTreeLeafCont] Double -> Tensor [BTreeLeafCont] Double
+-- softmaxBTreeLeaf' = softmax'
+-- 
+-- softmaxBTreeNode' : Tensor [BTreeNodeCont] Double -> Tensor [BTreeNodeCont] Double
+-- softmaxBTreeNode' = softmax'
  
 
 

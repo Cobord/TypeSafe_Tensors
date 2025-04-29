@@ -26,13 +26,13 @@ record ApplC where
 public export
 data ApplV : Vect n ApplC -> Type where
   Nil : ApplV []
-  (::) : (c : Cont) -> {auto prf : Applicative (Ext c)}
-     -> ApplV cs -> ApplV ((# c) :: cs)
+  (::) : (c : Cont) -> Applicative (Ext c)
+     => ApplV cs -> ApplV ((# c) :: cs)
 
 public export
 data Tensor : (shape : ApplV conts) -> (dtype : Type) -> Type where
     TZ : (val : dtype) -> Tensor [] dtype
-    TS : {auto prf : Applicative (Ext c)} -> {cs : ApplV conts} -> c `fof` (Tensor cs dtype) -> Tensor (c :: cs) dtype
+    TS : Applicative (Ext c) => {cs : ApplV conts} -> c `fof` (Tensor cs dtype) -> Tensor (c :: cs) dtype
 
 
 %name Tensor t, t'
@@ -83,6 +83,12 @@ namespace ApplicativeT
 
 namespace NumericT
   public export
+  {shape : ApplV conts} -> Rig a => Rig (Tensor shape a) where
+    zero = tensorReplicate zero
+    one = tensorReplicate one
+    xs ~+~ ys = (uncurry (~+~)) <$> liftA2 xs ys
+    xs ~*~ ys = (uncurry (~*~)) <$> liftA2 xs ys
+  public export
   {shape : ApplV conts} -> Num a => Num (Tensor shape a) where
     fromInteger i = pure (fromInteger i)
     xs + ys = (uncurry (+)) <$> liftA2 xs ys
@@ -112,7 +118,7 @@ namespace AlgebraT
   data AllAlgebra : (shape : ApplV conts) -> (dtype : Type) -> Type where
     Nil : AllAlgebra [] a
     (::) : {c : Cont} -> 
-      {auto prf : Applicative (Ext c)} ->
+      Applicative (Ext c) =>
       {cs : ApplV conts} ->
       (alg : Algebra (Ext c) (Tensor cs a))
       => AllAlgebra cs a -> AllAlgebra (c :: cs) a
@@ -142,11 +148,18 @@ dot : {shape : ApplV conts} -> {a : Type}
   => Tensor shape a -> Tensor shape a -> Tensor [] a
 dot xs ys = TZ $ reduce $ (\(x, y) => x ~*~ y) <$> liftA2Tensor xs ys
 
+
+tEx : Tensor [BTreeLeafCont] Int
+tEx = ?hooo
+
+tDott : Tensor [] Int
+tDott = dot tEx tEx
+
 -- Multiply a matrix and a vector
 public export
 multiplyMV : {a : Type} -> Rig a =>
-  {auto prff : Applicative (Ext f)} ->
-  {auto prfg : Applicative (Ext g)} ->
+  Applicative (Ext f) =>
+  Applicative (Ext g) =>
   AllAlgebra [g] a =>
   Tensor [f, g] a -> Tensor [g] a -> Tensor [f] a
 multiplyMV (TS m) v = TS (dot v <$> m)
@@ -154,8 +167,8 @@ multiplyMV (TS m) v = TS (dot v <$> m)
 -- Multiply a vector and a matrix
 public export
 multiplyVM : {a : Type} -> {f, g : Cont} -> Rig a =>
-  {auto prff : Applicative (Ext f)} ->
-  {auto prfg : Applicative (Ext g)} ->
+  Applicative (Ext f) =>
+  Applicative (Ext g) =>
   (allAlgebra : AllAlgebra [f, g] a) =>
   Tensor [f] a -> Tensor [f, g] a -> Tensor [g] a
 multiplyVM {allAlgebra = ((::) aa)} (TS v) (TS m)
@@ -165,9 +178,9 @@ multiplyVM {allAlgebra = ((::) aa)} (TS v) (TS m)
 
 public export
 matMul : {f, g, h : Cont} -> {a : Type} -> Rig a =>
-  {auto prff : Applicative (Ext f)} ->
-  {auto prfg : Applicative (Ext g)} ->
-  {auto prfh : Applicative (Ext h)} ->
+  Applicative (Ext f) =>
+  Applicative (Ext g) =>
+  Applicative (Ext h) =>
   (allAlgebra : AllAlgebra [g, h] a) =>
   Tensor [f, g] a -> Tensor [g, h] a -> Tensor [f, h] a
 matMul (TS m1) m2 = TS $ m1 <&> (\row => multiplyVM row m2)
@@ -175,9 +188,9 @@ matMul (TS m1) m2 = TS $ m1 <&> (\row => multiplyVM row m2)
 -- ij,kj->ki
 public export
 multiplyMMT : {f, g, h : Cont} -> {a : Type} -> Rig a =>
-  {auto prff : Applicative (Ext f)} ->
-  {auto prfg : Applicative (Ext g)} ->
-  {auto prfh : Applicative (Ext h)} ->
+  Applicative (Ext f) =>
+  Applicative (Ext g) =>
+  Applicative (Ext h) =>
   (allAlgebra : AllAlgebra [g] a) =>
   Tensor [f, g] a -> Tensor [h, g] a -> Tensor [h, f] a
 multiplyMMT m (TS n) = TS (multiplyMV m <$> n)
@@ -194,14 +207,19 @@ fromArray {shape = []} x = TZ x
 fromArray {shape = (c :: _)} xs = TS $ fromArray <$> xs
 
 public export
+toArray : {shape : ApplV conts} -> Tensor shape a -> Array shape a
+toArray (TZ val) = val
+toArray (TS xs) = toArray <$> xs
+
+public export
 toNestedTensor : {n : Cont} -> {ns : ApplV conts} ->
-  {auto prf : Applicative (Ext n)} ->
+  Applicative (Ext n) =>
   Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
 toNestedTensor (TS vs) = TS (TZ <$> vs)
 
 public export
 fromNestedTensor : {n : Cont} -> {ns : ApplV conts} ->
-  {auto prf : Applicative (Ext n)} ->
+  Applicative (Ext n) =>
   Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
 fromNestedTensor (TS vs) = TS $ ((\(TZ jk) => jk) <$> vs)
 
@@ -229,10 +247,7 @@ Functor (Tensor' shape) where
   map f (MkT t) = MkT $ map f t
 
 public export
-{shape : Vect n Nat} ->
--- {allAppl : AllAppl (VectCont <$> shape)} ->
-Num a =>
-Num (Tensor' shape a) where
+{shape : Vect n Nat} -> Num a => Num (Tensor' shape a) where
   fromInteger i = MkT $ fromInteger {ty=(Tensor (vectApplV shape) a)} i
   (MkT xs) + (MkT ys) = MkT $ (+) {ty=(Tensor (vectApplV shape) a)} xs ys
   (MkT xs) * (MkT ys) = MkT $ (*) {ty=(Tensor (vectApplV shape) a)} xs ys
@@ -296,7 +311,7 @@ namespace IndexT
   data IndexT : (shape : ApplV conts) -> (t : Tensor shape dtype) -> Type where
     Nil : {val : dtype} -> IndexT [] (TZ val)
     (::) :  {e : ((!>) shp' pos') `fof` (Tensor cs dtype)} -> 
-      {auto prf : Applicative (Ext ((!>) shp' pos'))} ->
+      Applicative (Ext ((!>) shp' pos')) =>
       (p : pos' (shapeExt e)) ->
       IndexT cs (indexCont e p) -> 
       IndexT ((!>) shp' pos' :: cs) (TS e)
@@ -332,63 +347,6 @@ namespace IndexT
   (@@@) : {shape : Vect n Nat}
     -> (t : Tensor' shape a) -> IndexT (vectApplV shape) (GetT t) -> a
   (@@@) (MkT t) i = indexTensor t i
-
-
-namespace NaperianT
-  public export
-  data AllNaperian : (shape : ApplV conts) -> Type where
-    Nil : AllNaperian []
-    (::) : {c : Cont} -> 
-      {auto prf : Applicative (Ext c)} ->
-      {cs : ApplV conts} ->
-      (naperian : Naperian (Ext c))
-      => AllNaperian cs -> AllNaperian (c :: cs)
-
-  namespace IndexTNaperian
-    ||| Datatype for indeixng Tensors made out of containers whose extensions are Naperian
-    ||| Meaning we don't need the tensor *term* to be able to index into it, just the type
-    public export
-    data IndexTNaperian : (shape : ApplV conts) -> (allNaperian : AllNaperian shape) -> Type where
-      Nil : IndexTNaperian [] []
-      (::) : {c : Cont} ->
-        (napC : Naperian (Ext c)) =>
-        {cs : ApplV conts} ->
-        {allNapsCs : AllNaperian cs} ->
-        (i : Log {f=Ext c}) ->
-        {auto prf : Applicative (Ext c)} ->
-        IndexTNaperian cs allNapsCs ->
-        IndexTNaperian (c :: cs) ((::) {naperian=napC} allNapsCs)
-
-  tensorTabulate : {shape : ApplV conts} -> (allNaperian : AllNaperian shape) -> (IndexTNaperian shape allNaperian -> a) -> Tensor shape a
-  tensorTabulate {shape = []} [] f = TZ $ f []
-  tensorTabulate {shape = (_ :: _)} ((::) applS) f
-    = TS $ tabulate $ \i => tensorTabulate applS $ \is => f (i :: is)
-
-  public export
-  {conts : Vect n ApplC} -> {shape : ApplV conts} -> (allNaperian : AllNaperian shape) =>
-  Naperian (Tensor shape) where
-    Log = IndexTNaperian shape allNaperian
-    lookup {allNaperian = []} (TZ val) [] = val
-    lookup {allNaperian = ((::) _)} (TS xs) (i :: is) = lookup (lookup xs i) is
-    tabulate {allNaperian} = tensorTabulate allNaperian
-
-  -- indexTensor (TS xs) (i :: is) = indexTensor (indexCont xs i) is 
-  public export
-  prodShapes : {conts : Vect n ApplC} -> {shape : ApplV conts} -> (allNaperian : AllNaperian shape) -> Vect n Type
-  prodShapes [] = []
-  prodShapes ((::) {c} ns) = Log {f=Ext c} :: prodShapes ns
-
-  public export -- Is this the best way?
-  TupleType : Vect n Type -> Type
-  TupleType [] = Unit
-  TupleType (x :: xs) = (x, TupleType xs)
-
-  ltt : {shape : ApplV conts} -> (allNaperian : AllNaperian shape) -> TupleType (prodShapes allNaperian) -> Tensor shape a -> a
-  ltt {shape = []} allNaperian i (TZ val) = ?ltt_rhs_0
-  ltt {shape = (c :: cs)} allNaperian i (TS x) = ?ltt_rhs_1
-    -- = let g = indexTensor t
-    --   in ?ltt_rhs
-
 
 
 

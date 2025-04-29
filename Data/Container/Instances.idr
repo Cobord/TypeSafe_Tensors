@@ -51,6 +51,10 @@ namespace MainContainerExamples
   public export
   ListCont : Cont
   ListCont = (n : Nat) !> (Fin n)
+
+  public export
+  StreamCont : Cont
+  StreamCont = (_ : Unit) !> Nat
   
   ||| Trees with data stored at nodes
   public export
@@ -164,6 +168,7 @@ namespace VectInstances
 
 
   ||| Helper to sum elements of a vector represented by a function Fin n -> a
+  public export
   reduceVect : {n : Nat} -> Rig a => (Fin n -> a) -> a
   reduceVect {n = Z} _ = zero
   reduceVect {n = S k} v = v FZ ~+~ reduceVect (v . FS)
