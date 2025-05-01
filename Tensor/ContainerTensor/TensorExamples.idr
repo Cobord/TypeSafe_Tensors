@@ -129,9 +129,7 @@ attention : {inputStructure, features : Cont} -> {a : Type} ->
 attention softmax q k v =
   let attentionMatrix : Tensor [inputStructure, inputStructure] a
       attentionMatrix = (q `multiplyMMT` k) -- missing softmax1
-      sm = softmax
-      -- sm' = softmax1 {s=inputStructure} {ss=[inputStructure]} {a=a}
-  in ?holre -- attentionMatrix `matMul` v
+  in attentionMatrix `matMul` v
 
 -- We need to be able to apply softmax (the argument to attention) to attentionMatrix
 -- That's what the tmfa function is for
