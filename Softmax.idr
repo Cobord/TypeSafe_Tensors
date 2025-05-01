@@ -36,18 +36,18 @@ softmax' : {i : Cont}
 softmax' t = let exps = exp <$> t
              in exps <&> (/ reduce exps)
 
--- This should be done by a more general map operation over a specific axis
-public export
-softmax1 : {s : Cont} -> {ss : ApplV conts} ->
-  Applicative (Ext s) =>
-  Fractional (Tensor ss a) =>
-  Exp (Tensor ss a) => 
-  (allAlgebra : AllAlgebra [s] (Tensor ss a)) =>
-  Tensor (s :: ss) a -> Tensor (s :: ss) a
-softmax1 {allAlgebra} x
-   = let sm = softmax' {i=s} {a=(Tensor ss a)}
-         t = tensorMapFirstAxis {x=s, y=s} sm x
-    in t
+-- -- This should be done by a more general map operation over a specific axis
+-- public export
+-- softmax1 : {s : Cont} -> {ss : ApplV conts} ->
+--   Applicative (Ext s) =>
+--   Fractional (Tensor ss a) =>
+--   Exp (Tensor ss a) => 
+--   (allAlgebra : AllAlgebra [s] (Tensor ss a)) =>
+--   Tensor (s :: ss) a -> Tensor (s :: ss) a
+-- softmax1 {allAlgebra} x
+--    = let sm = softmax' {i=s} {a=(Tensor ss a)}
+--          t = tensorMapFirstAxis {x=s, y=s} sm 
+--     in ?fmft
              
 
 

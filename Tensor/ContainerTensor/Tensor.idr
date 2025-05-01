@@ -30,6 +30,14 @@ data ApplV : Vect n ApplC -> Type where
   (::) : (c : Cont) -> Applicative (Ext c)
      => ApplV cs -> ApplV ((# c) :: cs)
 
+public export infixr 5 +++
+public export
+(+++) : {cs : Vect n ApplC} -> {ds : Vect m ApplC}
+  -> ApplV cs -> ApplV ds -> ApplV (cs ++ ds)
+[] +++ ys = ys
+(c :: cs) +++ ys = c :: (cs +++ ys)
+
+
 public export
 data Tensor : (shape : ApplV conts) -> (dtype : Type) -> Type where
     TZ : (val : dtype) -> Tensor [] dtype
@@ -218,11 +226,46 @@ toNestedTensor : {n : Cont} -> {ns : ApplV conts} ->
   Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
 toNestedTensor (TS vs) = TS (TZ <$> vs)
 
+public export infix 4 <-$
+
+public export
+(<-$) : {n : Cont} -> {ns : ApplV conts} ->
+  Applicative (Ext n) =>
+  Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
+(<-$) = toNestedTensor
+
 public export
 fromNestedTensor : {n : Cont} -> {ns : ApplV conts} ->
   Applicative (Ext n) =>
   Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
-fromNestedTensor (TS vs) = TS $ ((\(TZ jk) => jk) <$> vs)
+fromNestedTensor (TS vs) = TS $ (\(TZ jk) => jk) <$> vs
+
+public export infixr 4 $->
+public export
+($->) : {n : Cont} -> {ns : ApplV conts} ->
+  Applicative (Ext n) =>
+  Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
+($->) = fromNestedTensor
+
+public export
+tensorMapFirstAxis : {rest : Cont}
+  -> {s1, s2 : ApplV conts}
+  -> Applicative (Ext rest)
+  => (f : Tensor s1 a -> Tensor s2 a)
+  -> Tensor (rest :: s1) a -> Tensor (rest :: s2) a
+tensorMapFirstAxis f t = fromNestedTensor $ map f $ toNestedTensor t
+
+
+public export infixr 4 <-$->
+
+||| Map, but for nested tensors
+public export
+(<-$->) : {rest : Cont}
+  -> {shape : ApplV conts}
+  -> Applicative (Ext rest)
+  => (f : Tensor shape a -> Tensor shape a)
+  -> Tensor (rest :: shape) a -> Tensor (rest :: shape) a
+(<-$->) = tensorMapFirstAxis
 
 
 -- This recovers usual tensors in Tensor.Tensor
@@ -362,30 +405,6 @@ namespace IndexT
 -- TODO
 -- exCont3 : Tensor [BTreeLeafCont, ListCont] Int
 -- exCont3 = fromArray ?exCont3_rhs
-
-ggh : {x, y : Cont}
-  -> Applicative (Ext x) => Applicative (Ext y)
-  => {ss : ApplV conts}
-  -> (f : Tensor [x] a -> Tensor [y] a)
-  -> Tensor [x] (Tensor ss a) -> Tensor [y] (Tensor ss a)
-ggh f t = ?ho
-
-tmfa : {x, y : Cont}
-  -> Applicative (Ext x) => Applicative (Ext y)
-  => {ss : ApplV conts}
-  -> (f : Tensor [x] a -> Tensor [y] a)
-  -> Tensor (x :: ss) a  -> Tensor (y :: ss) a
-tmfa f ta = ?hoo
-  -- = let tt = f
-  --   in fromNestedTensor $ ?flvl $ toNestedTensor ta
-
-public export
-tensorMapFirstAxis : {x, y : Cont}
-  -> Applicative (Ext x) => Applicative (Ext y)
-  => {ss : ApplV conts}
-  -> (f : Tensor [x] (Tensor ss a) -> Tensor [y] (Tensor ss a))
-  -> Tensor (x :: ss) a -> Tensor (y :: ss) a
-tensorMapFirstAxis f ta = fromNestedTensor $ f $ toNestedTensor ta
 
 exampleList : List' Int
 exampleList = fromList [1,2,3,4]

@@ -84,7 +84,14 @@ t1again = fromArray $ fromVect $ fromVect <$> [ [0, 1, 2, 3]
 
 ||| Instead of having a vector with n elements, we can have a tree with leaves as elements.
 ex1 : Tensor [BTreeLeafCont] Double
-ex1 = fromArray $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 47)) (Leaf 2)
+ex1 = fromArray $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+{- 
+        *
+      /    \
+     *      2 
+    / \
+(-42)  46 
+-}
 
 ||| Or a tree with nodes as elements
 ex2 : Tensor [BTreeNodeCont] Double
@@ -116,20 +123,16 @@ failing
 -- tDot = dot t0again t0again
 
 
-attention : {inputStructure, features : Cont} -> {a : Type} ->
+crossAttention : {inputStructure, crossStructure, features : Cont} -> {a : Type} ->
   Fractional a => Rig a => Exp a =>
-  Applicative (Ext inputStructure) => Applicative (Ext features) =>
-  AllAlgebra [features] a =>
-  AllAlgebra [inputStructure, features] a =>
+  Applicative (Ext inputStructure) => Applicative (Ext crossStructure) => Applicative (Ext features) =>
+  (allAlg : AllAlgebra [inputStructure, features] a) =>
   (softmax : Tensor [inputStructure] a -> Tensor [inputStructure] a) ->
-  (Tensor [inputStructure, features] a) ->
-  (Tensor [inputStructure, features] a) ->
-  (Tensor [inputStructure, features] a) ->
-  Tensor [inputStructure, features] a
-attention softmax q k v =
-  let attentionMatrix : Tensor [inputStructure, inputStructure] a
-      attentionMatrix = (q `multiplyMMT` k) -- missing softmax1
+  (q : Tensor [inputStructure, features] a) ->
+  (k : Tensor [crossStructure, features] a) ->
+  (v : Tensor [inputStructure, features] a) ->
+  Tensor [crossStructure, features] a
+crossAttention {allAlg = ((::) _)} softmax q k v =
+  let attentionMatrix : Tensor [crossStructure, inputStructure] a
+      attentionMatrix = softmax <-$-> (q `multiplyMMT` k)
   in attentionMatrix `matMul` v
-
--- We need to be able to apply softmax (the argument to attention) to attentionMatrix
--- That's what the tmfa function is for
