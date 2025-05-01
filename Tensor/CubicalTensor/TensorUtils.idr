@@ -2,7 +2,7 @@ module Tensor.CubicalTensor.TensorUtils
 
 import Data.Vect 
 
-import Rig
+import Data.Rig
 import Tensor.CubicalTensor.Tensor
 
 public export

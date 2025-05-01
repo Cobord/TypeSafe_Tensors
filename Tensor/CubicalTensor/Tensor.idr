@@ -3,7 +3,7 @@ module Tensor.CubicalTensor.Tensor
 import Data.Fin
 import Data.Vect
 
-import Rig
+import Data.Rig
 import Misc
 import Tensor.Naperian
 

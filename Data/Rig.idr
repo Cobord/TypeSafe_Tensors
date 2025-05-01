@@ -1,4 +1,4 @@
-module Rig
+module Data.Rig
 
 import Data.Fin
 import Data.Vect

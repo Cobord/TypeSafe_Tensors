@@ -5,7 +5,7 @@ import Data.Vect
 import Tensor.GeneralisedTensor.Tensor
 import Algebra
 import Tree
-import Rig
+import Data.Rig
 
 %hide Builtin.infixr.(#)
 

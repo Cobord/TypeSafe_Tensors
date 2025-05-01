@@ -9,7 +9,7 @@ import Tensor.Naperian
 import Misc
 import Data.Tree
 import Algebra
-import Rig
+import Data.Rig
 
 %hide Data.Vect.fromList
 

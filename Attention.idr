@@ -7,7 +7,7 @@ import Tensor.Tensor
 import Tensor.TensorUtils
 import Tensor.Naperian
 import Tree
-import Rig
+import Data.Rig
 import Para.Para
 import Softmax
 import Algebra

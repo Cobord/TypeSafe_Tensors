@@ -9,7 +9,7 @@ import Tensor.ContainerTensor.Tensor
 import ApplicativeLinAlg
 import Algebra
 import Tree
-import Rig
+import Data.Rig
 import Misc
 
 public export

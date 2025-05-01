@@ -6,7 +6,7 @@ import Data.Vect
 import Data.Container.Definition
 import Data.Container.Instances
 import Data.Tree
-import Rig
+import Data.Rig
 import Misc
 import Algebra
 import Tensor.Naperian
@@ -15,6 +15,7 @@ import Tensor.Naperian
 %hide Builtin.infixr.(#)
 
 public export prefix 0 #
+
 ||| Container and a proof that its extension is an applicative functor
 public export
 record ApplC where
@@ -22,7 +23,7 @@ record ApplC where
   GetC : Cont
   {auto prf : Applicative (Ext GetC)}
 
-||| Construction to make it ergonomic to create vectors of applicative containers
+||| Construction to make it ergonomic to deal with vectors of applicative containers
 public export
 data ApplV : Vect n ApplC -> Type where
   Nil : ApplV []
@@ -58,7 +59,7 @@ namespace FunctorT
 
 namespace ApplicativeT
   ||| Datatype for witnessing that all the containers in a shape are applicative
-  -- public export
+  -- public export -- Not needed anymore since Applicative is baked in to Tensor
   -- data AllAppl : (shape : Vect n Cont) -> Type where
   --   Nil : AllAppl []
   --   Cons : Applicative (Ext c) => AllAppl cs -> AllAppl (c :: cs)
@@ -298,7 +299,6 @@ arr0 = fromArray' [1,2,3]
 
 
 namespace IndexT
-
   -- Given the Extension of a container, and a position in its shape, return the value at that position
   -- Couterpart of 'index' for Vectors
   -- public export
@@ -363,6 +363,21 @@ namespace IndexT
 -- exCont3 : Tensor [BTreeLeafCont, ListCont] Int
 -- exCont3 = fromArray ?exCont3_rhs
 
+ggh : {x, y : Cont}
+  -> Applicative (Ext x) => Applicative (Ext y)
+  => {ss : ApplV conts}
+  -> (f : Tensor [x] a -> Tensor [y] a)
+  -> Tensor [x] (Tensor ss a) -> Tensor [y] (Tensor ss a)
+ggh f t = ?ho
+
+tmfa : {x, y : Cont}
+  -> Applicative (Ext x) => Applicative (Ext y)
+  => {ss : ApplV conts}
+  -> (f : Tensor [x] a -> Tensor [y] a)
+  -> Tensor (x :: ss) a  -> Tensor (y :: ss) a
+tmfa f ta = ?hoo
+  -- = let tt = f
+  --   in fromNestedTensor $ ?flvl $ toNestedTensor ta
 
 public export
 tensorMapFirstAxis : {x, y : Cont}

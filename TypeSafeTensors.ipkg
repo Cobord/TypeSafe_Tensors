@@ -18,8 +18,8 @@ authors = "Bruno Gavranovic"
 -- modules to install
 modules = ApplicativeLinAlg,
           Data.Tree,
+          Data.Rig,
           Misc,
-          Rig,
           Tensor.ContainerTensor.Tensor,
           Tensor.ContainerTensor.TensorExamples,
           -- Tensor.ContainerTensor.NaperianTensor,

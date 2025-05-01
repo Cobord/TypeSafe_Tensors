@@ -4,7 +4,7 @@ import Data.Vect
 
 import Tensor
 import Tree
-import Rig
+import Data.Rig
 
 
 ||| Generalised sum operation

@@ -6,7 +6,7 @@ import Data.Vect
 import Tensor.CubicalTensor.Tensor
 import Tensor.Naperian
 import Tree
-import Rig
+import Data.Rig
 import Algebra
 
 import Misc

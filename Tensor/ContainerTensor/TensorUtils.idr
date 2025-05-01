@@ -5,7 +5,7 @@ import Data.Nat -- Add import for Cast
 
 import Tensor.ContainerTensor.Tensor
 import Tensor.Naperian
-import Rig
+import Data.Rig
 
 public export
 zeros : Rig a => {shape : ApplV conts} -> Tensor shape a

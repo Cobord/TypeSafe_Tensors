@@ -6,7 +6,7 @@ import Data.Vect.Quantifiers
 -- import Tensor
 import Algebra
 import Tree
-import Rig
+import Data.Rig
 import Misc
 
 %hide Builtin.infixr.(#)
