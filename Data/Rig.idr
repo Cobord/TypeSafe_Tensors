@@ -1,6 +1,5 @@
 module Data.Rig
 
-import Data.Fin
 import Data.Vect
 
 import Misc
@@ -8,6 +7,7 @@ import Misc
 -- We're also interested in natural numbers as an example
 public export
 interface Rig a where
+  constructor MkRig
   zero : a
   one : a
   (~+~) : a -> a -> a
@@ -18,37 +18,15 @@ export infixr 6 ~+~
 export infixr 7 ~*~
 
 public export
-Rig Int where
-  zero = 0
-  one = 1
+Num a => Rig a where
+  zero = fromInteger 0
+  one = fromInteger 1
   (~+~) = (+)
   (~*~) = (*)
-
-public export
-Rig Double where
-  zero = 0
-  one = 1
-  (~+~) = (+)
-  (~*~) = (*)
-
-public export
-Rig Nat where
-  zero = 0
-  one = 1
-  (~+~) = (+)
-  (~*~) = (*)
-
-||| Pointwise Rig structure
--- public export
--- {n : Nat} -> Rig a => Rig (Vect n a) where
---   zero = replicate n zero
---   one = replicate n one
---   xs ~+~ ys = zipWith (~+~) xs ys
---   xs ~*~ ys = zipWith (~*~) xs ys
 
 ||| Pointwise Rig structure for Applicative functors
 public export
-(Rig a, Applicative f) => Rig (f a) where
+[applicativeRig] Rig a => Applicative f => Rig (f a) where
   zero = pure zero
   one = pure one
   xs ~+~ ys = uncurry (~+~) <$> liftA2 xs ys

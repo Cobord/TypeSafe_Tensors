@@ -122,17 +122,3 @@ failing
 -- tDot : Tensor [] Double
 -- tDot = dot t0again t0again
 
-
-crossAttention : {inputStructure, crossStructure, features : Cont} -> {a : Type} ->
-  Fractional a => Rig a => Exp a =>
-  Applicative (Ext inputStructure) => Applicative (Ext crossStructure) => Applicative (Ext features) =>
-  (allAlg : AllAlgebra [inputStructure, features] a) =>
-  (softmax : Tensor [inputStructure] a -> Tensor [inputStructure] a) ->
-  (q : Tensor [inputStructure, features] a) ->
-  (k : Tensor [crossStructure, features] a) ->
-  (v : Tensor [inputStructure, features] a) ->
-  Tensor [crossStructure, features] a
-crossAttention {allAlg = ((::) _)} softmax q k v =
-  let attentionMatrix : Tensor [crossStructure, inputStructure] a
-      attentionMatrix = softmax <-$-> (q `multiplyMMT` k)
-  in attentionMatrix `matMul` v

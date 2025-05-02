@@ -174,7 +174,7 @@ namespace VectInstances
   reduceVect {n = S k} v = v FZ ~+~ reduceVect (v . FS)
 
   public export
-  {n : Nat} -> Rig a => Algebra (Ext (VectCont n)) a where
+  [vectContAlg] {n : Nat} -> Rig a => Algebra (Ext (VectCont n)) a where
     reduce (() <| v) = reduceVect v
 
 

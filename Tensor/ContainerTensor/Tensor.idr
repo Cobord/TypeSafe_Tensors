@@ -67,10 +67,10 @@ namespace FunctorT
 
 namespace ApplicativeT
   ||| Datatype for witnessing that all the containers in a shape are applicative
-  -- public export -- Not needed anymore since Applicative is baked in to Tensor
-  -- data AllAppl : (shape : Vect n Cont) -> Type where
-  --   Nil : AllAppl []
-  --   Cons : Applicative (Ext c) => AllAppl cs -> AllAppl (c :: cs)
+  -- public export -- Not used below since Applicative is baked in to Tensor
+  -- data AllApplicative : (shape : Vect n Cont) -> Type where
+  --   Nil : AllApplicative []
+  --   Cons : Applicative (Ext c) => AllApplicative cs -> AllApplicative (c :: cs)
 
   ||| Unit of the monoidal functor
   public export
@@ -91,12 +91,14 @@ namespace ApplicativeT
     fs <*> xs = uncurry ($) <$> liftA2Tensor fs xs 
 
 namespace NumericT
-  public export
-  {shape : ApplV conts} -> Rig a => Rig (Tensor shape a) where
-    zero = tensorReplicate zero
-    one = tensorReplicate one
-    xs ~+~ ys = (uncurry (~+~)) <$> liftA2 xs ys
-    xs ~*~ ys = (uncurry (~*~)) <$> liftA2 xs ys
+  -- We should get Rig from Num
+  -- public export
+  -- {shape : ApplV conts} -> Rig a => Rig (Tensor shape a) where
+  --   zero = tensorReplicate zero
+  --   one = tensorReplicate one
+  --   xs ~+~ ys = (uncurry (~+~)) <$> liftA2 xs ys
+  --   xs ~*~ ys = (uncurry (~*~)) <$> liftA2 xs ys
+  
   public export
   {shape : ApplV conts} -> Num a => Num (Tensor shape a) where
     fromInteger i = pure (fromInteger i)
@@ -129,31 +131,32 @@ namespace AlgebraT
     (::) : {c : Cont} -> 
       Applicative (Ext c) =>
       {cs : ApplV conts} ->
-      (alg : Algebra (Ext c) (Tensor cs a))
-      => AllAlgebra cs a -> AllAlgebra (c :: cs) a
+      (alg : Algebra (Ext c) (Tensor cs a)) =>
+      AllAlgebra cs a -> AllAlgebra (c :: cs) a
 
   public export
   reduceTensor : {shape : ApplV conts} -> (allAlgebra : AllAlgebra shape a) => Tensor shape a -> a
   reduceTensor {allAlgebra = []} (TZ val) = val
   reduceTensor {allAlgebra = ((::) cs)} (TS xs) = reduceTensor @{cs} (reduce xs)
 
+
   public export
-  {shape : ApplV conts} -> (allAlgebra : AllAlgebra shape a) =>
+  {shape : ApplV conts} ->
+  (allAlgebra : AllAlgebra shape a) =>
   Algebra (Tensor shape) a where
     reduce = reduceTensor
 
   public export
-  [appSumTensor] {shape : ApplV conts} 
-    -> {a : Type}
-    -> Rig a
-    => Applicative (Ext c)
-    => (allAlg : AllAlgebra shape a)
-    => Algebra (Tensor shape) ((Ext c) a) where
+  [appSumTensor] {shape : ApplV conts} ->
+    {a : Type} ->
+    Rig a =>
+    Applicative (Ext c) =>
+    (allAlg : AllAlgebra shape a) =>
+    Algebra (Tensor shape) ((Ext c) a) where
       reduce {allAlg = []} (TZ val) = val
       reduce {shape=(c::cs)} {allAlg = ((::) alg)} (TS xs) -- = ?fvhvh_2
         = let t = reduce {f=(Tensor cs)} <$> xs
           in ?ghhh -- reduce (reduce <$> xs)
-
 
 
 

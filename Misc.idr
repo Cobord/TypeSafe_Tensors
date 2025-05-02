@@ -29,6 +29,13 @@ Exp Double where
   exp = Prelude.exp
 
 
+-- for reshaping a tensor
+rr : {n, x, y : Nat}
+  -> Fin (S n)
+  -> {auto prf : n = x * y}
+  -> (Fin (S x), Fin (S y))
+rr i = ?rooo
+  -- -> Data.Fin.Arith.(*) (Fin (S x)) (Fin (S y))
 
 
 

@@ -12,28 +12,29 @@ import Tree
 import Data.Rig
 import Misc
 
-public export
-softmax : {f : Type -> Type}
-  -> (Functor f, Algebra f a, Fractional a, Exp a) => f a -> f a
-softmax {f} xs = let exps = exp <$> xs
-                 in exps <&> (/ reduce exps)
-
-softmaxVect : {n : Nat} -> Vect n Double -> Vect n Double
-softmaxVect = softmax
-
-softmaxTreeLeaf : BTreeLeaf Double -> BTreeLeaf Double
-softmaxTreeLeaf = softmax {f=BTreeLeaf}
-
-softmaxTreeNode : BTreeNode Double -> BTreeNode Double
-softmaxTreeNode = softmax {f=BTreeNode}
+-- public export
+-- softmax : {f : Type -> Type}
+--   -> (Functor f, Algebra f a, Fractional a, Exp a) => f a -> f a
+-- softmax {f} xs = let exps = exp <$> xs
+--                  in exps <&> (/ reduce exps)
+-- 
+-- softmaxVect : {n : Nat} -> Vect n Double -> Vect n Double
+-- softmaxVect = softmax
+-- 
+-- softmaxTreeLeaf : BTreeLeaf Double -> BTreeLeaf Double
+-- softmaxTreeLeaf = softmax {f=BTreeLeaf}
+-- 
+-- softmaxTreeNode : BTreeNode Double -> BTreeNode Double
+-- softmaxTreeNode = softmax {f=BTreeNode}
 
 --- Tensor softmax
 
-softmax' : {i : Cont}
-  -> Applicative (Ext i) => (allAlg : AllAlgebra [i] a)
-  => Fractional a => Exp a
-  => Tensor [i] a -> Tensor [i] a
-softmax' t = let exps = exp <$> t
+public export
+softmax : {i : Cont}
+  -> Applicative (Ext i) => (allAlg : AllAlgebra [i] a) =>
+  Fractional a => Exp a =>
+  Tensor [i] a -> Tensor [i] a
+softmax t = let exps = exp <$> t
              in exps <&> (/ reduce exps)
 
 -- -- This should be done by a more general map operation over a specific axis
