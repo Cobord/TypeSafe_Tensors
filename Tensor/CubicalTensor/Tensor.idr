@@ -225,11 +225,6 @@ namespace SliceT
   sliceToShape Nil = []
   sliceToShape (s :: ss) = finToNat s :: sliceToShape ss
 
-  public export -- analogus to take in Data.Vect, but for Fin
-  takeFin : (s : Fin (S n)) -> Vect n a -> Vect (finToNat s) a
-  takeFin FZ _ = []
-  takeFin (FS s) (x :: xs) = x :: takeFin s xs
-
   public export --
   takeTensor : (slice : SliceT shape)
             -> Tensor shape a

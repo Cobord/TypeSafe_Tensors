@@ -4,7 +4,8 @@ import Data.Vect
 
 import Misc
 
--- We're also interested in natural numbers as an example
+||| Not Ring
+||| We're also interested in natural numbers as an example
 public export
 interface Rig a where
   constructor MkRig

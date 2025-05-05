@@ -10,32 +10,14 @@ import Misc
 import Data.Tree
 import Algebra
 import Data.Rig
+import Data.Container.TreeUtils
+
 
 %hide Data.Vect.fromList
 
 
-||| Shapes of binary trees
-public export
-data BTreeShape : Type where
-  LeafS : BTreeShape
-  NodeS : BTreeShape -> BTreeShape -> BTreeShape
-
-||| Positions corresponding to internal nodes within a BTreeShape shape.
-public export
-data FinBTreeNode : (b : BTreeShape) -> Type where
-  Root : {l, r : BTreeShape} -> FinBTreeNode (NodeS l r)
-  GoL  : {l, r : BTreeShape} -> FinBTreeNode l -> FinBTreeNode (NodeS l r)
-  GoR  : {l, r : BTreeShape} -> FinBTreeNode r -> FinBTreeNode (NodeS l r)
-
-||| Positions corresponding to leaves within a BTreeShape shape.
-public export
-data FinBTreeLeaf : (b : BTreeShape) -> Type where
-  AtLeaf : FinBTreeLeaf LeafS
-  GoLLeaf : {l, r : BTreeShape} -> FinBTreeLeaf l -> FinBTreeLeaf (NodeS l r)
-  GoRLeaf : {l, r : BTreeShape} -> FinBTreeLeaf r -> FinBTreeLeaf (NodeS l r)
-
 namespace MainContainerExamples
-  -- Examples
+  ||| Examples
   public export
   PairCont : Cont
   PairCont = (_ : Unit) !> Bool
@@ -76,7 +58,7 @@ namespace ExtensionsOfMainContainerExamples
   ||| Isomorphic to Vect
   public export
   Vect' : (n : Nat) -> Type -> Type
-  Vect' n x = (VectCont n) `fof` x
+  Vect' n x = (VectCont n) `fullOf` x
   
   ||| Isomorphic to Maybe
   public export
@@ -129,9 +111,6 @@ namespace ConversionFunctions
   
   
   
-  
-  
-  
   fromTreeHelper : FinBTreeNode LeafS -> a
   fromTreeHelper Root impossible
   fromTreeHelper (GoL x) impossible
@@ -160,64 +139,99 @@ namespace ConversionFunctions
             GoLLeaf posL => fnL posL
             GoRLeaf posR => fnR posR)
 
+  public export
+  toBTreeLeaf : BTreeLeaf' a -> BTreeLeaf a
+  toBTreeLeaf (LeafS <| content) = Leaf (content AtLeaf)
+  toBTreeLeaf ((NodeS l r) <| content) =
+    Node' (toBTreeLeaf (l <| \posL => content (GoLLeaf posL)))
+          (toBTreeLeaf (r <| \posR => content (GoRLeaf posR)))
+
 namespace VectInstances
+  public export
+  {n : Nat} -> Eq x => Eq (Ext (VectCont n) x) where
+    v == v' = (toVect v) == (toVect v')
+ 
+  public export
+  {n : Nat} -> Show x => Show (Ext (VectCont n) x) where
+    show v = show (toVect v)
+
+  public export
+  {n : Nat} -> Foldable (Ext (VectCont n)) where
+    foldr f z v = foldr f z (toVect v)
+  
   public export
   {n : Nat} -> Applicative (Ext (VectCont n)) where
     pure a = fromVect $ pure a
     fs <*> vs = fromVect $ toVect fs <*> toVect vs
 
-
-  ||| Helper to sum elements of a vector represented by a function Fin n -> a
   public export
-  reduceVect : {n : Nat} -> Rig a => (Fin n -> a) -> a
-  reduceVect {n = Z} _ = zero
-  reduceVect {n = S k} v = v FZ ~+~ reduceVect (v . FS)
+  {n : Nat} -> Rig a => Algebra (Ext (VectCont n)) a where
+    reduce v = reduce (toVect v)
 
-  public export
-  [vectContAlg] {n : Nat} -> Rig a => Algebra (Ext (VectCont n)) a where
-    reduce (() <| v) = reduceVect v
+  -- TODO Naperian instance? Or is that covered by the one in Definiton.idr?
 
 
 namespace BTreeLeafInstances
-    public export
-    liftA2BBTreeLeaf' : BTreeLeaf' a -> BTreeLeaf' b -> BTreeLeaf' (a, b)
-    liftA2BBTreeLeaf' (LeafS <| v) (LeafS <| v') = LeafS <| (\x => (v x, v' x))
-    liftA2BBTreeLeaf' (LeafS <| v) (NodeS l' r' <| v') =
-      NodeS l' r' <| \pos =>
-        case pos of
-          GoLLeaf posL' => (v AtLeaf, v' (GoLLeaf posL'))
-          GoRLeaf posR' => (v AtLeaf, v' (GoRLeaf posR'))
-    liftA2BBTreeLeaf' (NodeS l r <| v) (LeafS <| v') =
-      NodeS l r <| \pos =>
-        case pos of
-          GoLLeaf posL => (v (GoLLeaf posL), v' AtLeaf)
-          GoRLeaf posR => (v (GoRLeaf posR), v' AtLeaf)
-    liftA2BBTreeLeaf' (NodeS l r <| v) (NodeS l' r' <| v') =
-      let (ls <| fl) = liftA2BBTreeLeaf' (l <| v . GoLLeaf) (l' <| v' . GoLLeaf)
-          (rs <| fr) = liftA2BBTreeLeaf' (r <| v . GoRLeaf) (r' <| v' . GoRLeaf)
-      in (NodeS ls rs <| \pos =>
-           case pos of
-             GoLLeaf posL => fl posL
-             GoRLeaf posR => fr posR)
 
-    public export
-    Applicative BTreeLeaf' where
-      pure a = LeafS <| \_ => a
-      fs <*> vs = uncurry ($) <$> liftA2BBTreeLeaf' fs vs 
+  showBTreeLeaf' : Show a => BTreeLeaf' a -> String
+  showBTreeLeaf' (LeafS <| content) = "Leaf (" ++ show {ty=a} (content AtLeaf) ++ ")"
+  showBTreeLeaf' ((NodeS l r) <| content) =
+    let leftSubtree : BTreeLeaf' a = (l <| \posL => content (GoLLeaf posL))
+        rightSubtree : BTreeLeaf' a = (r <| \posR => content (GoRLeaf posR))
+    in "Node (" ++ showBTreeLeaf' leftSubtree ++ ") (" ++ showBTreeLeaf' rightSubtree ++ ")"
+
+  partial -- not partial but not sure how to convince Idris totality checker
+  public export
+  Show a => Show (BTreeLeaf' a) where
+    show t = show (toBTreeLeaf t)
+
+  public export
+  Eq a => Eq (BTreeLeaf' a) where
+    (LeafS <| v) == (LeafS <| v') = v AtLeaf == v' AtLeaf
+    ((NodeS l r) <| v) == ((NodeS l' r') <| v') =
+      (l == l') && (r == r') && ?vnm -- Assuming Eq BTreeShape is defined elsewhere
+    _ == _ = False
+
+  public export
+  liftA2BBTreeLeaf' : BTreeLeaf' a -> BTreeLeaf' b -> BTreeLeaf' (a, b)
+  liftA2BBTreeLeaf' (LeafS <| v) (LeafS <| v') = LeafS <| (\x => (v x, v' x))
+  liftA2BBTreeLeaf' (LeafS <| v) (NodeS l' r' <| v') =
+    NodeS l' r' <| \pos =>
+      case pos of
+        GoLLeaf posL' => (v AtLeaf, v' (GoLLeaf posL'))
+        GoRLeaf posR' => (v AtLeaf, v' (GoRLeaf posR'))
+  liftA2BBTreeLeaf' (NodeS l r <| v) (LeafS <| v') =
+    NodeS l r <| \pos =>
+      case pos of
+        GoLLeaf posL => (v (GoLLeaf posL), v' AtLeaf)
+        GoRLeaf posR => (v (GoRLeaf posR), v' AtLeaf)
+  liftA2BBTreeLeaf' (NodeS l r <| v) (NodeS l' r' <| v') =
+    let (ls <| fl) = liftA2BBTreeLeaf' (l <| v . GoLLeaf) (l' <| v' . GoLLeaf)
+        (rs <| fr) = liftA2BBTreeLeaf' (r <| v . GoRLeaf) (r' <| v' . GoRLeaf)
+    in (NodeS ls rs <| \pos =>
+         case pos of
+           GoLLeaf posL => fl posL
+           GoRLeaf posR => fr posR)
+
+  public export
+  Applicative BTreeLeaf' where
+    pure a = LeafS <| \_ => a
+    fs <*> vs = uncurry ($) <$> liftA2BBTreeLeaf' fs vs 
 
 
-    ||| Just summing up elements of the tree given by the Rig a structure
-    public export
-    Rig a => Algebra BTreeLeaf' a where
-      reduce (LeafS <| v) = v AtLeaf
-      reduce ((NodeS l r) <| v) =
-        let leftSubtree = l <| \posL => v (GoLLeaf posL)
-            rightSubtree = r <| \posR => v (GoRLeaf posR)
-        in reduce {f=BTreeLeaf'} leftSubtree ~+~
-           reduce {f=BTreeLeaf'} rightSubtree
+  ||| Just summing up elements of the tree given by the Rig a structure
+  public export
+  Rig a => Algebra BTreeLeaf' a where
+    reduce (LeafS <| v) = v AtLeaf
+    reduce ((NodeS l r) <| v) =
+      let leftSubtree = l <| \posL => v (GoLLeaf posL)
+          rightSubtree = r <| \posR => v (GoRLeaf posR)
+      in reduce {f=BTreeLeaf'} leftSubtree ~+~
+         reduce {f=BTreeLeaf'} rightSubtree
 
 
 namespace BTreeNodeInstances
+  -- TODO missing Eq instance for trees
 
   impossibleCase : FinBTreeNode LeafS -> (a, b)
   impossibleCase Root impossible

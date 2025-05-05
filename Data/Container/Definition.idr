@@ -12,15 +12,14 @@ import Misc
 
 -- Inspired by Andre's code
 
-
-||| A container is a product of a shape and a set of positions indexed by that shape
-||| They can be used to describe data types
+||| A container is a pair: a shape and a set of positions indexed by that shape
+||| They can be used to describe various data types
 public export
 record Cont where
   constructor (!>)
-  ||| Shapes
+  ||| A type of shapes
   shp : Type
-  ||| Positions
+  ||| For each shape, a position
   pos : shp -> Type
 
 export typebind infixr 0 !>
@@ -46,12 +45,14 @@ record Ext (c : Cont) (x : Type) where
 -- Ext : Cont -> Type -> Type
 -- Ext (shp !> pos) x = (s : shp ** pos s -> x)
 
--- Container 'c' "full off" `off` a type 'x'
+-- Container 'c' "full off" a type 'x'
 public export
-fof : Cont -> Type -> Type
-fof c x = Ext c x 
+fullOf : Cont -> Type -> Type
+fullOf c x = Ext c x 
 
--- previously called ExtMap
+-- In general hard to write Eq instance for Ext c x becuase pos is not enumerable
+
+
 public export
 Functor (Ext c) where
   map {c=shp !> pos} f ((s <| v)) = (s <| f . v)
@@ -70,7 +71,6 @@ public export
   Log = l
   lookup = indexCont
   tabulate t = () <| t
-
 
 -- No Applicative instance for (Ext c) in general
 

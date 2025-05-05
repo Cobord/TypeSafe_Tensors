@@ -3,5 +3,10 @@
 
 
 Features
-* Type-safe tensor contractions
-* Generalised tensors based on applicative functors
+* Type safe tensor contractions
+* Non-cubical tensors (trees, streams)
+
+
+
+Planned:
+* Type-safe einsum

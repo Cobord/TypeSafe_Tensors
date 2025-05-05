@@ -1,9 +1,11 @@
-module Attention
+module Architectures.Attention
 
 import Data.Vect
 
 import Data.Container.Definition
 import Data.Container.Instances
+import Data.Container.TreeUtils
+
 import Tensor.ContainerTensor.Tensor
 import Tensor.ContainerTensor.TensorUtils
 -- import ApplicativeLinAlg
@@ -13,7 +15,7 @@ import Tensor.ContainerTensor.TensorUtils
 import Data.Tree
 import Data.Rig
 import Para.Para
-import Softmax
+import Architectures.Softmax
 import Algebra
 import Misc
 
@@ -28,7 +30,7 @@ crossAttention : {inputStructure, crossStructure, features : Cont} ->
   (k : Tensor [crossStructure, features] a) ->
   (v : Tensor [inputStructure, features] a) ->
   Tensor [crossStructure, features] a
-crossAttention {allAlg = ((::) _)} softmax q k v =
+crossAttention {allAlg = ((::) {allAlg=_})} softmax q k v =
   let attentionMatrix : Tensor [crossStructure, inputStructure] a
       attentionMatrix = softmax <-$-> (q `multiplyMMT` k)
   in attentionMatrix `matMul` v
@@ -47,17 +49,38 @@ selfAttention : {inputStructure, features : Cont} ->
   Tensor [inputStructure, features] a
 selfAttention = crossAttention
 
--- attention : {inputStructure, features : Type -> Type} -> {a : Type}
---   -> (Applicative inputStructure, Applicative features, Rig a, Algebra features a, Algebra inputStructure (features a))
---   => (softmax : inputStructure a -> inputStructure a)
---   -> (q : inputStructure (features a))
---   -> (k : inputStructure (features a))
---   -> (v : inputStructure (features a))
---   -> inputStructure (features a)
--- attention softmax queries keys values =
---   let attentionMatrix = softmax <$> (queries `multiplyMMT` keys)
---   in attentionMatrix `matMul` values
 
+rrr : {shape : ApplV conts} -> Num a => Rig (Tensor shape a)
+rrr = %search
+
+ffg : Rig a => AllAlgebra [] a
+ffg = %search
+
+-- Should follow from what?
+-- ffgr : Num a => Algebra (Ext (VectCont 3)) (Tensor [] a)
+-- ffgr = %search
+
+-- ffgr' : Rig a => AllAlgebra [VectCont 3] a
+-- ffgr' = %search -- ?ffgr'_rhs
+
+
+fg : Rig a => AllAlgebra [VectCont 3, VectCont 4] a
+fg = ?isearch
+
+-- ||| Self-attention for cubical tensors
+-- public export
+-- selfAttention' : {inputSize, featureSize : Nat} ->
+--   {a : Type} -> Rig a =>
+--   (softmax : Tensor' [inputSize] a -> Tensor' [inputSize] a) ->
+--   (q : Tensor' [inputSize, featureSize] a) ->
+--   (k : Tensor' [inputSize, featureSize] a) ->
+--   (v : Tensor' [inputSize, featureSize] a) ->
+--   Tensor' [inputSize, featureSize] a
+-- selfAttention' softmax (MkT q) (MkT k) (MkT v)
+--   = MkT $ selfAttention ?ss ?qq ?kk ?vv
+
+
+||| Data structure for holding parameters of self-attention
 record SelfAttentionParams
   (features : Cont)
   {auto prf : Applicative (Ext features)}
@@ -67,17 +90,15 @@ record SelfAttentionParams
   keyMatParam : Tensor [features, features] a
   valueMatParam : Tensor [features, features] a
 
-
-
 ||| Forward pass of self-attention
 SAImpl : {inputStructure, features : Cont} -> {a : Type} -> Rig a =>
   Applicative (Ext inputStructure) => Applicative (Ext features) =>
   (allAlg : AllAlgebra [inputStructure, features] a) =>
   (softmax : Tensor [inputStructure] a -> Tensor [inputStructure] a) ->
-  Tensor [inputStructure, features] a ->
-  SelfAttentionParams features a ->
+  (input : Tensor [inputStructure, features] a) ->
+  (params : SelfAttentionParams features a) ->
   Tensor [inputStructure, features] a
-SAImpl {allAlg = ((::) _)} softmax input (MkSAParams queryMat keyMat valueMat)
+SAImpl {allAlg = ((::) {allAlg=_})} softmax input (MkSAParams queryMat keyMat valueMat)
   = let queries = queryMat `multiplyMMT` input
         keys = keyMat `multiplyMMT` input
         values = valueMat `multiplyMMT` input
@@ -89,7 +110,8 @@ SelfAttention : {inputStructure, features : Cont} -> {a : Type} -> Rig a =>
   Applicative (Ext inputStructure) => Applicative (Ext features) =>
   (allAlg : AllAlgebra [inputStructure, features] a) =>
   (softmax : Tensor [inputStructure] a -> Tensor [inputStructure] a)
-  -> Para (Tensor [inputStructure, features] a) (Tensor [inputStructure, features] a)
+  -> Para (Tensor [inputStructure, features] a)
+          (Tensor [inputStructure, features] a)
 SelfAttention softmax = MkPara
   (const (SelfAttentionParams features a))
   (SAImpl softmax)
@@ -98,7 +120,6 @@ SelfAttention softmax = MkPara
 matParam : {d : Nat}
   -> SelfAttentionParams (VectCont d) Double
 matParam = MkSAParams ones ones ones 
-
 
 
 inputMatrix : Tensor' [4, 2] Double
@@ -115,16 +136,17 @@ SelfAttentionMat : {n, d : Nat}
 SelfAttentionMat 
   -- This follows just from Algebra (Ext c) a, where a=Tensor shape a?
   -- And that requires Rig a on Tensor shape a?
-  = let aal : Algebra (Ext (VectCont d)) (Tensor [] Double)
-        aal = MkAlgebra ?ruuearch
-        bbl : Rig (Tensor [] Double)
-        bbl = %search -- MkRig 0 1 (?pp ?mm
-        -- t = SelfAttention {a=Double,inputStructure=VectCont n, features=VectCont d} softmax 
+  = let aab : Algebra (Ext (VectCont d)) Double
+        aab = %search
+        aal : Algebra (Ext (VectCont d)) (Tensor [] Double)
+        aal = %search -- MkAlgebra ?uuearch
+        -- bbl : Rig (Tensor [] Double)
+        -- bbl = %search -- MkRig 0 1 (?pp ?mm
+        t = SelfAttention {a=Double,inputStructure=VectCont n, features=VectCont d} softmax 
     in ?alall
 -- SelfAttentionMat {n} {d} = SelfAttention {inputStructure=Vect n, features=Vect d} softmax
 
 {-
-
 matImpl : {n, d : Nat}
   -> (v : Vect n (Vect d Double))
   -> (p : Param SelfAttentionMat v)

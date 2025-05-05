@@ -7,8 +7,7 @@ import Data.Vect.Quantifiers
 
 %hide Builtin.infixr.(#)
 
-
-
+||| Definition of liftA2 in terms of (<*>)
 public export
 liftA2 : Applicative f => f a -> f b -> f (a, b)
 liftA2 fa fb = ((,) <$> fa) <*> fb
@@ -19,6 +18,12 @@ public export
 addBeginning : x -> (Fin l -> x) -> (Fin (S l) -> x)
 addBeginning x _ FZ = x
 addBeginning _ c (FS k') = c k'
+
+||| analogus to take in Data.Vect, but for Fin
+public export 
+takeFin : (s : Fin (S n)) -> Vect n a -> Vect (finToNat s) a
+takeFin FZ _ = []
+takeFin (FS s) (x :: xs) = x :: takeFin s xs
 
 public export
 interface Exp a where
@@ -36,7 +41,6 @@ rr : {n, x, y : Nat}
   -> (Fin (S x), Fin (S y))
 rr i = ?rooo
   -- -> Data.Fin.Arith.(*) (Fin (S x)) (Fin (S y))
-
 
 
 -- t : {A, B : Type}

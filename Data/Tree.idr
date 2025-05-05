@@ -45,6 +45,12 @@ BTreeNode nodeType = BTree () nodeType
 
 namespace BTreeLeafInstances
   public export
+  Show a => Show (BTreeLeaf a) where
+    show (Leaf x) = "Leaf " ++ show x
+    show (Node () leftTree rightTree)
+      = "Node (" ++ show leftTree ++ ") (" ++ show rightTree ++ ")"
+
+  public export
   Functor BTreeLeaf where
       map f (Leaf x) = Leaf (f x)
       map {a} {b} f (Node x leftTree rightTree)

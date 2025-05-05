@@ -1,4 +1,4 @@
-module Softmax
+module Architectures.Softmax
 
 import Data.Vect
 import Data.Vect.Elem
@@ -11,6 +11,27 @@ import Algebra
 import Tree
 import Data.Rig
 import Misc
+
+public export
+softmax : {i : Cont} -> {a : Type} -> Num a => 
+  {default 1 temperature : a} ->
+  Applicative (Ext i) => (allAlg : AllAlgebra [i] a) =>
+  Fractional a => Exp a => 
+  Tensor [i] a -> Tensor [i] a
+softmax {temperature} t = let exps = exp <$> (t <&> (/ temperature))
+                          in exps <&> (/ (reduce exps))
+
+
+
+||| Softmax for a cubical 1D tensor, i.e. a vector
+softmax' : {i : Nat} -> {a : Type} -> Num a => 
+  {default 1 temperature : a} ->
+  (allAlg : AllAlgebra [VectCont i] a) => -- We should not need this explicitly here
+  Fractional a => Exp a => 
+  Tensor' [i] a -> Tensor' [i] a
+softmax' {temperature} t = let exps = exp <$> (t <&> (/ temperature))
+                           in exps <&> (/ (reduce exps)) -- (/ (reduce exps))
+
 
 -- public export
 -- softmax : {f : Type -> Type}
@@ -28,14 +49,6 @@ import Misc
 -- softmaxTreeNode = softmax {f=BTreeNode}
 
 --- Tensor softmax
-
-public export
-softmax : {i : Cont}
-  -> Applicative (Ext i) => (allAlg : AllAlgebra [i] a) =>
-  Fractional a => Exp a =>
-  Tensor [i] a -> Tensor [i] a
-softmax t = let exps = exp <$> t
-             in exps <&> (/ reduce exps)
 
 -- -- This should be done by a more general map operation over a specific axis
 -- public export
@@ -63,7 +76,7 @@ softmax t = let exps = exp <$> t
  
 
 
-
+-- TODO
 -- namedSoftmax : {axis : Type -> Type}
 --   -> {shape : Vect n ApplF} -> {a : Type}
 --   -> Functor axis

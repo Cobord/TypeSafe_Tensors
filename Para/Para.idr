@@ -3,6 +3,7 @@ module Para.Para
 import Data.Vect
 import Data.Vect.Quantifiers
 
+||| Dependent Para
 public export
 record Para (a : Type) (b : Type) where
     constructor MkPara
