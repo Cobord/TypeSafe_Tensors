@@ -3,7 +3,7 @@
 This is an Idris 2 tensor framework which:
 * Is type-safe (meaning indexing and contractions fail at compile time unless types match)
 * Works for non-cubical tensors (including trees, and streams)
-* Is made to be ergonomically usable 
+* Is made with ergonomics and 'backward compatiblity' in mind, meaning it tries not to expose unnecessary constraints to the user, and tries to provide the same interface as numpy/PyTorch
 
 
 Examples (taken from `Data.Tensor.TensorExamples.idr`):
