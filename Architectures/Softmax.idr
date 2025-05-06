@@ -6,17 +6,15 @@ import Data.Vect.Elem
 import Data.Container.Definition
 import Data.Container.Instances
 import Tensor.ContainerTensor.Tensor
-import ApplicativeLinAlg
+-- import ApplicativeLinAlg
 import Algebra
-import Tree
-import Data.Rig
+import Data.Tree
 import Misc
 
 public export
-softmax : {i : Cont} -> {a : Type} -> Num a => 
+softmax : {i : Cont} -> {a : Type} -> Fractional a => Exp a =>
   {default 1 temperature : a} ->
   Applicative (Ext i) => (allAlg : AllAlgebra [i] a) =>
-  Fractional a => Exp a => 
   Tensor [i] a -> Tensor [i] a
 softmax {temperature} t = let exps = exp <$> (t <&> (/ temperature))
                           in exps <&> (/ (reduce exps))
@@ -24,13 +22,23 @@ softmax {temperature} t = let exps = exp <$> (t <&> (/ temperature))
 
 
 ||| Softmax for a cubical 1D tensor, i.e. a vector
-softmax' : {i : Nat} -> {a : Type} -> Num a => 
+public export
+softmax' : {i : Nat} -> {a : Type} -> Fractional a => Exp a => 
   {default 1 temperature : a} ->
-  (allAlg : AllAlgebra [VectCont i] a) => -- We should not need this explicitly here
-  Fractional a => Exp a => 
   Tensor' [i] a -> Tensor' [i] a
 softmax' {temperature} t = let exps = exp <$> (t <&> (/ temperature))
-                           in exps <&> (/ (reduce exps)) -- (/ (reduce exps))
+                           in exps <&> (/ (reduce exps))
+
+
+public export
+softmaxBTreeLeaf : {a : Type} -> Fractional a => Exp a =>
+  Tensor [BTreeLeafCont] a -> Tensor [BTreeLeafCont] a
+softmaxBTreeLeaf = softmax
+
+public export
+softmaxBTreeNode : {a : Type} -> Fractional a => Exp a =>
+  Tensor [BTreeNodeCont] a -> Tensor [BTreeNodeCont] a
+softmaxBTreeNode = softmax
 
 
 -- public export

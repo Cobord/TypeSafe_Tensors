@@ -34,6 +34,22 @@ Exp Double where
   exp = Prelude.exp
 
 
+||| Pointwise Num structure for Applicative functors
+public export
+[applicativeNum] Num a => Applicative f => Num (f a) where
+  xs + ys = uncurry (+) <$> liftA2 xs ys
+  xs * ys = uncurry (*) <$> liftA2 xs ys
+  fromInteger = pure . fromInteger
+
+public export
+sum : Num a => Vect n a -> a
+sum = foldr (+) (fromInteger 0)
+
+public export
+prod : Num a => Vect n a -> a
+prod = foldr (*) (fromInteger 1)
+
+
 -- for reshaping a tensor
 rr : {n, x, y : Nat}
   -> Fin (S n)

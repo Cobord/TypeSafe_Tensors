@@ -6,7 +6,6 @@ import Data.Container.Definition
 import Data.Container.Instances
 import Tensor.ContainerTensor.Tensor
 import Tensor.ContainerTensor.TensorUtils
-import Data.Rig
 import Para.Para
 import Architectures.Softmax
 import Algebra

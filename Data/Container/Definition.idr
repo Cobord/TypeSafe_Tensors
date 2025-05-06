@@ -4,7 +4,7 @@ import Data.Fin
 import Data.Vect
 
 import Data.Tree
-import Tensor.Naperian
+import Data.Functor.Naperian
 import Misc
 
 %hide Data.Vect.fromList

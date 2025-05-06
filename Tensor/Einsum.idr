@@ -115,4 +115,4 @@ data EinsumExpr :
   -> Type where
   --Empty : (out : OutputAxisNames o) -> EinsumExpr [] out
 
--- Einsum : Rig a => List (Tensor shape a) -> 
+-- Einsum : Num a => List (Tensor shape a) -> 

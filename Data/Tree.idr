@@ -124,20 +124,20 @@ namespace TreeRotation
   don't work
   -}
   public export
-  data CanRotateRight : (BTree : BTreeLeaf a) -> Type where
-    RotateRight : (leftLeftTree : BTreeLeaf a)
-               -> (leftRightTree : BTreeLeaf a)
+  data CanRotateNumht : (BTree : BTreeLeaf a) -> Type where
+    RotateNumht : (leftLeftTree : BTreeLeaf a)
+               -> (leftNumhtTree : BTreeLeaf a)
                -> (rightTree : BTreeLeaf a)
-               -> CanRotateRight (Node () (Node () leftLeftTree leftRightTree) rightTree)
+               -> CanRotateNumht (Node () (Node () leftLeftTree leftNumhtTree) rightTree)
 
 
   public export
-  cannotRotateLeaf : CanRotateRight (Leaf leaf) -> Void
-  cannotRotateLeaf (RotateRight _ _ _) impossible
+  cannotRotateLeaf : CanRotateNumht (Leaf leaf) -> Void
+  cannotRotateLeaf (RotateNumht _ _ _) impossible
 
   public export
-  cannotRotateThisTree : CanRotateRight (Node n (Leaf l) (Node n' lt rt)) -> Void
-  cannotRotateThisTree (RotateRight _ _ _) impossible
+  cannotRotateThisTree : CanRotateNumht (Node n (Leaf l) (Node n' lt rt)) -> Void
+  cannotRotateThisTree (RotateNumht _ _ _) impossible
 
   {-
 
@@ -148,11 +148,11 @@ namespace TreeRotation
   -}
   -- Tree rotation
   public export
-  rotateRight : (tree : BTreeLeaf a)
-             -> (CanRotateRight tree)
+  rotateNumht : (tree : BTreeLeaf a)
+             -> (CanRotateNumht tree)
              -> BTreeLeaf a
-  rotateRight (Node n (Node n' leftLeftTree leftRightTree) rightTree) x
-    = Node n leftLeftTree (Node n' leftRightTree rightTree)
+  rotateNumht (Node n (Node n' leftLeftTree leftNumhtTree) rightTree) x
+    = Node n leftLeftTree (Node n' leftNumhtTree rightTree)
 
 
 

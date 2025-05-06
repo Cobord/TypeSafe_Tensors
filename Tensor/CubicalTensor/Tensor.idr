@@ -3,9 +3,8 @@ module Tensor.CubicalTensor.Tensor
 import Data.Fin
 import Data.Vect
 
-import Data.Rig
+import Data.Functor.Naperian
 import Misc
-import Tensor.Naperian
 
 %hide Data.Vect.transpose
 
@@ -118,13 +117,13 @@ namespace ApplicativeT
     fs <*> xs = uncurry ($) <$> liftA2Tensor fs xs 
 
 namespace NumericT
-  -- Pointwise Rig structure
+  -- Pointwise Num structure
   public export
-  {shape : Vect n Nat} -> Rig a => Rig (Tensor shape a) where
+  {shape : Vect n Nat} -> Num a => Num (Tensor shape a) where
     zero = tensorReplicate zero
     one = tensorReplicate one
-    xs ~+~ ys = (uncurry (~+~)) <$> liftA2 xs ys
-    xs ~*~ ys = (uncurry (~*~)) <$> liftA2 xs ys
+    xs + ys = (uncurry (+)) <$> liftA2 xs ys
+    xs * ys = (uncurry (*)) <$> liftA2 xs ys
 
   public export
   {shape : Vect n Nat} -> Num a => Num (Tensor shape a) where

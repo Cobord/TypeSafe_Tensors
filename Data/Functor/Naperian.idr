@@ -1,4 +1,4 @@
-module Tensor.Naperian
+module Data.Functor.Naperian
 
 import Data.Vect
 

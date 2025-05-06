@@ -4,7 +4,7 @@ import Data.Vect
 import Data.Fin.Arith
 
 import Tensor.CubicalTensor.Tensor
-import Data.Rig
+import Data.Num
 
 
 -- This only works for cube-shaped tensors, and not the generalised tensors one can start developing

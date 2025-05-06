@@ -6,7 +6,7 @@ import Data.Vect.Quantifiers
 -- import Tensor
 import Algebra
 import Tree
-import Data.Rig
+import Data.Num
 import Misc
 
 %hide Builtin.infixr.(#)
@@ -151,13 +151,13 @@ namespace FoldableT
 -- Dot product in the usual sense
 public export
 dot : {shape : Vect n ApplF} -> {a : Type}
-  -> Rig a => AllAlgebra shape a
+  -> Num a => AllAlgebra shape a
   => Tensor shape a -> Tensor shape a -> Tensor [] a
 dot xs ys = GTZ $ reduce $ (\(x, y) => x ~*~ y) <$> liftA2Tensor xs ys
 
 -- public export
 -- matMul : {a : Type}
---   -> (Rig a, Algebra g (h a))
+--   -> (Num a, Algebra g (h a))
 --   => Tensor [i, j] a -> Tensor [j, k] -> Tensor [i, k] a
 -- matMul m1 m2 = m1 <&> (\row => multiplyVM row m2)
 

@@ -12,7 +12,6 @@ import Tensor.ContainerTensor.TensorUtils
 -- import Tensor.ContainerTensor.NaperianTensor
 import Algebra
 import Data.Tree
-import Data.Rig
 import Softmax
 import Misc
 

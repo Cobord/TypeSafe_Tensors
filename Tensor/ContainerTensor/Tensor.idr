@@ -6,10 +6,9 @@ import Data.Vect
 import Data.Container.Definition
 import Data.Container.Instances
 import Data.Tree
-import Data.Rig
 import Misc
 import Algebra
-import Tensor.Naperian
+import Data.Functor.Naperian
 
 %hide Data.Vect.fromList
 %hide Builtin.infixr.(#)
@@ -139,14 +138,6 @@ namespace ApplicativeT
     fs <*> xs = uncurry ($) <$> liftA2Tensor fs xs 
 
 namespace NumericT
-  -- We should get Rig from Num
-  -- public export
-  -- {shape : ApplV conts} -> Rig a => Rig (Tensor shape a) where
-  --   zero = tensorReplicate zero
-  --   one = tensorReplicate one
-  --   xs ~+~ ys = (uncurry (~+~)) <$> liftA2 xs ys
-  --   xs ~*~ ys = (uncurry (~*~)) <$> liftA2 xs ys
-  
   public export
   {shape : ApplV conts} -> Num a => Num (Tensor shape a) where
     fromInteger i = pure (fromInteger i)
@@ -196,7 +187,7 @@ namespace AlgebraT
   public export
   [appSumTensor] {shape : ApplV conts} ->
     {a : Type} ->
-    Rig a =>
+    Num a =>
     Applicative (Ext c) =>
     (allAlg : AllAlgebra shape a) =>
     Algebra (Tensor shape) ((Ext c) a) where
@@ -237,14 +228,14 @@ namespace FoldableT
 namespace TensorContractions
   public export
   dot : {shape : ApplV conts} -> {a : Type}
-    -> Rig a => AllAlgebra shape a
+    -> Num a => AllAlgebra shape a
     => Tensor shape a -> Tensor shape a -> Tensor [] a
-  dot xs ys = TZ $ reduce $ (\(x, y) => x ~*~ y) <$> liftA2Tensor xs ys
+  dot xs ys = TZ $ reduce $ (\(x, y) => x * y) <$> liftA2Tensor xs ys
 
 
   -- Multiply a matrix and a vector
   public export
-  multiplyMV : {a : Type} -> Rig a =>
+  multiplyMV : {a : Type} -> Num a =>
     Applicative (Ext f) => Applicative (Ext g) =>
     AllAlgebra [g] a =>
     Tensor [f, g] a -> Tensor [g] a -> Tensor [f] a
@@ -252,19 +243,19 @@ namespace TensorContractions
 
   -- Multiply a vector and a matrix
   public export
-  multiplyVM : {a : Type} -> {f, g : Cont} -> Rig a =>
+  multiplyVM : {a : Type} -> {f, g : Cont} -> Num a =>
     Applicative (Ext f) =>
     Applicative (Ext g) =>
     (allAlgebra : AllAlgebra [f, g] a) =>
     Tensor [f] a -> Tensor [f, g] a -> Tensor [g] a
   multiplyVM {allAlgebra = ((::))} (TS v) (TS m)
     = let t = liftA2 v m
-          w = (\((TZ val), v') => (val ~*~) <$> v') <$> t
+          w = (\((TZ val), v') => (val *) <$> v') <$> t
       in reduce {f=(Ext f)} w
 
   -- ij,jk->ik
   public export
-  matMul : {f, g, h : Cont} -> {a : Type} -> Rig a =>
+  matMul : {f, g, h : Cont} -> {a : Type} -> Num a =>
     Applicative (Ext f) =>
     Applicative (Ext g) =>
     Applicative (Ext h) =>
@@ -274,7 +265,7 @@ namespace TensorContractions
 
   -- ij,kj->ki
   public export
-  multiplyMMT : {f, g, h : Cont} -> {a : Type} -> Rig a =>
+  multiplyMMT : {f, g, h : Cont} -> {a : Type} -> Num a =>
     Applicative (Ext f) =>
     Applicative (Ext g) =>
     Applicative (Ext h) =>
@@ -373,6 +364,13 @@ record Tensor' (shape : Vect n Nat) a where
   constructor MkT
   GetT : Tensor (vectApplV shape) a
 
+public export
+toCubicalTensor : {shape : Vect n Nat} -> Tensor (vectApplV shape) a -> Tensor' shape a
+toCubicalTensor t = MkT t
+
+public export
+fromCubicalTensor : {shape : Vect n Nat} -> Tensor' shape a -> Tensor (vectApplV shape) a
+fromCubicalTensor t = GetT t
 
 namespace Tensor'Interfaces
   public export
@@ -437,9 +435,9 @@ namespace Tensor'Interfaces
 
 public export
 dot' : {shape : Vect n Nat} -> {a : Type}
-  -> Rig a => AllAlgebra (vectApplV shape) a
+  -> Num a => AllAlgebra (vectApplV shape) a
   => Tensor' shape a -> Tensor' shape a -> Tensor' [] a
-dot' (MkT xs) (MkT ys) = MkT $ TZ $ reduce $ (\(x, y) => x ~*~ y) <$> liftA2Tensor xs ys
+dot' (MkT xs) (MkT ys) = MkT $ TZ $ reduce $ (\(x, y) => x * y) <$> liftA2Tensor xs ys
 
 public export
 Array' : (shape : Vect n Nat) -> (dtype : Type) -> Type

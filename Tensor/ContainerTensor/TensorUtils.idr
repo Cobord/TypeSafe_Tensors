@@ -5,17 +5,18 @@ import Data.Vect
 import Data.Nat -- Add import for Cast
 -- import System.Random
 
+
 import Tensor.ContainerTensor.Tensor
-import Tensor.Naperian
-import Data.Rig
+import Data.Functor.Naperian -- needed for range
+import Misc
 
 public export
 zeros : Num a => {shape : ApplV conts} -> Tensor shape a
-zeros = tensorReplicate zero
+zeros = tensorReplicate (fromInteger 0)
 
 public export
 ones : Num a => {shape : ApplV conts} -> Tensor shape a
-ones = tensorReplicate one
+ones = tensorReplicate (fromInteger 1)
 
 public export
 range : {n : Nat} -> Cast Nat a => Tensor' [n] a
@@ -59,5 +60,5 @@ max' t = let t = Prelude.max in ?oo -- (flatten t)
 
 
 -- public export
--- eye : Rig a => Tensor [n, n] a
+-- eye : Num a => Tensor [n, n] a
 -- eye = ?eye_rhs

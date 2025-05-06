@@ -6,54 +6,54 @@ import Data.Vect
 import Tensor.CubicalTensor.Tensor
 import Tensor.Naperian
 import Tree
-import Data.Rig
+import Data.Num
 import Algebra
 
 import Misc
 
 -- Scale a vector by a scalar
 public export
-scaleVector : Rig a => Functor f =>
+scaleVector : Num a => Functor f =>
   a -> f a -> f a
 scaleVector a v = (a ~*~) <$> v
 
 -- Dot product in the usual sense
 public export
 dot : {f : Type -> Type} -> {a : Type}
-  -> (Applicative f, Rig a, Algebra f a)
+  -> (Applicative f, Num a, Algebra f a)
   => f a -> f a -> a
 dot xs ys = reduce $ (\(x, y) => x ~*~ y) <$> liftA2 xs ys
 
 public export
 dotVect : {n : Nat} -> {a : Type}
-  -> Rig a => Vect n a -> Vect n a -> a
+  -> Num a => Vect n a -> Vect n a -> a
 dotVect = dot
 
 public export
-{shape : Vect n Nat} -> Rig a => Algebra (Tensor shape) a where
+{shape : Vect n Nat} -> Num a => Algebra (Tensor shape) a where
   reduce = foldr (~+~) zero 
 
 public export
 dotTensor : {shape : Vect n Nat} -> {a : Type}
-  -> Rig a => Tensor shape a -> Tensor shape a -> a
+  -> Num a => Tensor shape a -> Tensor shape a -> a
 dotTensor = dot
 
 public export
 dotTree : {a : Type}
-  -> Rig a => BTreeLeaf a -> BTreeLeaf a -> a
+  -> Num a => BTreeLeaf a -> BTreeLeaf a -> a
 dotTree = dot {f=BTreeLeaf}
 
 -- Multiply a matrix and a vector
 public export
 multiplyMV : {f, g : Type -> Type} -> {a : Type}
-  -> (Applicative f, Applicative g, Rig a, Algebra g a)
+  -> (Applicative f, Applicative g, Num a, Algebra g a)
   => f (g a) -> g a -> f a
 multiplyMV m v = dot v <$> m
 
 -- Multiply a vector and a matrix
 public export
 multiplyVM : {f, g : Type -> Type} -> {a : Type}
-  -> (Applicative f, Applicative g, Rig a, Algebra f (g a))
+  -> (Applicative f, Applicative g, Num a, Algebra f (g a))
   => f a -> f (g a) -> g a
 multiplyVM {a} {f} v m = let t : f (a, g a)
                              t = liftA2 v m
@@ -66,7 +66,7 @@ multiplyVM {a} {f} v m = let t : f (a, g a)
 -- "ij,jk->ik"
 public export
 matMul : {f, g, h : Type -> Type} -> {a : Type}
-  -> (Functor f, Applicative g, Applicative h, Rig a, Algebra g (h a))
+  -> (Functor f, Applicative g, Applicative h, Num a, Algebra g (h a))
   => f (g a) -> g (h a) -> f (h a)
 matMul m1 m2 = m1 <&> (\row => multiplyVM row m2)
 
@@ -74,18 +74,18 @@ matMul m1 m2 = m1 <&> (\row => multiplyVM row m2)
 -- Calculates result by dotting rows of m1 with columns of m2.
 public export
 matMul' : {f, g, h : Type -> Type} -> {a : Type}
-  -> (Functor f, Applicative g, Naperian g, Naperian h, Rig a, Algebra g a)
+  -> (Functor f, Applicative g, Naperian g, Naperian h, Num a, Algebra g a)
   => f (g a) -> g (h a) -> f (h a)
 matMul' m1 m2 = m1 <&> \rowA => (dot {f=g} rowA) <$> (transpose m2)
 
 matMulTensor : {i, j, k : Nat} -> {f : Type -> Type} -> {a : Type}
-  -> Rig a => Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
+  -> Num a => Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
 matMulTensor m n = fromNestedTensor (matMul' (toNestedTensor m) (toNestedTensor n))
 
 -- ij,kj->ki
 public export
 multiplyMMT : {f, g, h: Type -> Type} -> {a : Type}
-  -> (Applicative f, Applicative g, Functor h, Rig a, Algebra g a)
+  -> (Applicative f, Applicative g, Functor h, Num a, Algebra g a)
   => f (g a) -> h (g a) -> h (f a)
 multiplyMMT m n = (multiplyMV m) <$> n
 
@@ -96,7 +96,7 @@ multiplyMMT m n = (multiplyMV m) <$> n
 -}
 
 linearLayer : {i, j : Type -> Type} -> {a : Type}
-  -> (Applicative i, Applicative j, Rig a, Algebra j a)
+  -> (Applicative i, Applicative j, Num a, Algebra j a)
   => i (j a) -> i a -> j a -> i a
 linearLayer weights bias input 
   = (uncurry (~+~)) <$> (liftA2 bias $ multiplyMV weights input)
@@ -152,7 +152,7 @@ tL1 = Node () (Leaf 0.1) (Leaf 0.3)
 interface Comult (f : Type -> Type) a where
   comult : f a -> f (f a)
 
-{shape : Vect n Nat} -> Rig a => Comult (Tensor shape) a where
+{shape : Vect n Nat} -> Num a => Comult (Tensor shape) a where
   comult t = ?eii
 
 gg : Tensor [3] Double -> Tensor [3, 3] Double
@@ -162,7 +162,7 @@ gg (TS xs) = TS $ map ?fn ?gg_rhs_0
 -- can we even do outer product?
 -- we wouldn't need reduce, but something like multiply?
 outer : {f : Type -> Type} -> {a : Type}
-  -> (Rig a, Applicative f, Algebra f a)
+  -> (Num a, Applicative f, Algebra f a)
   => f a -> f a -> f (f a)
 outer xs ys = let t = liftA2 xs ys
               in ?outer_rhs 

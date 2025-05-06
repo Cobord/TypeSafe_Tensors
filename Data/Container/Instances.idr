@@ -5,12 +5,11 @@ import Data.Vect
 
 
 import Data.Container.Definition
-import Tensor.Naperian
+import Data.Functor.Naperian
 import Misc
 import Data.Tree
 import Algebra
-import Data.Rig
-import Data.Container.TreeUtils
+import public Data.Container.TreeUtils -- rexport all the stuff inside
 
 
 %hide Data.Vect.fromList
@@ -165,7 +164,7 @@ namespace VectInstances
     fs <*> vs = fromVect $ toVect fs <*> toVect vs
 
   public export
-  {n : Nat} -> Rig a => Algebra (Ext (VectCont n)) a where
+  {n : Nat} -> Num a => Algebra (Ext (VectCont n)) a where
     reduce v = reduce (toVect v)
 
   -- TODO Naperian instance? Or is that covered by the one in Definiton.idr?
@@ -219,14 +218,14 @@ namespace BTreeLeafInstances
     fs <*> vs = uncurry ($) <$> liftA2BBTreeLeaf' fs vs 
 
 
-  ||| Just summing up elements of the tree given by the Rig a structure
+  ||| Just summing up elements of the tree given by the Num a structure
   public export
-  Rig a => Algebra BTreeLeaf' a where
+  Num a => Algebra BTreeLeaf' a where
     reduce (LeafS <| v) = v AtLeaf
     reduce ((NodeS l r) <| v) =
       let leftSubtree = l <| \posL => v (GoLLeaf posL)
           rightSubtree = r <| \posR => v (GoRLeaf posR)
-      in reduce {f=BTreeLeaf'} leftSubtree ~+~
+      in reduce {f=BTreeLeaf'} leftSubtree +
          reduce {f=BTreeLeaf'} rightSubtree
 
 
@@ -259,9 +258,9 @@ namespace BTreeNodeInstances
     fs <*> vs = uncurry ($) <$> liftA2BTreeNode' fs vs 
 
   public export
-  Rig a => Algebra BTreeNode' a where
-    reduce (LeafS <| v) = zero
-    reduce ((NodeS l r) <| v) = v Root ~+~
-        reduce {f=BTreeNode'} (l <| v . GoL) ~+~
+  Num a => Algebra BTreeNode' a where
+    reduce (LeafS <| v) = fromInteger 0
+    reduce ((NodeS l r) <| v) = v Root +
+        reduce {f=BTreeNode'} (l <| v . GoL) +
         reduce {f=BTreeNode'} (r <| v . GoR)
   

@@ -7,7 +7,7 @@ import Data.Vect
 import Data.Container.Definition
 import Data.Container.Instances
 import Tensor.ContainerTensor.Tensor
-import Tensor.Naperian
+import Data.Functor.Naperian
 
 
 

@@ -16,10 +16,12 @@ authors = "Bruno Gavranovic"
 depends = contrib
 
 -- modules to install
-modules = ApplicativeLinAlg,
+modules = Data.Container.Definition,
+          Data.Container.Morphism,
+          Data.Container.Instances,
+          Data.Container.TreeUtils,
+          Data.Functor.Naperian,
           Data.Tree,
-          Data.Rig,
-          Misc,
           Tensor.ContainerTensor.Tensor,
           Tensor.ContainerTensor.TensorExamples,
           -- Tensor.ContainerTensor.NaperianTensor,
@@ -29,9 +31,11 @@ modules = ApplicativeLinAlg,
           Tensor.CubicalTensor.TensorView,
           Tensor.GeneralisedTensor.Tensor,
           Tensor.GeneralisedTensor.TensorExamples,
-          Tensor.Naperian,
           Tensor.Einsum,
-          IevaExamples.IevaExamples
+          IevaExamples.IevaExamples,
+          Algebra,
+          Misc,
+          ApplicativeLinAlg
 
 -- main file (i.e. file to load at REPL)
 -- main =
