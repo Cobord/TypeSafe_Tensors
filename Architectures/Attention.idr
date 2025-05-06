@@ -173,18 +173,3 @@ tree1 = fromArray $ fromBTreeLeaf $
 ||| Example output for tree self-attention
 SAOutputTree : Tensor [BTreeLeafCont, VectCont 2] Double
 SAOutputTree = SATreeForwardPass tree1 params
-
-{-
-
-
--- This is a left leaning tree of depth 3, where the content of each leaf is [1, 3]
-{-
-        .
-   /      \
-  [1,3]    .
-          /  \
-      [1,3]    . 
-              / \
-            [1,3] [1,3]
-
- -}
