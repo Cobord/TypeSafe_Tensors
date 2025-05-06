@@ -6,7 +6,7 @@ This is an Idris 2 tensor framework which:
 * Is made to be ergonomically usable 
 
 
-Examples:
+Examples (taken from `Data.Tensor.TensorExamples.idr`):
 
 ```idris
 ||| Analogous to np.range, except the range is specified in the type
