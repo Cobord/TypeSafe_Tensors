@@ -1,12 +1,14 @@
 # Type safe neural network architectures
 
-This is an Idris 2 tensor framework which:
-* Is type-safe (meaning indexing and contractions fail at compile time unless types match)
-* Works for non-cubical tensors (including trees, and streams)
-* Is made with ergonomics and 'backward compatiblity' in mind, meaning it tries not to expose unnecessary constraints to the user, and tries to provide the same interface as numpy/PyTorch
+This is framework for pure functional tensor processing, implemented in Idris 2. It
+* Is **type-safe**: indexing and contractions fail at compile time if types do not match
+* **implements non-cubical tensors**: tensors of trees and streams instead of just arrays are supported
+* **is made with ergonomics in mind**: it aims to provide the familiar numpy/Pytorch interface to the user
 
 
-Examples (taken from `Data.Tensor.TensorExamples.idr`):
+It is expressive enough to implement generalised cross-attention from [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html) - you can find the implementation [here](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19).
+
+Some core examples below (taken from `Data.Tensor.TensorExamples.idr`):
 
 ```idris
 ||| Analogous to np.range, except the range is specified in the type
@@ -152,4 +154,6 @@ failing
 TODO:
 * Type-safe einsum
 * Type-safe broadcasting, reshaping and stacking
-* In-place operations
+* In-place operations/views
+* Better ergonomics for general applicative tensors
+* FFI to a low-level kernel for tensor operations
