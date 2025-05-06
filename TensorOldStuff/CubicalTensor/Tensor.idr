@@ -120,16 +120,9 @@ namespace NumericT
   -- Pointwise Num structure
   public export
   {shape : Vect n Nat} -> Num a => Num (Tensor shape a) where
-    zero = tensorReplicate zero
-    one = tensorReplicate one
     xs + ys = (uncurry (+)) <$> liftA2 xs ys
     xs * ys = (uncurry (*)) <$> liftA2 xs ys
-
-  public export
-  {shape : Vect n Nat} -> Num a => Num (Tensor shape a) where
-    fromInteger i = pure (fromInteger i)
-    xs + ys = (uncurry (+)) <$> liftA2 xs ys
-    xs * ys = (uncurry (*)) <$> liftA2 xs ys
+    fromInteger = pure . fromInteger
 
   public export
   {shape : Vect n Nat} -> Neg a => Neg (Tensor shape a) where

@@ -1,4 +1,4 @@
-module Tensor.ContainerTensor.Tensor
+module Data.Tensor.Tensor
 
 import Data.Fin
 import Data.Vect

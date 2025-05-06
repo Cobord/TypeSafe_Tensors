@@ -1,9 +1,9 @@
-module Tensor.Einsum
+module Data.Tensor.Einsum
 
 import Data.Vect
 
-import Tensor.CubicalTensor.Tensor
-import Tensor.Naperian
+import Data.Tensor.Tensor
+import Data.Tensor.NaperianTensor
 
 {-
 What do we want of einsum?

@@ -80,18 +80,6 @@ SAImpl {allAlg = ((::) {allAlg=_})} softmax input (MkSAParams queryMat keyMat va
         values = valueMat `multiplyMMT` input
   in selfAttention softmax queries keys values
 
--- ||| Forward pass of self-attention for cubical tensors
--- SAImpl' : {inputSize, featureSize : Nat} -> {a : Type} -> Num a =>
---   (softmax : Tensor' [inputSize] a -> Tensor' [inputSize] a) ->
---   (input : Tensor' [inputSize, featureSize] a) ->
---   (params : SelfAttentionParams (VectCont featureSize) a) ->
---   Tensor' [inputSize, featureSize] a
--- SAImpl' softmax input (MkSAParams queryMat keyMat valueMat)
---   = let queries = queryMat `multiplyMMT` (GetT input)
---         keys = keyMat `multiplyMMT` (GetT input)
---         values = valueMat `multiplyMMT` (GetT input)
---   in selfAttention (fromCubicalTensor . softmax . toCubicalTensor) queries keys values
-
 ||| Self-attention as a parametric map
 public export
 SelfAttention : {inputStructure, features : Cont} -> {a : Type} -> Num a =>
@@ -167,8 +155,7 @@ SATreeForwardPass = Run SelfAttentionTree
 
 tree1 : Tensor [BTreeLeafCont, VectCont 2] Double
 tree1 = fromArray $ fromBTreeLeaf $ 
-  Node' (Node' (Leaf (fromVect [1, 3])) (Leaf (fromVect [1, 3])))
-        (Node' (Leaf (fromVect [10, 4])) (Leaf (fromVect [1, 3])))
+  Node' (Leaf (fromVect [4, 5])) (Leaf (fromVect [-12, 25]))
 
 ||| Example output for tree self-attention
 SAOutputTree : Tensor [BTreeLeafCont, VectCont 2] Double

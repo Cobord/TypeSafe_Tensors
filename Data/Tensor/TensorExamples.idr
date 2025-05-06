@@ -1,4 +1,4 @@
-module Tensor.ContainerTensor.TensorExamples
+module Data.Tensor.TensorExamples
 
 import Data.Vect
 import Data.Fin
@@ -7,9 +7,9 @@ import Data.Container.Definition
 import Data.Container.Instances
 import Data.Container.TreeUtils
 
-import Tensor.ContainerTensor.Tensor
-import Tensor.ContainerTensor.TensorUtils
--- import Tensor.ContainerTensor.NaperianTensor
+import Data.Tensor.Tensor
+import Data.Tensor.TensorUtils
+import Data.Tensor.NaperianTensor
 import Algebra
 import Data.Tree
 import Softmax
@@ -64,9 +64,9 @@ failing
    indexExampleFail : Double
    indexExampleFail = t1 @@@ [7, 2]
 
--- Safe transposition
--- t1Transposed : Tensor' [4, 3] Double
--- t1Transposed = transposeMatrix t1
+||| Safe transposition
+t1Transposed : Tensor' [4, 3] Double
+t1Transposed = transposeMatrix' t1
 
 ||| We can do all sorts of numeric operations
 numericOps : Tensor' [2, 5] Double
@@ -99,10 +99,10 @@ failing
 
 ||| Tensor can do everything that Tensor' can
 t0again : Tensor [VectCont 7] Double
-t0again = GetT t0 -- Or alternatively, fromArray $ fromVect [1,2,3,4,5,6,7]
+t0again = fromCubicalTensor t0 -- Or alternatively, fromArray $ fromVect [1,2,3,4,5,6,7]
 
 t1again : Tensor [VectCont 3, VectCont 4] Double
-t1again = GetT t1 
+t1again = fromCubicalTensor t1 
 
 ||| Instead of an n-element vector, here's tree with leaves as elements.
 ex1 : Tensor [BTreeLeafCont] Double

@@ -1,4 +1,4 @@
-module Tensor.ContainerTensor.NaperianTensor
+module Data.Tensor.NaperianTensor
 
 import Data.Fin
 import Data.Vect
@@ -6,7 +6,7 @@ import Data.Vect
 
 import Data.Container.Definition
 import Data.Container.Instances
-import Tensor.ContainerTensor.Tensor
+import Data.Tensor.Tensor
 import Data.Functor.Naperian
 
 
@@ -51,6 +51,11 @@ transposeMatrix : {i, j : Cont} ->
   Applicative (Ext j) =>
   (allNaperian : AllNaperian [i, j]) =>
   Tensor [i, j] a -> Tensor [j, i] a
-transposeMatrix {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))} m
-  = fromArray $ Naperian.transpose {f=(Ext i)} {g=(Ext j)} (toArray m)
-    -- This can be written a bit more succintly, but compiler gets slow with all the ambiguity?
+transposeMatrix {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))}
+  = fromArray . Naperian.transpose . toArray
+
+
+public export
+transposeMatrix' : {i, j : Nat} ->
+  Tensor' [i, j] a -> Tensor' [j, i] a
+transposeMatrix'  = toCubicalTensor . transposeMatrix . fromCubicalTensor

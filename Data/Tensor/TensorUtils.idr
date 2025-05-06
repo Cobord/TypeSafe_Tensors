@@ -1,4 +1,4 @@
-module Tensor.ContainerTensor.TensorUtils
+module Data.Tensor.TensorUtils
 
 import Data.List
 import Data.Vect 
@@ -6,7 +6,7 @@ import Data.Nat -- Add import for Cast
 -- import System.Random
 
 
-import Tensor.ContainerTensor.Tensor
+import Data.Tensor.Tensor
 import Data.Functor.Naperian -- needed for range
 import Misc
 

@@ -1,7 +1,5 @@
 # Bruno stuff
 
-IevaExamples/*
-
 # Idris build artifacts
 *.ibc
 *.o

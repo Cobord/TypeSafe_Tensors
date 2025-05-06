@@ -159,3 +159,25 @@ failing
 
 
 
+
+{-
+
+interface Comult (f : Type -> Type) a where
+  comult : f a -> f (f a)
+
+{shape : Vect n Nat} -> Num a => Comult (Tensor shape) a where
+  comult t = ?eii
+
+gg : Tensor [3] Double -> Tensor [3, 3] Double
+gg (TS xs) = TS $ map ?fn ?gg_rhs_0
+
+-- [1, 2, 3]
+-- can we even do outer product?
+-- we wouldn't need reduce, but something like multiply?
+outer : {f : Type -> Type} -> {a : Type}
+  -> (Num a, Applicative f, Algebra f a)
+  => f a -> f a -> f (f a)
+outer xs ys = let t = liftA2 xs ys
+              in ?outer_rhs 
+  
+ -}
