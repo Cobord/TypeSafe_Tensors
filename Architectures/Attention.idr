@@ -139,7 +139,7 @@ inputMatrix = fromArray' [ [1, 3]
 ||| Parameters for self-attention
 ||| Here just a matrix of ones
 params : {d : Nat} -> SelfAttentionParams (VectCont d) Double
-params = MkSAParams ones ones ones 
+params = MkSAParams ones ones ones
 
 ||| Example output for cubical self-attention
 SAOutputMatrix : Tensor' [4, 2] Double

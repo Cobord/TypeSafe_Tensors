@@ -49,6 +49,13 @@ public export
 prod : Num a => Vect n a -> a
 prod = foldr (*) (fromInteger 1)
 
+public export
+maxInList : Ord a => List a -> Maybe a
+maxInList [] = Nothing
+maxInList (x :: xs) = do
+  mx <- maxInList xs
+  pure (Prelude.max x mx)
+
 
 -- for reshaping a tensor
 rr : {n, x, y : Nat}
@@ -166,7 +173,7 @@ interface Comult (f : Type -> Type) a where
   comult : f a -> f (f a)
 
 {shape : Vect n Nat} -> Num a => Comult (Tensor shape) a where
-  comult t = ?eii
+  comult t = ?eir
 
 gg : Tensor [3] Double -> Tensor [3, 3] Double
 gg (TS xs) = TS $ map ?fn ?gg_rhs_0

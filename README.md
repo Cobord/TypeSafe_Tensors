@@ -1,4 +1,4 @@
-# Type safe neural network architectures
+# Type-safe Tensors & Network architectures
 
 This is framework for pure functional tensor processing, implemented in Idris 2. It
 * Is **type-safe**: indexing and contractions fail at compile time if types do not match
@@ -11,7 +11,7 @@ It is expressive enough to implement generalised cross-attention from [Generalis
 Some core examples below (taken from `Data.Tensor.TensorExamples.idr`):
 
 ```idris
-||| Analogous to np.range, except the range is specified in the type
+||| Analogous to np.arange, except the range is specified in the type
 t0 : Tensor' [7] Double
 t0 = range 
 
@@ -146,8 +146,13 @@ failing
   ||| And we'll get errors if we try to index outside of the structure
   indexTreeExampleFail : Double
   indexTreeExampleFail = ex1 @@ [GoRLeaf (GoRLeaf AtLeaf)]
-
-
+  {- 
+          *
+        /   \
+       *     2  
+      / \     \
+  (-42)  46    X   <---- indexing here throws an error
+  -}
 ```
 
 

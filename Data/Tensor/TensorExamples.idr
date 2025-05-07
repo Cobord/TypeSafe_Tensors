@@ -22,7 +22,7 @@ import Misc
 -- They're named Tensor' with a prime to remind us we can use
 -- a more general, non-cubical tensor
 
-||| Analogous to np.range, except the range is specified in the type
+||| Analogous to np.arange, except the range is specified in the type
 t0 : Tensor' [7] Double
 t0 = range 
 
@@ -118,6 +118,11 @@ ex1 = fromArray $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 ||| Here's another one, with a different number of elements
 ex2 : Tensor [BTreeLeafCont] Double
 ex2 = fromArray $ fromBTreeLeaf $ Node' (Leaf 10) (Leaf 100)
+{- 
+        *
+      /   \
+     10   100 
+-}
 
 ||| We can take their dot product!
 ||| It does not matter that they have the same number of elements, it matters that the functor is the same

@@ -28,8 +28,9 @@ public export prefix 0 #
 public export
 data ApplV : Vect n ApplC -> Type where
   Nil : ApplV []
-  (::) : (c : Cont) -> Applicative (Ext c)
-     => ApplV cs -> ApplV ((# c) :: cs)
+  (::) : (c : Cont) ->
+    Applicative (Ext c) =>
+    ApplV cs -> ApplV ((# c) :: cs)
 
 public export infixr 5 +++
 public export
@@ -210,8 +211,7 @@ namespace FoldableT
 
 
   public export
-  tensorFoldr : {shape : ApplV conts} ->
-    (allFoldable : AllFoldable shape) =>
+  tensorFoldr : (allFoldable : AllFoldable shape) =>
     (el -> acc -> acc) -> acc -> Tensor shape el -> acc
   tensorFoldr {allFoldable = NilFoldable} f z (TZ val) = f val z
   tensorFoldr {allFoldable = (ConsFoldable recAllFoldable)} f z (TS xs) =
@@ -227,9 +227,9 @@ namespace FoldableT
 
 namespace TensorContractions
   public export
-  dot : {shape : ApplV conts} -> {a : Type}
-    -> Num a => AllAlgebra shape a
-    => Tensor shape a -> Tensor shape a -> Tensor [] a
+  dot : {shape : ApplV conts} -> {a : Type} -> Num a =>
+    Algebra (Tensor shape) a =>
+    Tensor shape a -> Tensor shape a -> Tensor [] a
   dot xs ys = TZ $ reduce $ (\(x, y) => x * y) <$> liftA2Tensor xs ys
 
 
@@ -248,7 +248,7 @@ namespace TensorContractions
     Applicative (Ext g) =>
     (allAlgebra : AllAlgebra [f, g] a) =>
     Tensor [f] a -> Tensor [f, g] a -> Tensor [g] a
-  multiplyVM {allAlgebra = ((::))} (TS v) (TS m)
+  multiplyVM {allAlgebra = (::)} (TS v) (TS m)
     = let t = liftA2 v m
           w = (\((TZ val), v') => (val *) <$> v') <$> t
       in reduce {f=(Ext f)} w
@@ -341,9 +341,9 @@ namespace NestedTensorStuff
 
 -- This recovers usual tensors in Tensor.Tensor
 -- public export
--- Tensor' : (shape : Vect n Nat) -> Type -> Type
--- Tensor' shape = Tensor ((\n => (_ : Unit) !> Fin n) <$> shape)
--- Tensor' shape = Tensor (VectCont <$> shape)
+-- Tensor'' : (shape : Vect n Nat) -> Type -> Type
+-- Tensor'' shape = Tensor $ (\n => # (VectCont n) <$> shape)
+-- Tensor'' shape = Tensor ((\n => (_ : Unit) !> Fin n) <$> shape)
 
 -- vvv : (shape : Vect n Nat) -> Vect n ApplC
 -- vvv shape = (\n => # (VectCont n)) <$> shape
@@ -410,10 +410,23 @@ namespace Tensor'Interfaces
   Algebra (Tensor' shape) a where
       reduce (MkT t) = reduce t
 
+  tensorCFoldr : {shape : Vect n Nat} ->
+    (el -> acc -> acc) -> acc -> Tensor (vectApplV shape) el -> acc
+  tensorCFoldr {shape = []} f z t = foldr f z t
+  tensorCFoldr {shape = (s :: ss)} f z (TS xs)
+    = foldr (\t, acc => tensorCFoldr f acc t) z xs
+
+
   public export
-  {shape : Vect n Nat} -> Foldable (Tensor' shape) where
-    foldr {shape = []} f z (MkT t) = foldr f z t
-    foldr {shape = (s :: ss)} f z (MkT t) = ?viuuu -- foldr f z t
+  {shape : Vect n Nat} ->
+  Foldable (Tensor' shape) where
+    foldr f z (MkT t) = tensorCFoldr f z t
+
+  -- TODO Foldable still probably isn't implemented right
+  -- public export
+  -- {shape : Vect n Nat} -> Foldable (Tensor' shape) where
+  --   foldr {shape = []} f z (MkT t) = foldr f z t
+  --   foldr {shape = (s :: ss)} f z (MkT t) = ?vbb -- foldr f z t
   -- all the stuff below is probably needed to write Foldable
 
   -- Remove explicit instance and helper
@@ -430,8 +443,6 @@ namespace Tensor'Interfaces
   --   foldr {shape = []} f z t = foldr f z t
   --   foldr {shape = (s :: ss)} f z (TS xs) =
   --     foldr (\t, acc => tensorFoldr f acc t) z xs
-
-    -- ?vnnn_0 -- foldr f z t
 
 public export
 dot' : {shape : Vect n Nat} -> {a : Type}
@@ -528,35 +539,6 @@ namespace SliceT
   takeTensor' (s :: ss) (MkT (TS xs)) = MkT $ TS $ 
     (\t => GetT ((takeTensor' ss) (MkT t))) <$> takeFinVect' s xs
 
-
-
--- TODO
--- exCont2 : Tensor [BTreeNodeCont, ListCont] Int
--- exCont2 = fromArray $ fromTree $ Node (fromList [1,2,3,4,5]) Leaf' Leaf'
-
--- TODO
--- indexCont2 : Int
--- indexCont2 = indexTensor exCont2 [Root, 4]
-
-
--- TODO
--- exCont3 : Tensor [BTreeLeafCont, ListCont] Int
--- exCont3 = fromArray ?exCont3_rhs
-
-exampleList : List' Int
-exampleList = fromList [1,2,3,4]
-
-
-val : Int
-val = indexCont exampleList 3
-
-vv : Vect' 3 Int
-vv = fromVect [1,2,3]
-
-
--- Same as index from Data.Vect!
-indexVect : Fin n -> Vect' n a -> a
-indexVect x v = indexCont v x
 
 
 
