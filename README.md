@@ -6,7 +6,7 @@ This is framework for pure functional tensor processing, implemented in Idris 2.
 * **is made with ergonomics in mind**: it aims to provide the familiar numpy/Pytorch interface to the user
 
 
-It is expressive enough to implement generalised cross-attention from [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html) - you can find the implementation [here](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19).
+It is expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) as described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
 
 Some core examples below (taken from `Data.Tensor.TensorExamples.idr`):
 
