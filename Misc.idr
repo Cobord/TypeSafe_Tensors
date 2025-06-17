@@ -3,7 +3,8 @@ module Misc
 import Data.Vect
 import Data.Fin.Arith
 import Data.Vect.Quantifiers
-
+import Decidable.Equality
+import Decidable.Equality.Core
 
 %hide Builtin.infixr.(#)
 
@@ -12,14 +13,13 @@ public export
 liftA2 : Applicative f => f a -> f b -> f (a, b)
 liftA2 fa fb = ((,) <$> fa) <*> fb
 
--- Starting with (Fin l -> x) and an extra x, we produce a map (Fin (S l) -> x) 
--- whose first element is the extra x 
+||| Starting with (Fin l -> x) and an extra x, we produce a map (Fin (S l) -> x) whose first element is the extra x 
 public export
 addBeginning : x -> (Fin l -> x) -> (Fin (S l) -> x)
 addBeginning x _ FZ = x
 addBeginning _ c (FS k') = c k'
 
-||| analogus to take in Data.Vect, but for Fin
+||| Analogus to take in Data.Vect, but for Fin
 public export 
 takeFin : (s : Fin (S n)) -> Vect n a -> Vect (finToNat s) a
 takeFin FZ _ = []
@@ -66,27 +66,6 @@ rr i = ?rooo
   -- -> Data.Fin.Arith.(*) (Fin (S x)) (Fin (S y))
 
 
--- t : {A, B : Type}
---   -> Bool -> Type
--- t False = A
--- t True = B
-
--- iso : {A, B : Type}
---   -> (A, B) -> (b : Bool) -> t {A=A} {B=B} b
--- iso (a, _) False = a
--- iso (_, b) True = b
--- 
--- tt : {A : Type} -> {B : A -> Type}
---   -> Bool -> Type
--- tt False = A
--- tt True = B ?otetwe_1
--- 
--- iso2 : {A : Type} -> {B : A -> Type}
---   -> (a : A ** B a) -> (b : Bool) -> tt {A=A} {B=B} b
--- iso2 ((a ** _)) False = a
--- iso2 ((a ** b)) True = ?tuu_2
-
-
 mm : {m, n : Nat} -> Fin (S m) -> Fin (S n) -> Fin (S (m * n))
 mm = Data.Fin.Arith.(*)
 
@@ -123,8 +102,6 @@ Interface1 Nat where
 getBoth : (i : Interface2 a) => (a, a)
 getBoth = (getInterface1, getInterface2)
 
-
-t : Type
 
 ll : Num a => List a
 ll = ?ll_rhs
