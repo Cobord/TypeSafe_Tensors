@@ -23,6 +23,15 @@ data ElemIndex : a -> Fin n -> Vect n a -> Type where
   Here : ElemIndex x FZ (x :: xs)
   There : (later : ElemIndex x i xs) -> ElemIndex x (FS i) (y :: xs)
 
+data IsNo : Dec a -> Type where
+  ItIsNo : {prop : Type} -> {contra : Not prop} -> IsNo (No contra)
+
+ff : DecEq a => {x : a} -> IsNo (decEq x x) -> Void
+ff y = ?ff_rhs
+
+-- fff : {a : Type} -> DecEq a => {x, y : a} -> (neq : Not (x = y)) -> IsNo (decEq x y)
+-- fff neq = ItIsNo {prop=(x = y)} {contra=(neq)}
+
 
 
 mutual
@@ -45,7 +54,7 @@ mutual
       {x, y : a} ->
       (xs : UniqueList a) ->
       NotElemUnique x xs ->
-      {auto neq : Not (x = y)} ->
+      {auto neq : IsNo (decEq x y)} ->
       {auto prf : NotElemUnique y xs} ->
       NotElemUnique x (y :: xs)
 
@@ -55,9 +64,9 @@ mutual
   isElemInUniqueList x [] = Yes (NotInEmptyList x)
   isElemInUniqueList x (y :: xs) = case decEq x y of
     Yes Refl => No (\p => case p of 
-      (NotInNonEmptyList _ _ {neq}) => neq Refl)
+      (NotInNonEmptyList _ _ {neq}) => ?nnn) -- neq Refl)
     No neq => case isElemInUniqueList x xs of
-      Yes prf => Yes (NotInNonEmptyList _ prf {neq=neq})
+      Yes prf => Yes (NotInNonEmptyList _ prf {neq=(?iii)})
       No nprf => No (\p => case p of
         NotInNonEmptyList _ prf' => nprf prf')
 
@@ -67,15 +76,11 @@ mutual
     Yes pp => x :: fromVect xs
     No _ => fromVect xs
 
--- av : UniqueList Nat
--- av = [1, 2, 3]
+av : UniqueList Nat
+av = [1, 2, 3]
 
--- av2 : UniqueListConstr Nat
--- av2 = fromVect [1, 2, 3]
-
-
-
-
+avv : UniqueList Nat
+avv = fromVect [1, 2, 3, 3]
 
 -- ||| A vector of unique elements
 -- ||| Consists of a vector and a proof that once we remove duplicates, we get the same vector back
