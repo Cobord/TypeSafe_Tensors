@@ -26,19 +26,36 @@ namespace ElemIndex
     There : (later : ElemIndex x i xs) -> ElemIndex x (FS i) (y :: xs)
 
 data IsNo : Dec a -> Type where
-  ItIsNo : {prop : Type} -> {contra : Not prop} -> IsNo (No contra)
+  ItIsNo : {prop : Type} -> {contra : Not prop} -> IsNo (No {prop=prop} contra)
 
-ff : DecEq a => {x : a} -> IsNo (decEq x x) -> Void
-ff y = ?ff_rhs
 
--- fff : {a : Type} -> DecEq a => {x, y : a} -> (neq : Not (x = y)) -> IsNo (decEq x y)
--- fff neq = ItIsNo {prop=(x = y)} {contra=(neq)}
+public export
+[uniqueUninhabited] {a : Type} -> {x : a} -> (de : DecEq a) =>
+Uninhabited (IsNo (Equality.decEq x x)) where
+  uninhabited y with (decEq x x)
+    _ | (Yes prf) with (y)
+      _ | (ItIsNo _) impossible
+    _ | (No contra) = contra Refl
+
+
+||| Proof of inequality yields IsNo
+proofIneqIsNo : {x, y : a} -> DecEq a => ((x = y) -> Void) -> (IsNo (Equality.decEq x y))
+proofIneqIsNo f with (decEq x y)
+  _ | (Yes prf) = absurd (f prf)
+  _ | (No contra) = ItIsNo
+
+
+{-
+public export
+absurd : Uninhabited t => (h : t) -> a
+absurd h = void (uninhabited h)
+-}
 
 
 
 mutual
   ||| A list with unique elements
-  ||| Constructively defined, an element can be inserted if it is not already in the list
+  ||| An element can be inserted if it is not already in the list
   public export
   data UniqueList : (a : Type) -> Type where
     Nil : {a : Type} -> UniqueList a
@@ -53,7 +70,7 @@ mutual
     (x : a) -> (xs : UniqueList a) -> Type where
     NotInEmptyList : {a : Type} -> DecEq a => (x : a)
       -> NotElemUnique {a=a} x []
-    NotInNonEmptyList : {a : Type} -> DecEq a =>
+    NotInNonEmptyList : {a : Type} -> (de : DecEq a) =>
       {x, y : a} ->
       (xs : UniqueList a) ->
       NotElemUnique x xs ->
@@ -77,22 +94,35 @@ mutual
   --     ElemUnique x (y :: xs)
     
 
-  ||| Decide if an element is found or not in a UniqueList
-  isElemInUniqueList : {a : Type} -> DecEq a =>
+
+  ||| Decision procedure for proving an element is not found in an UniqueList
+  decElemNotInUniqueList : {a : Type} -> DecEq a =>
     (x : a) -> (xs : UniqueList a) -> Dec (NotElemUnique x xs)
-  isElemInUniqueList x [] = Yes (NotInEmptyList x)
-  isElemInUniqueList x (y :: xs) = case decEq x y of
-    Yes Refl => No (\p => case p of 
-      (NotInNonEmptyList _ _ {neq}) => ?nnn) -- neq Refl)
-    No neq => case isElemInUniqueList x xs of
-      Yes prf => Yes (NotInNonEmptyList _ prf {neq=(?iii)})
+  decElemNotInUniqueList x [] = Yes (NotInEmptyList x)
+  decElemNotInUniqueList x (y :: xs) = case decEq x y of
+    Yes Refl => No (\p => case p of -- x is equal to y, we already know the answer is No then
+      (NotInNonEmptyList {de} _ _ {neq}) => uninhabited @{uniqueUninhabited {de=de}} neq) 
+    No neq => case decElemNotInUniqueList x xs of -- we have to check the rest
+      Yes prf => Yes (NotInNonEmptyList _ prf {neq=(proofIneqIsNo neq)})
       No nprf => No (\p => case p of
         NotInNonEmptyList _ prf' => nprf prf')
 
   public export
+  toList : {a : Type} -> DecEq a => UniqueList a -> List a
+  toList [] = []
+  toList (x :: xs) = x :: toList xs
+
+  public export
+  fromList : {a : Type} -> DecEq a => List a -> UniqueList a
+  fromList [] = []
+  fromList (x :: xs) = case decElemNotInUniqueList x (fromList xs) of
+    Yes _ => x :: fromList xs
+    No _ => fromList xs
+
+  public export
   fromVect : {a : Type} -> DecEq a => Vect n a -> UniqueList a
   fromVect [] = []
-  fromVect (x :: xs) = case isElemInUniqueList x (fromVect xs) of
+  fromVect (x :: xs) = case decElemNotInUniqueList x (fromVect xs) of
     Yes _ => x :: fromVect xs
     No _ => fromVect xs
 
@@ -111,7 +141,7 @@ mutual
 
 
   (+++) [] ys = ys
-  (+++) ((::) x xs {prf=prfx}) ys = case isElemInUniqueList x ys of
+  (+++) ((::) x xs {prf=prfx}) ys = case decElemNotInUniqueList x ys of
     Yes prfy => (::) x (xs +++ ys) {prf=(expandUnique xs ys x {prfx=prfx} {prfy=prfy})}
     No _ => xs +++ ys
 
@@ -145,6 +175,38 @@ namespace UniqueListFrom
 
 aa : UniqueListFrom Nat [10, 11, 12]
 aa = MkUniqueListFrom [10, 11]
+
+at : UniqueList Nat
+at = fromList [10, 11]
+
+bb : UniqueListFrom Char ['a', 'b', 'c']
+bb = MkUniqueListFrom ['a', 'b']
+
+packUnique : UniqueList Char -> String
+packUnique = pack . toList
+
+unpackUnique : String -> UniqueList Char
+unpackUnique = fromList . unpack
+
+data UniqueString : Type where
+  MkUniqueString : (str : String) ->
+    {auto prf : packUnique (unpackUnique str) = str} ->
+    UniqueString
+
+data UniqueStringFrom : (alphabet : String) -> Type where
+  MkUniqueStringFrom : {alphabet : String} ->
+     (str : String) ->
+     {auto prf : packUnique (unpackUnique str) = str} ->
+     {auto prf22 : All (\c => Elem c (unpack alphabet)) (unpackUnique str)} ->
+     UniqueStringFrom alphabet
+
+tt : All (\c => Elem c ['a', 'b', 'c']) ['a', 'c']
+tt = [Here, There (There Here)]
+
+
+
+ttfrom : UniqueStringFrom "ijk"
+ttfrom = MkUniqueStringFrom "ijk"
 
 
 -- ||| A vector of unique elements
