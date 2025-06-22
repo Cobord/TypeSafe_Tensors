@@ -6,24 +6,26 @@ import Decidable.Equality
 import Decidable.Equality.Core
 import Data.List.Elem
 
--- Definitions of vectors/lists with unique elements
-
-||| A proof that an element x is not found in vector xs
-||| Dual of Elem
-data NotElem : (x : a) -> (xs : Vect n a) -> Type where
-  NotElemEmpty : NotElem x []
-  NotElemCons : Eq a => {x, y : a} ->
-    NotElem x xs ->
-    So (x /= y) ->
-    NotElem x (y :: xs)
-
-namespace ElemIndex
+||| Proofs about elements existing or not existing in vectors
+namespace ElemVector
   ||| A proof that some element is found in a vector at position i
   ||| Position-relevant variant of Elem
   public export
   data ElemIndex : a -> Fin n -> Vect n a -> Type where 
     Here : ElemIndex x FZ (x :: xs)
     There : (later : ElemIndex x i xs) -> ElemIndex x (FS i) (y :: xs)
+
+
+  ||| A proof that an element x is not found in vector xs
+  ||| Dual of Elem
+  data NotElem : (x : a) -> (xs : Vect n a) -> Type where
+    NotElemEmpty : NotElem x []
+    NotElemCons : Eq a => {x, y : a} ->
+      NotElem x xs ->
+      So (x /= y) ->
+      NotElem x (y :: xs)
+
+
 
 public export
 data IsNo : Dec a -> Type where
@@ -47,54 +49,41 @@ proofIneqIsNo f with (decEq x y)
   _ | (No contra) = ItIsNo
 
 
+-- Definitions of vectors/lists with unique elements
+
 
 mutual
   ||| A list with unique elements
   ||| An element can be inserted if it is not already in the list
+  ||| Like a Set, but with ordering
   public export
-  data UniqueList : (a : Type) -> Type where
-    Nil : {a : Type} -> UniqueList a
-    (::) : {a : Type} ->
+  data UniqueList : (a : Type) -> DecEq a => Type where
+    Nil : {a : Type} -> DecEq a => UniqueList a
+    (::) : {a : Type} -> DecEq a =>
       (x : a) ->
       (xs : UniqueList a) ->
-      {auto prf : NotElemUnique x xs} ->
+      {auto prf : NotElem x xs} ->
       UniqueList a
 
   ||| A proof that an element x is not found in the UniqueList xs
   public export
-  data NotElemUnique : {a : Type} ->
+  data NotElem : {a : Type} -> DecEq a =>
     (x : a) -> (xs : UniqueList a) -> Type where
     NotInEmptyList : {a : Type} -> DecEq a => (x : a)
-      -> NotElemUnique {a=a} x []
+      -> NotElem {a=a} x []
     NotInNonEmptyList : {a : Type} -> (de : DecEq a) =>
       {x, y : a} ->
       (xs : UniqueList a) ->
-      NotElemUnique x xs ->
+      NotElem x xs ->
       {auto neq : IsNo (decEq x y)} ->
-      {auto prf : NotElemUnique y xs} ->
-      NotElemUnique x (y :: xs)
-
-  -- ||| A proof that an element x is found in the UniqueList xs
-  -- data ElemUnique : a -> UniqueList a -> Type where
-  --   Here : {a : Type} -> 
-  --     (x : a) ->
-  --     {xs : UniqueList a} ->
-  --     {auto prf : NotElemUnique x xs} ->
-  --     ElemUnique x (x :: xs)
-  --   There : {a : Type} ->
-  --     (x, y : a) ->
-  --     (xs : UniqueList a) ->
-  --     ElemUnique x xs ->
-  --     {auto prf : NotElemUnique x xs} ->
-  --     {auto prf : NotElemUnique y xs} ->
-  --     ElemUnique x (y :: xs)
-    
+      {auto prf : NotElem y xs} ->
+      NotElem x (y :: xs)
 
 
 ||| Decision procedure for proving an element is not found in an UniqueList
 public export
 decElemNotInUniqueList : {a : Type} -> DecEq a =>
-  (x : a) -> (xs : UniqueList a) -> Dec (NotElemUnique x xs)
+  (x : a) -> (xs : UniqueList a) -> Dec (NotElem x xs)
 decElemNotInUniqueList x [] = Yes (NotInEmptyList x)
 decElemNotInUniqueList x (y :: xs) = case decEq x y of
   Yes Refl => No (\p => case p of -- x is equal to y, we already know the answer is No then
@@ -123,6 +112,13 @@ fromVect (x :: xs) = case decElemNotInUniqueList x (fromVect xs) of
   Yes _ => x :: fromVect xs
   No _ => fromVect xs
 
+public export
+toVect : {a : Type} -> DecEq a => UniqueList a -> (n : Nat ** Vect n a)
+toVect [] = (0 ** [])
+toVect (x :: xs) = let (n ** xs) = toVect xs
+                   in (S n ** x :: xs)
+
+
 namespace UniqueListConcat
   {-
   Concatenation of unique lists
@@ -137,9 +133,9 @@ namespace UniqueListConcat
   expandUnique : {a : Type} -> DecEq a =>
     (x' : a) ->
     (xs, ys : UniqueList a) ->
-    {prfx : NotElemUnique x' xs} ->
-    {prfy : NotElemUnique x' ys} ->
-    NotElemUnique x' (xs +++ ys)
+    {prfx : NotElem x' xs} ->
+    {prfy : NotElem x' ys} ->
+    NotElem x' (xs +++ ys)
 
   (+++) [] ys = ys
   (+++) ((::) x xs {prf=prfx}) ys = case decElemNotInUniqueList x ys of
@@ -147,10 +143,13 @@ namespace UniqueListConcat
     No _ => xs +++ ys
 
   expandUnique x' [] ys {prfy} = prfy
-  expandUnique @{dece} x' (x :: xs) ys {prfx} {prfy} with (decElemNotInUniqueList x ys)
-    expandUnique x' (x :: xs) ys {prfx} {prfy} | (Yes prf_yes)
-      = let t = NotInNonEmptyList in ?h11
-    expandUnique @{dece} x' (x :: xs) ys {prfx = (NotInNonEmptyList _ prfx_cons)} {prfy} | (No prf_no)
+  expandUnique @{dece} x' ((::) x xs {prf=prfx_notelem}) ys {prfx = (NotInNonEmptyList {neq} xs prfx_cons)} {prfy} with (decElemNotInUniqueList @{dece} x ys)
+    _ | (Yes prf_yes)
+      = let v = expandUnique @{dece} x' xs ys
+            vv = expandUnique @{dece} x xs ys {prfx=prfx_notelem} {prfy=prf_yes}
+            t = NotInNonEmptyList {x=x'} {y=x} ((+++) @{dece} xs ys) v {neq} {prf=vv}-- v @{neq}
+        in ?h11
+    _ | (No prf_no)
       = expandUnique @{dece} x' xs ys {prfx=prfx_cons} {prfy=prfy}
 
       -- let prfx_tail = case prfx of
@@ -172,11 +171,13 @@ concatMapUnique (x :: xs) = x +++ concatMapUnique xs
 namespace All
   ||| A proof that all elements of a unique list satisfy a property. 
   public export
-  data All : (0 p : a -> Type) -> UniqueList a -> Type where
-    Nil  : All p Nil
-    (::) : {x : a} ->
+  data All : (0 p : a -> Type) -> DecEq a => UniqueList a -> Type where
+    Nil  : {a : Type} -> {0 p : a -> Type} -> DecEq a => All p Nil
+    (::) : {a : Type} -> DecEq a =>
+      {0 p : a -> Type} ->
+      {x : a} ->
       {0 xs : UniqueList a} ->
-      {auto prf : NotElemUnique x xs} ->
+      {auto prf : NotElem x xs} ->
       p x ->
       All p xs ->
       All p (x :: xs)
@@ -195,7 +196,7 @@ namespace UniqueListFrom
   ||| A list of unique elements with elements from ls
   public export
   data UniqueListFrom : (a : Type) -> (ls : List a) -> Type where
-    MkUniqueListFrom : {a : Type} -> {ls : List a} ->
+    MkUniqueListFrom : {a : Type} -> DecEq a => {ls : List a} ->
       (xs : UniqueList a) -> {auto prf : All (\x => Elem x ls) xs} ->
       UniqueListFrom a ls
 
