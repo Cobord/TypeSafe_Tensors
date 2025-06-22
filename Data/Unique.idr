@@ -143,14 +143,14 @@ namespace UniqueListConcat
     No _ => xs +++ ys
 
   expandUnique x' [] ys {prfy} = prfy
-  expandUnique @{dece} x' ((::) x xs {prf=prfx_notelem}) ys {prfx = (NotInNonEmptyList {neq} xs prfx_cons)} {prfy} with (decElemNotInUniqueList @{dece} x ys)
-    _ | (Yes prf_yes)
-      = let v = expandUnique @{dece} x' xs ys
-            vv = expandUnique @{dece} x xs ys {prfx=prfx_notelem} {prfy=prf_yes}
-            t = NotInNonEmptyList {x=x'} {y=x} ((+++) @{dece} xs ys) v {neq} {prf=vv}-- v @{neq}
-        in ?h11
-    _ | (No prf_no)
-      = expandUnique @{dece} x' xs ys {prfx=prfx_cons} {prfy=prfy}
+  expandUnique x' ((::) x xs {prf=not_elem_x_xs}) ys
+    {prfx = (NotInNonEmptyList {neq} xs not_elem_x'_xs)}
+    {prfy=not_elem_x'_ys} with (decElemNotInUniqueList x ys)
+    _ | (Yes _)
+      = let v = expandUnique x' xs ys {prfx=not_elem_x'_xs} {prfy=not_elem_x'_ys}
+        in NotInNonEmptyList {x=x'} {y=x} (xs +++ ys) v {neq} {prf=(expandUnique x xs ys)}
+    _ | (No _)
+      = expandUnique x' xs ys {prfx=not_elem_x'_xs} {prfy=not_elem_x'_ys}
 
       -- let prfx_tail = case prfx of
       --                   NotInNonEmptyList _ prfx_tail => prfx_tail
