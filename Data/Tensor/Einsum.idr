@@ -1,17 +1,19 @@
 module Data.Tensor.Einsum
 
-import Data.Vect
-import Data.List
-import Data.List1
-import Data.HashMap
-import Data.String.Parser
+import public Data.Vect
+import public Data.List
 import Decidable.Equality
+-- import Data.HashMap
 -- import Data.List.Elem
+import Data.String
 
-import Data.Unique
+import public Data.Unique
 import Data.Tensor.Tensor
 import Data.Tensor.NaperianTensor
 import Misc
+import Language.Reflection
+
+%language ElabReflection
 
 {-
 ----------------------------------------
@@ -140,7 +142,7 @@ uniqueLabels (xs :: xss) = fromList xs +++ uniqueLabels xss
 ||| b) each output label appears only once
 public export
 data EinsumExpr : (a : Type) -> DecEq a => Type where
-  Einsum : {a : Type} -> DecEq a =>
+  MkEinsumExpr : {a : Type} -> DecEq a =>
     (inputTy : List (List a)) ->
     (outputTy : UniqueList a) ->
     {auto prf : All (\x => Elem x (toList (uniqueLabels inputTy))) outputTy} ->
@@ -150,6 +152,7 @@ data EinsumExpr : (a : Type) -> DecEq a => Type where
 namespace EinsumToString
   ||| If a=Char, we write it as a string
   ||| Anything else we add commas between elements and brackets around
+  public export
   labelToString : {a : Type} -> DecEq a => Show a => List a -> String
   labelToString {a=Char} xs = pack xs
   labelToString xs
@@ -171,22 +174,78 @@ namespace EinsumToString
   
   public export
   toString : DecEq a => Show a => EinsumExpr a -> String
-  toString (Einsum inputTy outputTy)
+  toString (MkEinsumExpr inputTy outputTy)
     = (inputToString inputTy) ++ "->" ++ (outputToString outputTy)
 
 
 oo : EinsumExpr String
-oo = Einsum [["i", "j"], ["j", "k"]] ["i", "k"]
+oo = MkEinsumExpr [["i", "j"], ["j", "k"]] ["i", "k"]
 
 ooChar : EinsumExpr Char
-ooChar = Einsum [['i', 'j'], ['j', 'k']] ['i', 'k']
+ooChar = MkEinsumExpr [['i', 'j'], ['j', 'k']] ['i', 'k']
 
+
+----------------------------------------
+----- String-based einsum
+----------------------------------------
+
+public export
+data EinsumParseError : Type where
+  EmptyInput : EinsumParseError
+  MissingArrow : EinsumParseError
+  ContentBothSidesArrow : EinsumParseError
+  DuplicateOutputAxis : EinsumParseError
+  OutputAxisNotInInput : EinsumParseError
+  MultipleArrows : EinsumParseError
+
+public export
+Show EinsumParseError where
+  show EmptyInput = "Empty input string"
+  show MissingArrow = "Missing '->' arrow"
+  show ContentBothSidesArrow = "Content missing on one side of arrow"
+  show DuplicateOutputAxis = "Duplicate axis in output"
+  show OutputAxisNotInInput = "Output axis not found in input"
+  show MultipleArrows = "Multiple '->' arrows found"
+
+||| This parses into EinsumExpr Char, but other options are also possible
+||| For instance, one where we use the syntax
+||| "[batch,input],[input,output]->[batch,output]"
+public export
+parseEinsumString : String -> Either EinsumParseError (EinsumExpr Char)
+parseEinsumString str = case str of
+  "" => Left EmptyInput
+  _ => case splitString str "->" of
+    (0 ** _) => Left MissingArrow  -- Technically impossible
+    (1 ** _) => Left ContentBothSidesArrow 
+    (2 ** [left, right]) => 
+      let xs : Vect _ String := snd (splitString left ",")
+          inputLabels : List (List Char) := unpack <$> (toList xs)
+      in case fromListMaybe (unpack right) of
+           Nothing => Left DuplicateOutputAxis
+           Just outputTy => 
+             case checkAllInInput outputTy (uniqueLabels inputLabels) of
+                  Nothing => Left OutputAxisNotInInput
+                  Just prf => Right (MkEinsumExpr inputLabels outputTy {prf = prf})
+    (_ ** _) => Left MultipleArrows
+  where
+    -- Helper function to check if all output labels appear in input labels and provide proof
+    checkAllInInput : (outputTy : UniqueList Char) ->
+      (inputChars : UniqueList Char) -> 
+      Maybe (All (\x => Elem x (toList inputChars)) outputTy)
+    checkAllInInput [] inputChars = Just []
+    checkAllInInput (x :: xs) inputChars = 
+      case isElem x (toList inputChars) of
+        Yes prf => case checkAllInInput xs inputChars of
+                     Just restPrf => Just (prf :: restPrf)
+                     Nothing => Nothing
+        No _ => Nothing
+
+public export
 uniqueLabelsVect : {nInputs : Nat} -> Vect nInputs String -> UniqueList Char
 uniqueLabelsVect xs = uniqueLabels $ (unpack <$>) (toList xs)
--- uniqueLabelsVect xs = uniqueLabels (map unpack xs)
 
-data EinsumStrExpr : Type where
-  EinsumChar : (einsumExpr : String) ->
+data EinsumStrExpr' : Type where
+  EinsumChar' : (einsumExpr : String) ->
     {left, right : String} ->
     {auto prf : splitString einsumExpr "->" = (2 ** [left, right])} ->
     {nInputs : Nat} ->
@@ -195,125 +254,153 @@ data EinsumStrExpr : Type where
     {outputTy : UniqueList Char} ->
     {auto prf_unique : fromListMaybe (unpack right) = Just outputTy} ->
     {auto prf_from_input : All (\x => Elem x (toList (uniqueLabelsVect xs))) outputTy} ->
+    EinsumStrExpr'
+
+
+public export
+data EinsumStrExpr : Type where
+  EinsumChar : (einsumExprString : String) ->
+    {einsumExpr : EinsumExpr Char} ->
+    {auto prf : parseEinsumString einsumExprString = Right einsumExpr} ->
     EinsumStrExpr
+
+public export
+fromString : (einsumExprString : String) ->
+  {einsumExpr : EinsumExpr Char} ->
+  {auto prf : parseEinsumString einsumExprString = Right einsumExpr} ->
+  EinsumStrExpr
+fromString einsumExprString = EinsumChar einsumExprString
+
 
 esTest : EinsumStrExpr 
 esTest = EinsumChar "ij,jk->ik"
     
-----------------------------------------
------ String-based einsum
-----------------------------------------
+esTest' : EinsumStrExpr'
+esTest' = EinsumChar' "ij,jk->ik"
 
-data EinsumParseError : Type where
-  MissingArrow : EinsumParseError
-  MissingComma : EinsumParseError
-  InvalidTerm : EinsumParseError
-  EmptyInput : EinsumParseError
-  MultipleArrows : EinsumParseError
-  ContentBothSidesArrow : EinsumParseError
+-- This will only be the input
+public export
+data Einsum : (str : EinsumStrExpr) -> Type where
+  Contract : {a : Type} ->
+    {str : EinsumStrExpr} ->
+    (xs : List (shape : Vect n Nat ** Tensor' shape a)) ->
+    Einsum str
 
-||| This parses 
-parseEinsumInput : String -> Either EinsumParseError (EinsumExpr Char)
-parseEinsumInput str = case splitString "->" str of
-  (0 ** _) => Left MissingArrow  -- Technically impossible
-  (1 ** _) => Left ContentBothSidesArrow 
-  (2 ** [left, right]) => let xs = snd (splitString left ",")
-                          in ?hoole
-  (_ ** xs) => Left MultipleArrows
--- parseEinsumInput input = case toList (snd (splitString input ",")) of
---   [] => Left MissingComma -- technically impossible
---   term :: terms => let inputLabels = fromList (unpack term)
---                    in Right (fromVect inputLabels ** SingleTy inputLabels)
-  -- terms) => Right ?hoole -- Right (left, n, right)
+t1 : Tensor' [2, 3] Double
+t1 = fromArray' [ [1, 2, 3], [4, 5, 6] ]
+
+t2 : Tensor' [3, 4] Double
+t2 = fromArray' [ [1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12] ]
+
+t3 : Einsum "ij,jk->ik"
+t3 = Contract ?loo
+
+tO : {i, j, k : Nat} -> Tensor' [i, j] a -> Tensor' [j, k] a -> Tensor' [i, k] a
+
 
 ||| The name for an axis is an arbitrary string, usually a single character
 AxisName : Type
 AxisName = String
 
-AxisBinding : Type
-AxisBinding = HashMap AxisName Nat
+-- AxisBinding : Type
+-- AxisBinding = HashMap AxisName Nat
 
-{-
--- case splitString input "->" of
---   (0 ** _) => Left MissingArrow -- technically impossible
---   (1 ** _) => Left MissingArrow
---   (2 ** [left, right]) => case splitString left "," of
---     (0 ** []) => let t = SingleTy {a=Char} []
---                  in Right ?hole -- Left MissingComma -- technically impossible
---     (1 ** [term]) => let inputLabels = fromList (unpack term)
---                          t = SingleTy inputLabels
---                      in Right (fromVect inputLabels ** (t ** OutputTy (MkUniqueListFrom ?loo)))
---     (n ** _) => ?hoole -- Right (left, n, right)
---   (_ ** _) => Left MultipleArrows
+-- emptyH : AxisBinding
+-- emptyH = empty
+
+-- TODO be explciit about which errors should show up
+
+----------------------------------------
+----- Elaborator Reflection for Einsum Function Generation
+----------------------------------------
+
+-- Helper function to convert Char to variable name
+charToVarName : Char -> Name
+charToVarName c = UN (Basic (singleton c))
+
+-- Generate [i, j, k] from ['i', 'j', 'k']
+generateShapeVect : List Char -> TTImp
+generateShapeVect [] = `([])
+generateShapeVect (x :: xs) = 
+  `(~(IVar EmptyFC (charToVarName x)) :: ~(generateShapeVect xs))
+
+-- Generate Tensor' [i, j] a from shape ['i', 'j']
+generateTensorType : List Char -> TTImp
+generateTensorType shape = 
+  let shapeVect = generateShapeVect shape
+  in `(Tensor' ~(shapeVect) a)
+
+-- Build function type with implicit Nat parameters and explicit tensor parameters
+buildEinsumFunctionType : List Char -> List (List Char) -> List Char -> TTImp
+buildEinsumFunctionType uniqueVars inputShapes outputShape =
+  let
+    inputTensorTypes : List TTImp := generateTensorType <$> inputShapes
+    outputTensorType : TTImp := generateTensorType outputShape
+    
+    -- Build the main function type: input1 -> input2 -> ... -> output
+    mainFunctionType : TTImp := foldr (\inputType, acc =>
+      IPi EmptyFC MW ExplicitArg Nothing inputType acc)
+      outputTensorType inputTensorTypes
+    
+    -- Add implicit {i, j, k : Nat} parameters
+    withNatParams : TTImp := foldr (\var, acc => 
+      IPi EmptyFC MW ImplicitArg (Just (charToVarName var)) `(Nat) acc) mainFunctionType uniqueVars
+    
+    -- Add implicit {a : Type} parameter FIRST (before the Nat parameters)
+    fullType : TTImp := IPi EmptyFC MW ImplicitArg (Just (UN (Basic "a"))) `(Type) withNatParams
+    
+  in fullType
+
+-- Simple string replacement function
+replaceString : String -> String -> String -> String
+replaceString old new str = 
+  let chars = unpack str
+      oldChars = unpack old
+      newChars = unpack new
+  in pack (replaceInList oldChars newChars chars)
+  where
+    replaceInList : List Char -> List Char -> List Char -> List Char
+    replaceInList [] _ xs = xs
+    replaceInList old new [] = []
+    replaceInList old new xs@(x :: rest) =
+      if isPrefixOf old xs
+        then new ++ replaceInList old new (drop (length old) xs)
+        else x :: replaceInList old new rest
+
+-- Generate a function name from the einsum expression
+export
+generateFunctionName : String -> String
+generateFunctionName einsumStr = 
+  let withUnderscores = replaceString "->" "_" (replaceString "," "_" einsumStr)
+  in "einsum_" ++ withUnderscores
+
+-- Main function to generate Einsum function type from string
+export
+partial
+generateEinsumType : String -> Elab ()
+generateEinsumType einsumStr = do
+  case parseEinsumString einsumStr of
+    Left err => fail "Parse error in Einsum string: \{show err}"
+    Right (MkEinsumExpr inputTy outputTy) => do
+      let uniqueVars = toList (uniqueLabels inputTy)
+      let functionName = generateFunctionName einsumStr
+      let functionType = buildEinsumFunctionType uniqueVars inputTy (toList outputTy)
+      
+      -- Create the type declaration
+      let claimData = MkIClaimData MW Public [] (MkTy EmptyFC (NoFC (UN (Basic functionName))) functionType)
+      let tyDecl = IClaim (MkFCVal EmptyFC claimData)
+      
+      declare [tyDecl]
+      
+      -- Print confirmation
+      logTerm "elab" 0 ("Generated function type: " ++ functionName) functionType
 
 
-  -- if length input == 0
-  --   then Left EmptyInput
-  --   else
-  --     let arrowCount = length (filter (isInfixOf (unpack "->")) (tails (unpack input)))
-  --     in if arrowCount == 0
-  --          then Left MissingArrow
-  --          else if arrowCount > 1
-  --            then Left MultipleArrows
-  --            else
-  --              -- Try to parse the full structure
-  --              case parse einsumParser input of
-  --                Left err => 
-  --                  -- Try to determine what specifically went wrong
-  --                  case parse leftSideParser input of
-  --                    Left _ => Left InvalidTerm  -- Left side has invalid terms
-  --                    Right _ => 
-  --                      -- Left side is OK, check if arrow parsing works
-  --                      case parse (leftSideParser *> string "->") input of
-  --                        Left _ => Left MissingArrow  -- Arrow missing or malformed
-  --                        Right _ => Left InvalidTerm  -- Right side must be invalid
-  --                Right _ => Right input
-  -- where
-  --   term : Parser String
-  --   term = takeWhile1 isAlpha <?> "alphabetic term"
-  --   
-  --   leftSideParser : Parser ()
-  --   leftSideParser = ignore $ sepBy1 term (char ',') <?> "comma-separated terms"
-  --   
-  --   rightSideParser : Parser ()
-  --   rightSideParser = ignore $ optional term <?> "optional output term"
-  --   
-  --   einsumParser : Parser ()
-  --   einsumParser = do
-  --     leftSideParser
-  --     ignore $ string "->" <?> "arrow"
-  --     rightSideParser
-  --     eos <?> "end of input"
-
-{-
--- Test examples
-test1 : Either EinsumParseError String
-test1 = parseEinsumString "ij,jk->ik"  -- Should succeed
-
-test2 : Either EinsumParseError String  
-test2 = parseEinsumString "ijk->"      -- Should succeed (sum operation)
-
-test3 : Either EinsumParseError String
-test3 = parseEinsumString "i,j->ij"    -- Should succeed (outer product)
-
-test4 : Either EinsumParseError String
-test4 = parseEinsumString "invalid"    -- Should fail with MissingArrow
-
-test5 : Either EinsumParseError String
-test5 = parseEinsumString ""           -- Should fail with EmptyInput
-
-test6 : Either EinsumParseError String
-test6 = parseEinsumString "123,456->789"  -- Should fail with InvalidTerm (non-alphabetic)
-
-test7 : Either EinsumParseError String
-test7 = parseEinsumString "i,,j->ij"   -- Should fail with InvalidTerm (empty term)
-
-test8 : Either EinsumParseError String
-test8 = parseEinsumString "i,j->123"   -- Should fail with InvalidTerm (non-alphabetic output)
-
-test9 : Either EinsumParseError String
-test9 = parseEinsumString "i->j->k"    -- Should fail with MultipleArrows
-
-aa : String
-aa = "asdf"
--}
+-- Generate some common Einsum function types
+%runElab generateEinsumType "ij,jk->ik"    -- Matrix multiplication
+%runElab generateEinsumType "ij->ji"       -- Transpose  
+%runElab generateEinsumType "ij->"         -- Sum all elements
+%runElab generateEinsumType "ij->i"        -- Sum over columns
+%runElab generateEinsumType "ij->j"        -- Sum over rows
+%runElab generateEinsumType "i,j->ij"      -- Outer product
+%runElab generateEinsumType "ii->i"        -- Diagonal extraction
