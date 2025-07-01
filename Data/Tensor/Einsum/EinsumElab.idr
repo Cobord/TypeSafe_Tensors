@@ -128,17 +128,22 @@ einsum exprStr args = do
           clause = PatClause EmptyFC (IVar EmptyFC (UN (Basic fnName))) fullImpl
           funDef = IDef EmptyFC (UN (Basic fnName)) [clause]
 
-      
-          -- Create the function call
-          functionVar = IVar EmptyFC (UN (Basic fnName))
-      ttimpArgs <- hListToTTImp args
-      let functionCall = foldl (\acc, arg => IApp EmptyFC acc arg) functionVar ttimpArgs
-      
       -- Declare both the type and the implementation (this is an Elab action)
       declare [tyDecl, funDef]
       
-      -- Use check to convert TTImp to the expected tensor type
-      check functionCall
+      -- Now call the generated function directly with the actual arguments
+      -- Instead of trying to build TTImp, we'll use the actual function
+      case args of
+        [] => fail "No arguments provided"
+        [x] => do
+          -- Get the actual function and apply it
+          fn <- check (IVar EmptyFC (UN (Basic fnName)))
+          pure (fn x)
+        [x, y] => do
+          -- Get the actual function and apply it to both arguments
+          fn <- check (IVar EmptyFC (UN (Basic fnName)))
+          pure (fn x y)
+        _ => fail "More than 2 arguments not yet supported"
 
 m : Tensor' [2, 3] Double
 m = fromArray' [[1, 2, 3], [4, 5, 6]]
@@ -152,8 +157,8 @@ n = fromArray' [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
 
 
 -- Test the fixed einsum macro with a unique pattern
--- testNewPattern : Tensor' [2] Double
--- testNewPattern = %runElab einsum "ij,ij->i" [m, m]
+testNewPattern : Tensor' [3, 2] Double
+testNewPattern = %runElab einsum "ij->ji" [m]
 
 einsumImplementation : {a : Type} -> Num a => {is : List Nat} -> {m : Nat} -> {ls : List Nat} -> 
   {inputShs : List (Exists (\n => Vect n Nat))} ->
