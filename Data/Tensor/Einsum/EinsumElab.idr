@@ -14,6 +14,14 @@ import Misc
 ----- Elaborator Reflection for Einsum Function Generation
 ------------------------------------------------------------
 
+-- Inductive representation for a list of tensors with different shapes
+||| Inductive representation for a list of tensors with different shapes
+||| It allows us to use list syntax like [m, n] with tensors of different shape
+||| While, importantly, not needing to pass the shape parameter directly, and allow the typechecker to infer it
+data TensorList : List (List Nat) -> Type -> Type where
+  Nil : TensorList [] a
+  (::) : Tensor' sh a -> TensorList shapes a -> TensorList (sh :: shapes) a
+
 ||| Helper function to convert Char to variable name
 charToVarName : Char -> Name
 charToVarName c = UN (Basic (singleton c))
@@ -196,7 +204,7 @@ findCharPosition c (xs :: xss) =
 getTensorDimSize : {shapes : List (List Nat)} -> 
   (tensorIdx : Nat) -> 
   (dimIdx : Nat) -> 
-  HList (shapes <&> (\sh => Tensor' sh a)) -> 
+  TensorList shapes a -> 
   Maybe Nat
 getTensorDimSize {shapes = []} _ _ [] = Nothing
 getTensorDimSize {shapes = (sh :: shs)} Z dimIdx (t :: ts) = 
@@ -209,48 +217,38 @@ getTensorDimSize {shapes = (sh :: shs)} (S k) dimIdx (t :: ts) =
 getSize : {shapes : List (List Nat)} ->
   (outputName : Char) ->
   (inputNames : List (List Char)) -> 
-  (inputTensors : HList (shapes <&> (\sh => Tensor' sh a))) ->
+  (inputTensors : TensorList shapes a) ->
   Maybe Nat
 getSize outputName inputNames inputTensors = do
   (tensorIdx, dimIdx) <- findCharPosition outputName inputNames
   getTensorDimSize tensorIdx dimIdx inputTensors
 
 
--- Helper function to get size from a list of shapes
-getSizeFromList : Char -> List (List Char) -> List (List Nat) -> Maybe Nat
-getSizeFromList outputName inputNames shapes = do
-  (tensorIdx, dimIdx) <- findCharPosition outputName inputNames
-  case inBounds tensorIdx shapes of
-    Yes prf => 
-      let tensorShape = index tensorIdx shapes
-      in case inBounds dimIdx tensorShape of
-        Yes prf2 => Just (index dimIdx tensorShape)
-        No _ => Nothing
-    No _ => Nothing
-
-einsumComputeOutputTypeHelper2 : {a : Type} -> Num a =>
+einsumComputeOutputTypeHelper : {a : Type} -> Num a =>
+  {shapes : List (List Nat)} ->
   EinsumExpr Char ->
-  List (sh ** Tensor' sh a) ->
+  TensorList shapes a ->
   Type
-einsumComputeOutputTypeHelper2 (MkEinsumExpr inputTy outputTy) args = 
+einsumComputeOutputTypeHelper {shapes = []}
+  (MkEinsumExpr inputTy outputTy) [] = Void -- no shapes
+einsumComputeOutputTypeHelper {shapes = (sh :: shs)}
+  (MkEinsumExpr inputTy outputTy) (t :: ts) = 
   let outputChars : List Char = toList outputTy
-      shapes : List (List Nat) = map (\(sh ** _) => sh) args
-      -- Create a simple HList-like structure for getSize
-      maybeNats : List (Maybe Nat) = map (\c => getSizeFromList c inputTy shapes) outputChars
+      maybeNats : List (Maybe Nat) = map (\c => getSize {shapes = (sh :: shs)} c inputTy (t :: ts)) outputChars
       result : Maybe (List Nat) = sequence maybeNats
   in case result of
     Just listOfNats => Tensor' listOfNats a
     Nothing => Void
+einsumComputeOutputTypeHelper (MkEinsumExpr inputTy outputTy) args = Void -- This last case should never happen, it's only there to satisfy Idris coverage checker
 
 einsumComputeOutputType : {a : Type} -> Num a =>
+  {shapes : List (List Nat)} ->
   (exprStr : String) -> 
-  (args : List (sh ** Tensor' sh a)) ->
+  (args : TensorList shapes a) ->
   Type
 einsumComputeOutputType {a} exprStr args = case parseEinsumString exprStr of
   Left err => Void
-  Right expr => einsumComputeOutputTypeHelper2 expr args
-  
-  
+  Right expr => einsumComputeOutputTypeHelper expr args
 
 
 einsumImplementation : {a : Type} -> Num a =>
