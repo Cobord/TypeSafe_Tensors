@@ -10,6 +10,7 @@ record Para (a : Type) (b : Type) where
     Param : a -> Type
     Run : (x : a) -> Param x -> b
 
+-- TODO infix notation
 
 public export
 composePara : Para a b -> Para b c -> Para a c

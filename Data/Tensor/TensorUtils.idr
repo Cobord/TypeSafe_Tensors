@@ -15,8 +15,16 @@ zeros : Num a => {shape : ApplV conts} -> Tensor shape a
 zeros = tensorReplicate (fromInteger 0)
 
 public export
+zeros' : Num a => {shape : Vect n Nat} -> Tensor' shape a
+zeros' = tensorReplicate' (fromInteger 0)
+
+public export
 ones : Num a => {shape : ApplV conts} -> Tensor shape a
 ones = tensorReplicate (fromInteger 1)
+
+public export
+ones' : Num a => {shape : Vect n Nat} -> Tensor' shape a
+ones' = tensorReplicate' (fromInteger 1)
 
 public export
 range : {n : Nat} -> Cast Nat a => Tensor' [n] a

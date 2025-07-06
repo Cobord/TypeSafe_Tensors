@@ -6,8 +6,8 @@ import Data.Container.Definition
 import Data.Container.Instances
 import Data.Container.TreeUtils
 
-import Tensor.ContainerTensor.Tensor
-import Tensor.ContainerTensor.TensorUtils
+import Data.Tensor.Tensor
+import Data.Tensor.TensorUtils
 import Data.Tree
 import Para.Para
 import Architectures.Softmax

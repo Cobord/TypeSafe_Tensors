@@ -2,6 +2,7 @@ module Data.Unique
 
 import Data.Vect
 import Data.List
+import Data.List.Quantifiers
 import Decidable.Equality
 import Decidable.Equality.Core
 import public Data.List.Elem
@@ -129,6 +130,12 @@ namespace UniqueListConcat
     _ | (No _)
       = expandUnique x' xs ys {prfx=not_elem_x'_xs} {prfy=not_elem_x'_ys}
 
+  
+  public export
+  uniqueJoin : {a : Type} -> DecEq a => List (List a) -> UniqueList a
+  uniqueJoin = fromList . join
+
+
 ||| A proof that all elements of a unique list satisfy a property. 
 public export
 data All : (0 p : a -> Type) -> DecEq a => UniqueList a -> Type where
@@ -142,6 +149,32 @@ data All : (0 p : a -> Type) -> DecEq a => UniqueList a -> Type where
     All p xs ->
     All p (x :: xs)
 
+||| A proof that all elements of a unique list in a chosen list
+public export
+data IsFrom : {a : Type} -> DecEq a =>
+  (sublist : UniqueList a) ->
+  (xs : List a) -> Type where
+  IndeedItIs : {a : Type} -> DecEq a =>
+    {sublist : UniqueList a} ->
+    {xs : List a} ->
+    {auto prf : All (\x => Elem x xs) sublist} ->
+    IsFrom sublist xs
+
+
+
+  
+
+||| Takes lists xs and ys, and returns all the elements of xs that are not in ys
+||| When ys is a sublist of xs, this is the complement of ys in xs
+public export
+complement : DecEq a =>
+  (xs : UniqueList a) ->
+  (ys : UniqueList a) -> 
+  List a -- technically we also know this is unique
+complement [] ys = []
+complement (x :: xs) ys = case decElemNotInUniqueList x ys of
+  Yes prf => complement xs ys
+  No _ => x :: (complement xs ys)
 
 
 data TestList : (a : Type) -> DecEq a => Type where
@@ -161,7 +194,7 @@ namespace UniqueListFrom
   public export
   data UniqueListFrom : (a : Type) -> DecEq a => (ls : List a) -> Type where
     MkUniqueListFrom : {a : Type} -> DecEq a => {ls : List a} ->
-      (xs : UniqueList a) -> {auto prf : All (\x => Elem x ls) xs} ->
+      (xs : UniqueList a) -> {auto prf : xs `IsFrom` ls} ->
       UniqueListFrom a ls
 
   public export
@@ -206,7 +239,7 @@ data UniqueStringFrom : (alphabet : String) -> Type where
   MkUniqueStringFrom : {alphabet : String} ->
      (str : String) ->
      {auto prf : packUnique (unpackUnique str) = str} ->
-     {auto prf22 : All (\c => Elem c (unpack alphabet)) (unpackUnique str)} ->
+     {auto prf22 : (unpackUnique str) `IsFrom` (unpack alphabet)} ->
      UniqueStringFrom alphabet
 
 ttfrom : UniqueStringFrom "ijk"

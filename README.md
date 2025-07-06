@@ -8,7 +8,7 @@ This is framework for pure functional tensor processing, implemented in Idris 2.
 
 It is expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) as described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
 
-Some core examples below (taken from `Data.Tensor.TensorExamples.idr`):
+It is a proof of concept, with core examples below (taken from `Data.Tensor.TensorExamples.idr`), and many rough edges. See TODOs at the ottom of the page.
 
 ```idris
 ||| Analogous to np.arange, except the range is specified in the type
@@ -156,9 +156,12 @@ failing
 ```
 
 
-TODO:
+## Future work
 * Type-safe einsum
 * Type-safe broadcasting, reshaping and stacking
 * In-place operations/views
 * Better ergonomics for general applicative tensors
 * FFI to a low-level kernel for tensor operations
+* No investigation has been done regarding optimisation yet
+
+

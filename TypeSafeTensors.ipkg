@@ -13,7 +13,7 @@ authors = "Bruno Gavranovic"
 -- langversion
 
 -- packages to add to search path
-depends = contrib
+depends = contrib, hashmap, elab-util
 
 -- modules to install
 modules = Data.Container.Definition,
@@ -26,13 +26,15 @@ modules = Data.Container.Definition,
           Data.Tensor.TensorUtils,
           Data.Functor.Naperian,
           Data.Tree,
-          Data.Tensor.Einsum,
+          Data.Tensor.Einsum.EinsumExpr,
+          Data.Tensor.Einsum.EinsumElab,
           Architectures.Activations,
           Architectures.Attention,
           Architectures.Softmax,
           Architectures.Linear,
           Algebra,
-          Misc
+          Misc,
+          Data.ElabUtilTest
 
 -- main file (i.e. file to load at REPL)
 -- main =

@@ -32,19 +32,17 @@ data ApplV : Vect n ApplC -> Type where
     Applicative (Ext c) =>
     ApplV cs -> ApplV ((# c) :: cs)
 
-public export infixr 5 +++
-public export
-(+++) : {cs : Vect n ApplC} -> {ds : Vect m ApplC}
-  -> ApplV cs -> ApplV ds -> ApplV (cs ++ ds)
-[] +++ ys = ys
-(c :: cs) +++ ys = c :: (cs +++ ys)
-
-
 public export
 data Tensor : (shape : ApplV conts) -> (dtype : Type) -> Type where
     TZ : (val : dtype) -> Tensor [] dtype
     TS : Applicative (c `fullOf`) => {cs : ApplV conts} ->
       c `fullOf` (Tensor cs dtype) -> Tensor (c :: cs) dtype
+
+-- TODO this can probably be improved/simplified?
+public export
+vectApplV : (shape : Vect n Nat) -> ApplV ((\n => # (VectCont n)) <$> shape)
+vectApplV [] = []
+vectApplV (s :: ss) = VectCont s :: vectApplV ss
 
 
 %name Tensor t, t'
@@ -274,15 +272,16 @@ namespace TensorContractions
   multiplyMMT m (TS n) = TS (multiplyMV m <$> n)
 
 
+-- TODO rename since this is not array for non-cubical tensors
 public export
 Array : (shape : ApplV conts) -> (dtype : Type) -> Type
 Array [] dtype = dtype
-Array (c :: cs) dtype = (Ext c) (Array cs dtype)
+Array (c :: cs) dtype = c `fullOf` (Array cs dtype)
 
 public export
 fromArray : {shape : ApplV conts} -> Array shape a -> Tensor shape a
 fromArray {shape = []} x = TZ x
-fromArray {shape = (c :: _)} xs = TS $ fromArray <$> xs
+fromArray {shape = (_ :: _)} xs = TS $ fromArray <$> xs
 
 public export
 toArray : {shape : ApplV conts} -> Tensor shape a -> Array shape a
@@ -339,137 +338,155 @@ namespace NestedTensorStuff
   (<-$->) = tensorMapFirstAxis
 
 
--- This recovers usual tensors in Tensor.Tensor
--- public export
--- Tensor'' : (shape : Vect n Nat) -> Type -> Type
--- Tensor'' shape = Tensor $ (\n => # (VectCont n) <$> shape)
--- Tensor'' shape = Tensor ((\n => (_ : Unit) !> Fin n) <$> shape)
 
--- vvv : (shape : Vect n Nat) -> Vect n ApplC
--- vvv shape = (\n => # (VectCont n)) <$> shape
-
-
--- TODO this can probably be improved/simplified?
-public export
-vectApplV : (shape : Vect n Nat) -> ApplV ((\n => # (VectCont n)) <$> shape)
-vectApplV [] = []
-vectApplV (s :: ss) = VectCont s :: vectApplV ss
-
-
-||| This defines a special datatype for cubical tensors
-||| Instead of Tensor' above we need this to aid type inference
-||| There might be a more ergonomic way to do this
-public export
-record Tensor' (shape : Vect n Nat) a where
-  constructor MkT
-  GetT : Tensor (vectApplV shape) a
-
-public export
-toCubicalTensor : {shape : Vect n Nat} -> Tensor (vectApplV shape) a -> Tensor' shape a
-toCubicalTensor t = MkT t
-
-public export
-fromCubicalTensor : {shape : Vect n Nat} -> Tensor' shape a -> Tensor (vectApplV shape) a
-fromCubicalTensor t = GetT t
-
-namespace Tensor'Interfaces
-  public export
-  {shape : Vect n Nat} ->
-  AllEq (vectApplV shape) a =>
-  Eq (Tensor' shape a) where
-      (MkT t) == (MkT t') = tensorEq t t'
-
-  public export
-  {shape : Vect n Nat} ->
-  AllShow (vectApplV shape) a =>
-  Show (Tensor' shape a) where
-    show (MkT t) = show t
-
-  public export
-  {shape : Vect n Nat} -> Num a => Num (Tensor' shape a) where
-    fromInteger i = MkT $ fromInteger {ty=(Tensor (vectApplV shape) a)} i
-    (MkT xs) + (MkT ys) = MkT $ (+) {ty=(Tensor (vectApplV shape) a)} xs ys
-    (MkT xs) * (MkT ys) = MkT $ (*) {ty=(Tensor (vectApplV shape) a)} xs ys
-
-  public export
-  {shape : Vect n Nat} -> Neg a => Neg (Tensor' shape a) where
-    negate (MkT t) = MkT $ negate t
-    (MkT xs) - (MkT ys) = MkT $ (-) {ty=(Tensor (vectApplV shape) a)} xs ys
-
-  public export
-  {shape : Vect n Nat} -> Abs a => Abs (Tensor' shape a) where
-    abs (MkT t) = MkT $ abs t
-
-  public export
-  Functor (Tensor' shape) where
-    map f (MkT t) = MkT $ map f t
-
-  public export
-  {shape : Vect n Nat} ->
-  AllAlgebra (vectApplV shape) a =>
-  Algebra (Tensor' shape) a where
-      reduce (MkT t) = reduce t
-
-  tensorCFoldr : {shape : Vect n Nat} ->
-    (el -> acc -> acc) -> acc -> Tensor (vectApplV shape) el -> acc
-  tensorCFoldr {shape = []} f z t = foldr f z t
-  tensorCFoldr {shape = (s :: ss)} f z (TS xs)
-    = foldr (\t, acc => tensorCFoldr f acc t) z xs
-
-
-  public export
-  {shape : Vect n Nat} ->
-  Foldable (Tensor' shape) where
-    foldr f z (MkT t) = tensorCFoldr f z t
-
-  -- TODO Foldable still probably isn't implemented right
+namespace CubicalTensor
+  -- This recovers usual tensors in Tensor.Tensor
   -- public export
-  -- {shape : Vect n Nat} -> Foldable (Tensor' shape) where
-  --   foldr {shape = []} f z (MkT t) = foldr f z t
-  --   foldr {shape = (s :: ss)} f z (MkT t) = ?vbb -- foldr f z t
-  -- all the stuff below is probably needed to write Foldable
+  -- Tensor'' : (shape : Vect n Nat) -> Type -> Type
+  -- Tensor'' shape = Tensor $ vectApplV shape
 
-  -- Remove explicit instance and helper
-  -- -- Helper to define the foldr function with the proof
-  -- tensorFoldrVect : {shape : Vect n Nat} -> {a, b : Type} -> (a -> b -> b) -> b -> Tensor (vectApplV shape) a -> b
-  -- tensorFoldrVect {shape} = tensorFoldr @{allFoldable = mkAllFoldableVect shape}
-  --
+  -- public export infixr 5 +++
   -- public export
-  -- tff : {shape : Vect n Nat} -> Foldable (Tensor (vectApplV shape))
-  -- tff {shape} = MkFoldable tensorFoldrVect
+  -- (+++) : {cs : Vect n ApplC} -> {ds : Vect m ApplC}
+  --   -> ApplV cs -> ApplV ds -> ApplV (cs ++ ds)
+  -- [] +++ ys = ys
+  -- (c :: cs) +++ ys = c :: (cs +++ ys)
 
-  -- [tensorPrimeImpl] {shape : Vect n Nat} ->
-  -- Foldable (Tensor (vectApplV shape)) where
-  --   foldr {shape = []} f z t = foldr f z t
-  --   foldr {shape = (s :: ss)} f z (TS xs) =
-  --     foldr (\t, acc => tensorFoldr f acc t) z xs
 
-public export
-dot' : {shape : Vect n Nat} -> {a : Type}
-  -> Num a => AllAlgebra (vectApplV shape) a
-  => Tensor' shape a -> Tensor' shape a -> Tensor' [] a
-dot' (MkT xs) (MkT ys) = MkT $ TZ $ reduce $ (\(x, y) => x * y) <$> liftA2Tensor xs ys
+  -- vvv : (shape : Vect n Nat) -> Vect n ApplC
+  -- vvv shape = (\n => # (VectCont n)) <$> shape
 
-public export
-Array' : (shape : Vect n Nat) -> (dtype : Type) -> Type
-Array' [] dtype = dtype
-Array' (s :: ss) dtype = Vect s (Array' ss dtype)
 
-public export
-fromArrayHelper : {shape : Vect n Nat}
-  -> Array' shape a
-  -> Tensor (vectApplV shape) a
-fromArrayHelper {shape=[]} x = TZ x
-fromArrayHelper {shape=(s :: ss)} x
-  = TS $ fromVect $ fromArrayHelper <$> x
 
-public export
-fromArray' : {shape : Vect n Nat} -> Array' shape a -> Tensor' shape a
-fromArray' a = MkT $ fromArrayHelper a
+  ||| This is a helper datatype for cubical tensors, i.e. those made only out of VectCont
+  ||| It allows specifying a tensor only by the size of the content, and is needed (instead of Tensor'') to aid type inference
+  ||| There might be a more ergonomic way to do this
+  public export
+  record Tensor' (shape : Vect n Nat) a where
+    constructor MkT
+    GetT : Tensor (vectApplV shape) a
+
+  public export
+  toCubicalTensor : {shape : Vect n Nat} -> Tensor (vectApplV shape) a -> Tensor' shape a
+  toCubicalTensor t = MkT t
+
+  public export
+  fromCubicalTensor : {shape : Vect n Nat} -> Tensor' shape a -> Tensor (vectApplV shape) a
+  fromCubicalTensor t = GetT t
+
+  namespace Tensor'Interfaces
+    public export
+    {shape : Vect n Nat} ->
+    AllEq (vectApplV shape) a =>
+    Eq (Tensor' shape a) where
+        (MkT t) == (MkT t') = tensorEq t t'
+
+    public export
+    {shape : Vect n Nat} ->
+    AllShow (vectApplV shape) a =>
+    Show (Tensor' shape a) where
+      show (MkT t) = show t
+
+    public export
+    {shape : Vect n Nat} -> Num a => Num (Tensor' shape a) where
+      fromInteger i = MkT $ fromInteger {ty=(Tensor (vectApplV shape) a)} i
+      (MkT xs) + (MkT ys) = MkT $ (+) {ty=(Tensor (vectApplV shape) a)} xs ys
+      (MkT xs) * (MkT ys) = MkT $ (*) {ty=(Tensor (vectApplV shape) a)} xs ys
+
+    public export
+    {shape : Vect n Nat} -> Neg a => Neg (Tensor' shape a) where
+      negate (MkT t) = MkT $ negate t
+      (MkT xs) - (MkT ys) = MkT $ (-) {ty=(Tensor (vectApplV shape) a)} xs ys
+
+    public export
+    {shape : Vect n Nat} -> Abs a => Abs (Tensor' shape a) where
+      abs (MkT t) = MkT $ abs t
+
+    public export
+    Functor (Tensor' shape) where
+      map f (MkT t) = MkT $ map f t
+
+
+    public export
+    tensorReplicate' : {shape : Vect n Nat}
+      -> a -> Tensor' shape a
+    tensorReplicate' {shape = []} a = MkT $ TZ a
+    tensorReplicate' {shape = (c :: cs)} a = MkT $ TS $ pure (tensorReplicate a)
+
+    public export
+    {shape : Vect n Nat} ->
+    AllAlgebra (vectApplV shape) a =>
+    Algebra (Tensor' shape) a where
+        reduce (MkT t) = reduce t
+
+    public export
+    tensorCFoldr : {shape : Vect n Nat} ->
+      (el -> acc -> acc) -> acc -> Tensor (vectApplV shape) el -> acc
+    tensorCFoldr {shape = []} f z t = foldr f z t
+    tensorCFoldr {shape = (s :: ss)} f z (TS xs)
+      = foldr (\t, acc => tensorCFoldr f acc t) z xs
+
+
+    public export
+    {shape : Vect n Nat} ->
+    Foldable (Tensor' shape) where
+      foldr f z (MkT t) = tensorCFoldr f z t
+
+    -- TODO implement Traversable for Tensor, and then port it here
+    public export
+    tensorCTraverse : {shape : Vect n Nat} -> Applicative f =>
+      (a -> f b) -> Tensor (vectApplV shape) a -> f (Tensor (vectApplV shape) b)
+    tensorCTraverse {shape = []} fn (TZ val) = TZ <$> fn val
+    tensorCTraverse {shape = (s :: ss)} fn (TS xs)
+      = TS <$> ?alllao -- (fromVect <$> traverse (tensorCTraverse fn) (toVect xs))
+
+    public export
+    {shape : Vect n Nat} ->
+    Traversable (Tensor' shape) where
+      traverse f (MkT t) = MkT <$> tensorCTraverse f t
+
+  public export
+  dot' : {shape : Vect n Nat} -> {a : Type}
+    -> Num a => AllAlgebra (vectApplV shape) a
+    => Tensor' shape a -> Tensor' shape a -> Tensor' [] a
+  dot' (MkT xs) (MkT ys) = MkT $ TZ $ reduce $ (\(x, y) => x * y) <$> liftA2Tensor xs ys
+
+  public export
+  Array' : (shape : Vect n Nat) -> (dtype : Type) -> Type
+  Array' [] dtype = dtype
+  Array' (s :: ss) dtype = Vect s (Array' ss dtype)
+
+  public export
+  fromArrayHelper : {shape : Vect n Nat}
+    -> Array' shape a
+    -> Tensor (vectApplV shape) a
+  fromArrayHelper {shape=[]} x = TZ x
+  fromArrayHelper {shape=(_ :: _)} x = TS $ fromVect $ fromArrayHelper <$> x
+
+  public export
+  fromArray' : {shape : Vect n Nat} -> Array' shape a -> Tensor' shape a
+  fromArray' a = MkT $ fromArrayHelper a
 
 namespace IndexT
+  public export
+  data IndexTData : Type where
+    NonCubical : (shape : ApplV conts) -> IndexTData
+    Cubical : (shape : Vect n Nat) -> IndexTData -- assuming every Naperian functor has shape=Fin d for some d, this describes Naperian Tensors
+
+  -- vnn : IndexTData -> Type -> Type
+  -- vnn (NonCubical shape) = Tensor shape
+  -- vnn (Cubical shape) = \_ => Unit
+
+  vnnn : (conts : Vect n ApplC) -> Cont
+  vnnn conts = foldr ?acc CUnit (GetC <$> conts)
+
+  -- ||| Tensors too are a container
+  -- tensorCont : Type -> Cont
+  -- tensorCont dtype = (s : IndexTData) !> vnn s
+    
   ||| Machinery for indexing into a Tensor
-  ||| Does this depend only on the shape, or also the actual container?
+  ||| For general, non-cubical tensors this depends on the tensor itself
+  ||| TODO remove this dependence for cubical tensors
   public export
   data IndexT : (shape : ApplV conts) -> (t : Tensor shape dtype) -> Type where
     Nil : {val : dtype} -> IndexT [] (TZ val)

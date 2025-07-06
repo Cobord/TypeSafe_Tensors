@@ -12,7 +12,7 @@ import Data.Tensor.TensorUtils
 import Data.Tensor.NaperianTensor
 import Algebra
 import Data.Tree
-import Softmax
+import Architectures.Softmax
 import Misc
 
 
@@ -25,6 +25,12 @@ import Misc
 ||| Analogous to np.arange, except the range is specified in the type
 t0 : Tensor' [7] Double
 t0 = range 
+
+tg : Tensor' [0, 3] Double
+tg = fromArray' []
+
+bnn : Double
+bnn = let t = (tg @@@ (?vnn :: ?v2)) in ?cnn --  [0, 2]
 
 ||| We can construct Tensors directly
 t1 : Tensor' [3, 4] Double
@@ -114,6 +120,9 @@ ex1 = fromArray $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
     / \
 (-42)  46 
 -}
+
+-- t00 : Tensor'' [7] Double
+-- t00 = fromArray $ fromVect ?t00_rhs
 
 ||| Here's another one, with a different number of elements
 ex2 : Tensor [BTreeLeafCont] Double

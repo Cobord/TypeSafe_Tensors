@@ -5,7 +5,7 @@ import Data.Vect.Elem
 
 import Data.Container.Definition
 import Data.Container.Instances
-import Tensor.ContainerTensor.Tensor
+import Data.Tensor.Tensor
 -- import ApplicativeLinAlg
 import Algebra
 import Data.Tree

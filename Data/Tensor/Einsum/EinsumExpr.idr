@@ -156,37 +156,6 @@ summationIndices (MkEinsumExpr inputTy outputTy) = fromList $
 
 
 
-einsumImplementation : {a : Type} -> Num a => {is : List Nat} -> {m : Nat} -> {ls : List Nat} -> 
-  {inputShs : List (Exists (\n => Vect n Nat))} ->
-  {outputSh : Vect m Nat} ->
-  {auto prf : (fromVect outputSh) `IsFrom` is} ->
-  List (Exists (\sh => (Tensor' sh a, (fromVect sh) `IsFrom` ls))) ->
-  Tensor' outputSh a
-einsumImplementation xs = 
-  -- According to the blog post, einsum works as nested for loops
-  -- 1. Initialize output tensor to zeros
-  let outputTensor : Tensor' outputSh a := zeros'
-  -- 2. For each combination of free indices (outer loops)
-  -- 3. For each combination of summation indices (inner loops)  
-  -- 4. Compute product of all input tensors at appropriate indices
-  -- 5. Add this product to output tensor at current free index position
-  in 
-  -- This is a simplified implementation that needs to be expanded
-  -- based on the actual index manipulation and tensor operations
-  -- The core idea is to iterate through all valid index combinations
-  -- and perform the sum of products as described in the blog post
-  case xs of
-    [] => outputTensor  -- No inputs, return zeros
-    _ => 
-      -- For now, we return the zero tensor as a placeholder
-      -- The full implementation would need to:
-      -- 1. Extract the tensors from the existential types
-      -- 2. Create index iterators for free and summation indices  
-      -- 3. Implement the nested loops as described in the blog post
-      -- 4. Perform the products and sums according to Einstein notation
-      outputTensor
-
-
 simpleSum : {i : Nat} -> Tensor' [i] Double -> Tensor' [] Double
 simpleSum x = MkT $ TZ $ foldr (+) 0 x
 
@@ -326,34 +295,8 @@ fromString einsumExprString = EinsumChar einsumExprString
 esTest : EinsumStrExpr 
 esTest = EinsumChar "ij,jk->ik"
 
-Einsum : EinsumStrExpr -> Type
-
-gg : Int
-
 t1 : Tensor' [2, 3] Double
 t1 = fromArray' [ [1, 2, 3], [4, 5, 6] ]
 
 t2 : Tensor' [3, 4] Double
 t2 = fromArray' [ [1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12] ]
-
-t3 : Einsum "ij,jk->ik"
-t3 = ?dfl
-
-tO : {i, j, k : Nat} -> Tensor' [i, j] a -> Tensor' [j, k] a -> Tensor' [i, k] a
-
-
-
-----------------------------------------
------ Old
-----------------------------------------
-
-||| The name for an axis is an arbitrary string, usually a single character
-AxisName : Type
-AxisName = String
-
--- AxisBinding : Type
--- AxisBinding = HashMap AxisName Nat
-
--- emptyH : AxisBinding
--- emptyH = empty
-

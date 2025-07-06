@@ -10,7 +10,6 @@ import Data.Tensor.Tensor
 import Data.Functor.Naperian
 
 
-
 public export
 data AllNaperian : (shape : ApplV conts) -> Type where
   Nil : AllNaperian []
@@ -23,7 +22,7 @@ namespace IndexTNaperian
   public export
   data IndexTNaperian : (shape : ApplV conts) -> AllNaperian shape -> Type where
     Nil : IndexTNaperian [] []
-    (::) : (Applicative (Ext c)) =>
+    (::) : Applicative (Ext c) =>
       (napC : Naperian (Ext c)) =>
       Log {f=Ext c} ->
       {cs : ApplV conts} ->
