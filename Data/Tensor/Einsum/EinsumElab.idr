@@ -182,37 +182,83 @@ testNewPattern : Tensor' [3, 2] Double
 testNewPattern = %runElab einsum "ij->ji" [m]
 
 
--- getSize : UniqueList Char -> List (List Char) -> 
+-- Helper function to find character position in nested list
+findCharPosition : Char -> List (List Char) -> Maybe (Nat, Nat)
+findCharPosition c [] = Nothing
+findCharPosition c (xs :: xss) = 
+  case findIndex (== c) xs of
+    Just innerIdx => Just (0, finToNat innerIdx)
+    Nothing => case findCharPosition c xss of
+      Just (outerIdx, innerIdx) => Just (S outerIdx, innerIdx)
+      Nothing => Nothing
 
-einsumComputeOutputTypeHelper : {a : Type} -> Num a =>
-  {shapes : List (List Nat)} ->
+-- Helper function to get dimension size from tensor at given position
+getTensorDimSize : {shapes : List (List Nat)} -> 
+  (tensorIdx : Nat) -> 
+  (dimIdx : Nat) -> 
+  HList (shapes <&> (\sh => Tensor' sh a)) -> 
+  Maybe Nat
+getTensorDimSize {shapes = []} _ _ [] = Nothing
+getTensorDimSize {shapes = (sh :: shs)} Z dimIdx (t :: ts) = 
+  case inBounds dimIdx sh of
+    Yes prf => Just (index dimIdx sh)
+    No _ => Nothing
+getTensorDimSize {shapes = (sh :: shs)} (S k) dimIdx (t :: ts) = 
+  getTensorDimSize k dimIdx ts
+
+getSize : {shapes : List (List Nat)} ->
+  (outputName : Char) ->
+  (inputNames : List (List Char)) -> 
+  (inputTensors : HList (shapes <&> (\sh => Tensor' sh a))) ->
+  Maybe Nat
+getSize outputName inputNames inputTensors = do
+  (tensorIdx, dimIdx) <- findCharPosition outputName inputNames
+  getTensorDimSize tensorIdx dimIdx inputTensors
+
+
+-- Helper function to get size from a list of shapes
+getSizeFromList : Char -> List (List Char) -> List (List Nat) -> Maybe Nat
+getSizeFromList outputName inputNames shapes = do
+  (tensorIdx, dimIdx) <- findCharPosition outputName inputNames
+  case inBounds tensorIdx shapes of
+    Yes prf => 
+      let tensorShape = index tensorIdx shapes
+      in case inBounds dimIdx tensorShape of
+        Yes prf2 => Just (index dimIdx tensorShape)
+        No _ => Nothing
+    No _ => Nothing
+
+einsumComputeOutputTypeHelper2 : {a : Type} -> Num a =>
   EinsumExpr Char ->
-  HList (shapes <&> (\sh => Tensor' (fromList sh) a)) ->
+  List (sh ** Tensor' sh a) ->
   Type
-einsumComputeOutputTypeHelper {shapes = []}
-  (MkEinsumExpr inputTy outputTy) [] = Void -- no shapes
-einsumComputeOutputTypeHelper {shapes = (s :: ss)}
-  (MkEinsumExpr inputTy outputTy) (x :: xs) = ?iii_2
-einsumComputeOutputTypeHelper (MkEinsumExpr inputTy outputTy) args = Void -- This last case should never happen, it's only there to satisfy Idris coverage checker
+einsumComputeOutputTypeHelper2 (MkEinsumExpr inputTy outputTy) args = 
+  let outputChars : List Char = toList outputTy
+      shapes : List (List Nat) = map (\(sh ** _) => sh) args
+      -- Create a simple HList-like structure for getSize
+      maybeNats : List (Maybe Nat) = map (\c => getSizeFromList c inputTy shapes) outputChars
+      result : Maybe (List Nat) = sequence maybeNats
+  in case result of
+    Just listOfNats => Tensor' listOfNats a
+    Nothing => Void
 
 einsumComputeOutputType : {a : Type} -> Num a =>
   (exprStr : String) -> 
-  {shapes : List (Exists (\n => Vect n Nat))} ->
-  (args : HList (shapes <&> (\nsh => Tensor' (snd nsh) a))) ->
+  (args : List (sh ** Tensor' sh a)) ->
   Type
 einsumComputeOutputType {a} exprStr args = case parseEinsumString exprStr of
   Left err => Void
-  Right expr => einsumComputeOutputTypeHelper expr args
+  Right expr => einsumComputeOutputTypeHelper2 expr args
   
   
 
 
 einsumImplementation : {a : Type} -> Num a =>
   {is : List Nat} -> {m : Nat} -> {ls : List Nat} -> 
-  {inputShs : List (Exists (\n => Vect n Nat))} ->
-  {outputSh : Vect m Nat} ->
-  {auto prf : (fromVect outputSh) `IsFrom` is} ->
-  List1 (Exists (\sh => (Tensor' sh a, (fromVect sh) `IsFrom` ls))) ->
+  {inputShs : List (List Nat)} ->
+  {outputSh : List Nat} ->
+  {auto prf : (fromList outputSh) `IsFrom` is} ->
+  List1 (Exists (\sh => (Tensor' sh a, (fromList sh) `IsFrom` ls))) ->
   Tensor' outputSh a
 einsumImplementation xs = ?hmma
 --   -- According to the blog post, einsum works as nested for loops
