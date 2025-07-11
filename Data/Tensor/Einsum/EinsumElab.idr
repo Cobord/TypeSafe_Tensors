@@ -22,6 +22,10 @@ data TensorList : List (List Nat) -> Type -> Type where
   Nil : TensorList [] a
   (::) : Tensor' sh a -> TensorList shapes a -> TensorList (sh :: shapes) a
 
+toHList : TensorList shapes a -> HList (shapes <&> (\sh => Tensor' sh a))
+toHList [] = []
+toHList (t :: ts) = t :: toHList ts
+
 ||| Helper function to convert Char to variable name
 charToVarName : Char -> Name
 charToVarName c = UN (Basic (singleton c))
@@ -105,7 +109,7 @@ generateEinsumType einsumStr = do
           fnName = generateFunctionName einsumStr
           fnType = buildEinsumFunctionType uniqueVars inputTy (toList outputTy)
       
-          -- Create the type declaration
+      -- Create the type declaration
           claimData = MkIClaimData MW Public [] (MkTy EmptyFC (NoFC (UN (Basic fnName))) fnType)
           tyDecl = IClaim (MkFCVal EmptyFC claimData)
       
@@ -119,57 +123,55 @@ einsum : {a : Type} -> {shapes : List Type} ->
   (exprStr : String) ->
   (args : HList shapes) ->
   Elab a
-einsum exprStr args = do
-  case parseEinsumString exprStr of
-    Left err => fail "Parse error in Einsum string: \{show err}"
-    Right expr@(MkEinsumExpr inputTy outputTy) => do
-      let inpLength : Nat := length inputTy
-      when (inpLength /= length shapes) $
-        fail "Argument count mismatch: \{toString expr} defines \{show inpLength} inputs, but we got \{show (length shapes)} arguments"
-      
-      let uniqueVars = toList (uniqueJoin inputTy)
-          fnName = generateFunctionName exprStr
-          fnType = buildEinsumFunctionType uniqueVars inputTy (toList outputTy)
-          
-          -- Generate the function declaration
-          claimData = MkIClaimData MW Public [] (MkTy EmptyFC (NoFC (UN (Basic fnName))) fnType)
-          tyDecl = IClaim (MkFCVal EmptyFC claimData)
-          
-          -- Build lambda parameters for each input tensor
-          paramNames = [UN (Basic ("x" ++ show i)) | i <- [0..length inputTy `minus` 1]]
-          lambdaParams = zip paramNames inputTy
-          
-          -- Create the implementation body that matches the output tensor shape
-          -- Generate the output shape as a vector literal from the output type
-          outputShape = generateShapeVect (toList outputTy)
-          -- Create zeros' with the correct output shape and generic type 'a'
-          implBody = `(zeros' {shape = ~outputShape} {a = a})
-          
-          -- Build the full lambda expression
-          fullImpl = foldr (\(paramName, shape), body => 
-                           ILam EmptyFC MW ExplicitArg (Just paramName) (generateTensorType shape) body) 
-                          implBody lambdaParams
-          
-          -- Create the definition using the correct IDef pattern
-          clause = PatClause EmptyFC (IVar EmptyFC (UN (Basic fnName))) fullImpl
-          funDef = IDef EmptyFC (UN (Basic fnName)) [clause]
+einsum exprStr args = case parseEinsumString exprStr of
+  Left err => fail "Parse error in Einsum string: \{show err}"
+  Right expr@(MkEinsumExpr inputTy outputTy) => do
+    let inpLength : Nat := length inputTy
+    when (inpLength /= length shapes) $
+      fail "Argument count mismatch: \{toString expr} defines \{show inpLength} inputs, but we got \{show (length shapes)} arguments"
+
+    let uniqueVars = toList (uniqueJoin inputTy)
+        fnName = generateFunctionName exprStr
+        fnType = buildEinsumFunctionType uniqueVars inputTy (toList outputTy)
+        -- Generate the function declaration
+        claimData = MkIClaimData MW Public [] (MkTy EmptyFC (NoFC (UN (Basic fnName))) fnType)
+        tyDecl = IClaim (MkFCVal EmptyFC claimData)
+
+        -- Build lambda parameters for each input tensor
+        paramNames = [UN (Basic ("x" ++ show i)) | i <- [0..length inputTy `minus` 1]]
+        lambdaParams = zip paramNames inputTy
+        
+        -- Create the implementation body that matches the output tensor shape
+        -- Generate the output shape as a vector literal from the output type
+        outputShape = generateShapeVect (toList outputTy)
+        -- Create zeros' with the correct output shape and generic type 'a'
+        implBody = `(zeros' {shape = ~outputShape} {a = a})
+
+        -- Build the full lambda expression
+        fullImpl = foldr (\(paramName, shape), body => 
+                         ILam EmptyFC MW ExplicitArg (Just paramName) (generateTensorType shape) body) 
+                        implBody lambdaParams
+        
+        -- Create the definition using the correct IDef pattern
+        clause = PatClause EmptyFC (IVar EmptyFC (UN (Basic fnName))) fullImpl
+        funDef = IDef EmptyFC (UN (Basic fnName)) [clause]
 
       -- Declare both the type and the implementation
-      declare [tyDecl, funDef]
+    declare [tyDecl, funDef]
 
-      -- Now call the generated function directly with the actual arguments
-      case args of
-        [] => fail "No arguments provided"
-        [x] => do
-          fn <- check (IVar EmptyFC (UN (Basic fnName)))
-          pure (fn x)
-        [x, y] => do
-          fn <- check (IVar EmptyFC (UN (Basic fnName)))
-          pure (fn x y)
-        [x, y, z] => do
-          fn <- check (IVar EmptyFC (UN (Basic fnName)))
-          pure (fn x y z)
-        _ => fail "More than 3 arguments not yet supported"
+    -- Now call the generated function directly with the actual arguments
+    case args of
+      [] => fail "No arguments provided"
+      [x] => do
+        fn <- check (IVar EmptyFC (UN (Basic fnName)))
+        pure (fn x)
+      [x, y] => do
+        fn <- check (IVar EmptyFC (UN (Basic fnName)))
+        pure (fn x y)
+      [x, y, z] => do
+        fn <- check (IVar EmptyFC (UN (Basic fnName)))
+        pure (fn x y z)
+      _ => fail "More than 3 arguments not yet supported"
 
 
 m : Tensor' [2, 3] Double
@@ -241,14 +243,26 @@ einsumComputeOutputTypeHelper {shapes = (sh :: shs)}
     Nothing => Void
 einsumComputeOutputTypeHelper (MkEinsumExpr inputTy outputTy) args = Void -- This last case should never happen, it's only there to satisfy Idris coverage checker
 
-einsumComputeOutputType : {a : Type} -> Num a =>
-  {shapes : List (List Nat)} ->
-  (exprStr : String) -> 
-  (args : TensorList shapes a) ->
-  Type
+einsumComputeOutputType : {a : Type} -> Num a => {shapes : List (List Nat)} ->
+  String -> TensorList shapes a -> Type
 einsumComputeOutputType {a} exprStr args = case parseEinsumString exprStr of
   Left err => Void
   Right expr => einsumComputeOutputTypeHelper expr args
+
+partial
+einsumImpl : {a : Type} -> Num a => {shapes : List (List Nat)} ->
+  (exprStr : String) -> (args : TensorList shapes a) ->
+  einsumComputeOutputType exprStr args
+einsumImpl {shapes} exprStr args
+  = let t = einsum 
+    in ?einsumImpl_rhs
+       
+
+-- ?einsumImpl_rhs
+-- %runElab einsum "ii->" [m]
+
+-- einsumTest : (xs : String) -> einsumZeroDimensional xs
+-- einsumTest xs = %runElab check `(einsumImpl xs)
 
 
 einsumImplementation : {a : Type} -> Num a =>
