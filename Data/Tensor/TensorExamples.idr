@@ -12,53 +12,46 @@ import Data.Tensor.TensorUtils
 import Data.Tensor.NaperianTensor
 import Algebra
 import Data.Tree
-import Architectures.Softmax
 import Misc
 
 
 ----------------------------------------
 -- Examples with cube-shaped tensors
 ----------------------------------------
--- They're named Tensor' with a prime to remind us we can use
+-- They're named Tensor with a prime to remind us we can use
 -- a more general, non-cubical tensor
 
 ||| Analogous to np.arange, except the range is specified in the type
-t0 : Tensor' [7] Double
+t0 : Tensor [7] Double
 t0 = range 
 
-tg : Tensor' [0, 3] Double
-tg = fromArray' []
-
-bnn : Double
-bnn = let t = (tg @@@ (?vnn :: ?v2)) in ?cnn --  [0, 2]
-
 ||| We can construct Tensors directly
-t1 : Tensor' [3, 4] Double
+t1 : Tensor [3, 4] Double
 t1 = fromArray' [ [0, 1, 2, 3]
                 , [4, 5, 6, 7]
                 , [8, 9, 10, 11]]
 
 failing
    ||| And we'll get errors if we supply the wrong shape
-   t1Fail : Tensor' [3, 4] Double
+   t1Fail : Tensor [3, 4] Double
    t1Fail = fromArray' [ [0, 1, 2, 3, 999]
                        , [4, 5, 6, 7]
                        , [8, 9, 10, 11]]
 
 
-t2 : Tensor' [2, 5] Double
+t2 : Tensor [2, 5] Double
 t2 = fromArray' [ [0, 1, 2, 3, 4]
                 , [5, 6, 7, 8, 9]]
 
 
 
 ||| Safe elementwise addition
-tSum : Tensor' [3, 4] Double
+tSum : Tensor [3, 4] Double
 tSum = t1 + t1
 
 failing
   ||| Can't add tensors of different shapes
-  tSumFail : Tensor' [3, 4] Double
+  tSumFail : Tensor [3, 4] Double
   tSumFail = t1 + t2
 
 ||| Safe indexing
@@ -71,30 +64,30 @@ failing
    indexExampleFail = t1 @@@ [7, 2]
 
 ||| Safe transposition
-t1Transposed : Tensor' [4, 3] Double
+t1Transposed : Tensor [4, 3] Double
 t1Transposed = transposeMatrix' t1
 
 ||| We can do all sorts of numeric operations
-numericOps : Tensor' [2, 5] Double
+numericOps : Tensor [2, 5] Double
 numericOps = abs ((t2 * negate t2) <&> (+7))
 
 ||| Safe slicing, takeTensor [10, 2] t1 would not compile
-takeExample : Tensor' [2, 1] Double
-takeExample = takeTensor' [2, 1] t1
+takeExample : Tensor [2, 1] Double
+takeExample = takeTensor [2, 1] t1
 
 failing
-  takeExampleFail : Tensor' [10, 2] Double
-  takeExampleFail = takeTensor' [10, 2] t1
+  takeExampleFail : Tensor [10, 2] Double
+  takeExampleFail = takeTensor [10, 2] t1
 
 
 ||| Dot product of two vectors
-dotProduct : Tensor' [] Double
+dotProduct : Tensor [] Double
 dotProduct = dot' t0 t0
 
 failing
   ||| Can't dot product two different-sized vectors
-  dotProductFail : Tensor' [] Double
-  dotProductFail = dot' t0 (the (Tensor' [5] Double) range)
+  dotProductFail : Tensor [] Double
+  dotProductFail = dot' t0 (the (Tensor [5] Double) range)
 
 
 ----------------------------------------
@@ -103,15 +96,15 @@ failing
 -- These include tree shaped tensors, and other non-cubical ones
 
 
-||| Tensor can do everything that Tensor' can
-t0again : Tensor [VectCont 7] Double
+||| TensorA can do everything that Tensor can
+t0again : TensorA [VectCont 7] Double
 t0again = fromCubicalTensor t0 -- Or alternatively, fromArray $ fromVect [1,2,3,4,5,6,7]
 
-t1again : Tensor [VectCont 3, VectCont 4] Double
+t1again : TensorA [VectCont 3, VectCont 4] Double
 t1again = fromCubicalTensor t1 
 
 ||| Instead of an n-element vector, here's tree with leaves as elements.
-ex1 : Tensor [BTreeLeafCont] Double
+ex1 : TensorA [BTreeLeafCont] Double
 ex1 = fromArray $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 {- 
         *
@@ -121,11 +114,11 @@ ex1 = fromArray $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 (-42)  46 
 -}
 
--- t00 : Tensor'' [7] Double
+-- t00 : Tensor' [7] Double
 -- t00 = fromArray $ fromVect ?t00_rhs
 
 ||| Here's another one, with a different number of elements
-ex2 : Tensor [BTreeLeafCont] Double
+ex2 : TensorA [BTreeLeafCont] Double
 ex2 = fromArray $ fromBTreeLeaf $ Node' (Leaf 10) (Leaf 100)
 {- 
         *
@@ -135,11 +128,11 @@ ex2 = fromArray $ fromBTreeLeaf $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take their dot product!
 ||| It does not matter that they have the same number of elements, it matters that the functor is the same
-dotProduct2 : Tensor [] Double
+dotProduct2 : TensorA [] Double
 dotProduct2 = dot ex1 ex2
 
 ||| Here's a tree with nodes as elements
-ex3 : Tensor [BTreeNodeCont] Double
+ex3 : TensorA [BTreeNodeCont] Double
 ex3 = fromArray $ fromBTreeNode $ Node 127 Leaf' (Node 14 Leaf' Leaf')
 {- 
    127
@@ -150,7 +143,7 @@ ex3 = fromArray $ fromBTreeNode $ Node 127 Leaf' (Node 14 Leaf' Leaf')
 -}
 
 ||| Or elements themselves can be vectors!
-ex4 : Tensor [BTreeLeafCont, VectCont 2] Double
+ex4 : TensorA [BTreeLeafCont, VectCont 2] Double
 ex4 = fromArray $ fromBTreeLeaf $ (Leaf $ fromVect [1,2])
 
 ||| We can index into those structures

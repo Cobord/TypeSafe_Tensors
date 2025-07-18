@@ -39,13 +39,13 @@ Dot product (Vector) -> einsum("i,i->")
 Dot product (Matrix) -> einsum("ij,ij->")
 Outer product -> einsum("i,j->ij")
 
-x : Tensor [3, 3, 3] Double
+x : TensorA [3, 3, 3] Double
 Einsum "iii->i" x = view main diagonal
 Einsum "iii->" x = trace (sum elements along diagonal)
 Einsum "ijk->" x = sum all elements
 Einsum "ijk->kji" x = transpose first and last axis
 
-y : Tensor [3, 4] Double
+y : TensorA [3, 4] Double
 Einsum "ii->" x = Invalid -> x is not of the right type
 Einsum "ii->ii", x = Invalid -> output subscript included multiple times
 
@@ -84,7 +84,7 @@ Is einsum abount binding?
 Q: SCOPING: Why should scoping of Einsum names be local?
 Should it perhaps be global instead?
 
-Maybe it doesn't matter that we have Einsum "ii" (Tensor [3, 4] a),
+Maybe it doesn't matter that we have Einsum "ii" (TensorA [3, 4] a),
 perhaps if we want to contract, 3 and 4 should...what? be the same variable?
 
 
@@ -95,8 +95,8 @@ Should einsum work for generalised tensors?
 In this example, fix:
 shapeX = [100, 4, 5]
 shapeY = [100, 5, 6]
-x : Tensor shapeX Double
-y : Tensor shapeY Double
+x : TensorA shapeX Double
+y : TensorA shapeY Double
 Einsum "bij,bjk->ik" x y
 
 Step 1: Parsing, variable binding, and error checking
@@ -143,6 +143,15 @@ data EinsumExpr : (a : Type) -> DecEq a => Type where
     {auto prf : outputTy `IsFrom` (toList (uniqueJoin inputTy))} ->
     EinsumExpr a
 
+public export
+inputTyProj : DecEq a => EinsumExpr a -> List (List a)
+inputTyProj (MkEinsumExpr inputTy _) = inputTy
+
+public export
+outputTyProj : DecEq a => EinsumExpr a -> UniqueList a
+outputTyProj (MkEinsumExpr _ outputTy) = outputTy
+
+
 ||| Indices used in the output type
 public export
 freeIndices : {a : Type} -> DecEq a => EinsumExpr a -> UniqueList a
@@ -154,20 +163,6 @@ summationIndices : {a : Type} -> DecEq a => EinsumExpr a -> UniqueList a
 summationIndices (MkEinsumExpr inputTy outputTy) = fromList $
   complement (uniqueJoin inputTy) outputTy
 
-
-
-simpleSum : {i : Nat} -> Tensor' [i] Double -> Tensor' [] Double
-simpleSum x = MkT $ TZ $ foldr (+) 0 x
-
-
--- simpleTrace : {i : Nat} -> Tensor' [i, i] Double -> Tensor' [] Double
--- simpleTrace x = MkT $ TZ $ foldr (+) 0 x
--- 
--- simpleDiagonal : {i : Nat} -> Tensor' [i, i] Double -> Tensor' [i] Double
--- simpleDiagonal x = MkT $ TS $ tabulate (\k => TZ $ x @@@ [k, k])
-
-nestedFold : {i, j : Nat} -> Tensor' [i, j] Double -> Tensor' [] Double
-nestedFold x = MkT $ TZ $ foldr (+) 0 x
 
 namespace EinsumToString
   ||| If a=Char, we write it as a string
@@ -217,15 +212,19 @@ data EinsumParseError : Type where
   DuplicateOutputAxis : EinsumParseError
   OutputAxisNotInInput : EinsumParseError
   MultipleArrows : EinsumParseError
+  NonAlphaAxis : EinsumParseError
+  BindingInconsistency : EinsumParseError
 
 public export
 Show EinsumParseError where
-  show EmptyInput = "Empty input string"
-  show MissingArrow = "Missing '->' arrow"
-  show ContentBothSidesArrow = "Content missing on one side of arrow"
-  show DuplicateOutputAxis = "Duplicate axis in output"
-  show OutputAxisNotInInput = "Output axis not found in input"
-  show MultipleArrows = "Multiple '->' arrows found"
+  show EmptyInput = "Empty input string."
+  show MissingArrow = "Missing '->' arrow."
+  show ContentBothSidesArrow = "Content missing on one side of arrow."
+  show DuplicateOutputAxis = "Duplicate axis in output."
+  show OutputAxisNotInInput = "Output axis not found in input."
+  show MultipleArrows = "Multiple '->' arrows found."
+  show NonAlphaAxis = "Non-alphabetic character found in axis labels. Only [A-Z][a-z] are allowed."
+  show BindingInconsistency = "Binding inconsistency in axis labels and tensors."
 
 ||| This parses into EinsumExpr Char, but other options are also possible
 ||| For instance, one where we use the syntax
@@ -240,7 +239,12 @@ parseEinsumString str = case str of
     (2 ** [left, right]) => 
       let xs : Vect _ String := snd (splitString left ",")
           inputLabels : List (List Char) := unpack <$> (toList xs)
-      in case fromListMaybe (unpack right) of
+          outputLabels : List Char := unpack right
+      in case all (all isAlpha) inputLabels of
+        False => Left NonAlphaAxis
+        True => case all isAlphaNum outputLabels of
+          False => Left NonAlphaAxis
+          True => case fromListMaybe outputLabels of
            Nothing => Left DuplicateOutputAxis
            Just outputTy => 
              case checkAllInInput outputTy (uniqueJoin inputLabels) of
@@ -260,23 +264,8 @@ parseEinsumString str = case str of
                      Nothing => Nothing
         No _ => Nothing
 
--- public export
--- uniqueJoinVect : {nInputs : Nat} -> Vect nInputs String -> UniqueList Char
--- uniqueJoinVect xs = uniqueJoin $ (unpack <$>) (toList xs)
---
--- data EinsumStrExpr' : Type where
---   EinsumChar' : (einsumExpr : String) ->
---     {left, right : String} ->
---     {auto prf : splitString einsumExpr "->" = (2 ** [left, right])} ->
---     {nInputs : Nat} ->
---     {xs : Vect nInputs String} ->
---     {auto prf_left : splitString left "," = (nInputs ** xs)} ->
---     {outputTy : UniqueList Char} ->
---     {auto prf_unique : fromListMaybe (unpack right) = Just outputTy} ->
---     {auto prf_from_input : All (\x => Elem x (toList (uniqueJoinVect xs))) outputTy} ->
---     EinsumStrExpr'
 
-
+||| Instantiation of EinsumExpr for Char, with explicit (un)packing
 public export
 data EinsumStrExpr : Type where
   EinsumChar : (einsumExprString : String) ->
@@ -295,8 +284,43 @@ fromString einsumExprString = EinsumChar einsumExprString
 esTest : EinsumStrExpr 
 esTest = EinsumChar "ij,jk->ik"
 
-t1 : Tensor' [2, 3] Double
+failing
+  esFail : EinsumStrExpr
+  esFail = EinsumChar "ij->xx"
+
+t1 : Tensor [2, 3] Double
 t1 = fromArray' [ [1, 2, 3], [4, 5, 6] ]
 
-t2 : Tensor' [3, 4] Double
+t2 : Tensor [3, 4] Double
 t2 = fromArray' [ [1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12] ]
+
+simpleSum : {i : Nat} -> Tensor [i] Double -> Tensor [] Double
+simpleSum x = MkT $ TZ $ foldr (+) 0 x
+
+
+-- simpleTrace : {i : Nat} -> Tensor [i, i] Double -> Tensor [] Double
+-- simpleTrace x = MkT $ TZ $ foldr (+) 0 x
+-- 
+-- simpleDiagonal : {i : Nat} -> Tensor [i, i] Double -> Tensor [i] Double
+-- simpleDiagonal x = MkT $ TS $ tabulate (\k => TZ $ x @@@ [k, k])
+
+nestedFold : {i, j : Nat} -> Tensor [i, j] Double -> Tensor [] Double
+nestedFold x = MkT $ TZ $ foldr (+) 0 x
+
+
+-- public export
+-- uniqueJoinVect : {nInputs : Nat} -> Vect nInputs String -> UniqueList Char
+-- uniqueJoinVect xs = uniqueJoin $ (unpack <$>) (toList xs)
+--
+-- data EinsumStrExpr' : Type where
+--   EinsumChar' : (einsumExpr : String) ->
+--     {left, right : String} ->
+--     {auto prf : splitString einsumExpr "->" = (2 ** [left, right])} ->
+--     {nInputs : Nat} ->
+--     {xs : Vect nInputs String} ->
+--     {auto prf_left : splitString left "," = (nInputs ** xs)} ->
+--     {outputTy : UniqueList Char} ->
+--     {auto prf_unique : fromListMaybe (unpack right) = Just outputTy} ->
+--     {auto prf_from_input : All (\x => Elem x (toList (uniqueJoinVect xs))) outputTy} ->
+--     EinsumStrExpr'
+

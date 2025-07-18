@@ -16,30 +16,30 @@ public export
 linearImpl : {x, y : Cont} -> {a : Type} -> Num a =>
   Applicative (Ext x) => Applicative (Ext y) => 
   AllAlgebra [x] a =>
-  Tensor [y, x] a -> Tensor [y] a -> Tensor [x] a -> Tensor [y] a
+  TensorA [y, x] a -> TensorA [y] a -> TensorA [x] a -> TensorA [y] a
 linearImpl weights bias input = multiplyMV weights input + bias
 
 linearImpl' : {i, j : Nat} -> {a : Type} -> Num a =>
-  Tensor' [j, i] a -> Tensor' [j] a -> Tensor' [i] a -> Tensor' [j] a
+  Tensor [j, i] a -> Tensor [j] a -> Tensor [i] a -> Tensor [j] a
 linearImpl' = ?ghh -- linearImpl {x=VectCont i, y=VectCont j} {a}
 
 linearImplTreeLeaf : {a : Type} -> Num a =>
-  Tensor [BTreeLeafCont, BTreeLeafCont] a ->
-  Tensor [BTreeLeafCont] a ->
-  Tensor [BTreeLeafCont] a ->
-  Tensor [BTreeLeafCont] a
+  TensorA [BTreeLeafCont, BTreeLeafCont] a ->
+  TensorA [BTreeLeafCont] a ->
+  TensorA [BTreeLeafCont] a ->
+  TensorA [BTreeLeafCont] a
 linearImplTreeLeaf = linearImpl
 
 public export
 linearPara : {x, y : Cont} -> {a : Type} -> Num a =>
   Applicative (Ext x) => Applicative (Ext y) => 
   AllAlgebra [x] a =>
-  Para (Tensor [x] a) (Tensor [y] a)
+  Para (TensorA [x] a) (TensorA [y] a)
 linearPara = MkPara
-  (const (Tensor [y, x] a, Tensor [y] a))
+  (const (TensorA [y, x] a, TensorA [y] a))
   (\input, (weights, bias) => linearImpl weights bias input)
 
 
 -- linearPara' : {i, j : Nat} -> {a : Type} -> Num a =>
---   Para (Tensor' [i] a) (Tensor' [j] a)
+--   Para (Tensor [i] a) (Tensor [j] a)
 -- linearPara' = ?ghh -- linearPara {x=VectCont i, y=VectCont j} {a}

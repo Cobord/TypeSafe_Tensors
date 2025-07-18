@@ -10,7 +10,21 @@ import Misc
 %hide Data.Vect.fromList
 %hide Builtin.fst
 
--- Inspired by Andre's code
+-- Inspired by Andre's code:https://gitlab.com/avidela/types-laboratory/-/tree/main/src/Data/Container?ref_type=heads
+
+{-
+public export
+record GenCont {t : Type} where
+  constructor (!->)
+  shpG : Type
+  posG : shpG -> t
+
+mon : {tt : Type} -> Type
+mon {tt} = Monoid tt
+
+ContInst : Type 
+ContInst = GenCont {t=(mon {tt=Type})}
+-}
 
 ||| A container is a pair: a shape and a set of positions indexed by that shape
 ||| They can be used to describe various data types
@@ -50,9 +64,6 @@ public export
 fullOf : Cont -> Type -> Type
 fullOf c x = Ext c x 
 
--- In general hard to write Eq instance for Ext c x becuase pos is not enumerable
-
-
 public export
 Functor (Ext c) where
   map {c=shp !> pos} f ((s <| v)) = (s <| f . v)
@@ -64,7 +75,7 @@ liftA2ConstCont (() <| va) (() <| vb) = () <| (\x => (va x, vb x))
   pure a = () <| (\_ => a)
   fs <*> xs = uncurry ($) <$> liftA2ConstCont fs xs 
 
-||| For containers where shape is Unit
+||| For containers whose shape is Unit
 ||| Their extensions are Naperian
 public export
 {l : Type} -> Naperian (Ext ((!>) () (\_ => l))) where
@@ -80,3 +91,20 @@ infixr 0 ><
 ||| Hancock, or Dirichlet tensor product
 (><) : Cont -> Cont -> Cont
 (><) (shp !> pos) (shp' !> pos') = ((s, s') : (shp, shp')) !> (pos s, pos' s')
+
+public export
+CUnit : Cont
+CUnit = Const Unit
+
+
+-- ||| Specialised to Hancock tensor product
+-- ||| Coult be as simple as foldr (><) CUnit, but want to take care of associativity
+-- public export
+-- prodConts : List Cont -> Cont
+-- prodConts [] = CUnit -- = 
+-- prodConts ((shp !> pos) :: cs)
+--   = let (shps !> poss) = prodConts cs
+--     in ?vcc -- ( (s :: ss) : (shp :: prodConts ) )
+
+
+

@@ -13,7 +13,8 @@ import Data.Functor.Naperian
 %hide Data.Vect.fromList
 %hide Builtin.infixr.(#)
 
-||| Container and a proof that its extension is an applicative functor
+||| Applicative Container
+||| Consists of a container and a proof that its extension is an applicative functor
 public export
 record ApplC where
   constructor (#)
@@ -26,182 +27,184 @@ public export prefix 0 #
 
 ||| Construction to make it ergonomic to deal with vectors of applicative containers
 public export
-data ApplV : Vect n ApplC -> Type where
-  Nil : ApplV []
+data ApplContList : List ApplC -> Type where
+  Nil : ApplContList []
   (::) : (c : Cont) ->
     Applicative (Ext c) =>
-    ApplV cs -> ApplV ((# c) :: cs)
+    ApplContList cs -> ApplContList ((# c) :: cs)
 
+||| Applicative tensors
+||| Tensors whose shape is a list of applicative containers
 public export
-data Tensor : (shape : ApplV conts) -> (dtype : Type) -> Type where
-    TZ : (val : dtype) -> Tensor [] dtype
-    TS : Applicative (c `fullOf`) => {cs : ApplV conts} ->
-      c `fullOf` (Tensor cs dtype) -> Tensor (c :: cs) dtype
+data TensorA : (shape : ApplContList conts) -> (dtype : Type) -> Type where
+    TZ : (val : dtype) -> TensorA [] dtype
+    TS : Applicative (c `fullOf`) => {cs : ApplContList conts} ->
+      c `fullOf` (TensorA cs dtype) -> TensorA (c :: cs) dtype
+
+%name TensorA t, t'
 
 -- TODO this can probably be improved/simplified?
 public export
-vectApplV : (shape : Vect n Nat) -> ApplV ((\n => # (VectCont n)) <$> shape)
-vectApplV [] = []
-vectApplV (s :: ss) = VectCont s :: vectApplV ss
+natsToApplConts : (shape : List Nat) -> ApplContList ((\n => # (VectCont n)) <$> shape)
+natsToApplConts [] = []
+natsToApplConts (s :: ss) = VectCont s :: natsToApplConts ss
 
-
-%name Tensor t, t'
 
 public export
-Scalar : (dtype : Type) -> Type
-Scalar dtype = Tensor [] dtype
+ScalarA : (dtype : Type) -> Type
+ScalarA dtype = TensorA [] dtype
 
 public export
-Vector : (c : ApplC) -> (dtype : Type) -> Type
-Vector (# c) dtype = Tensor [c] dtype
+VectorA : (c : ApplC) -> (dtype : Type) -> Type
+VectorA (# c) dtype = TensorA [c] dtype
 
 public export
-Matrix : (row, col : ApplC) -> (dtype : Type) -> Type
-Matrix (# row) (# col) dtype = Tensor [row, col] dtype
+MatrixA : (row, col : ApplC) -> (dtype : Type) -> Type
+MatrixA (# row) (# col) dtype = TensorA [row, col] dtype
 
 
 namespace EqT
   public export
-  data AllEq : (shape : ApplV conts) -> (dtype : Type) -> Type where
+  data AllEq : (shape : ApplContList conts) -> (dtype : Type) -> Type where
     NilEq : Eq dtype => AllEq [] dtype
-    ConsEq : {c : Cont} -> {cs : ApplV conts} ->
+    ConsEq : {c : Cont} -> {cs : ApplContList conts} ->
       (applExtc : Applicative (Ext c)) =>
-      (eqCont: Eq (c `fullOf` (Tensor cs dtype))) =>
+      (eqCont: Eq (c `fullOf` (TensorA cs dtype))) =>
       AllEq (c :: cs) dtype
 
   public export
-  tensorEq : {shape : ApplV conts} -> (allEq : AllEq shape dtype) =>
-    Tensor shape dtype -> Tensor shape dtype -> Bool
+  tensorEq : {shape : ApplContList conts} -> (allEq : AllEq shape dtype) =>
+    TensorA shape dtype -> TensorA shape dtype -> Bool
   tensorEq {allEq = NilEq} (TZ val) (TZ val') = val == val'
   tensorEq {allEq = ConsEq} (TS xs) (TS xs') = xs == xs'
 
   public export
-  {shape : ApplV conts} -> (allEq : AllEq shape dtype) =>
-    Eq (Tensor shape dtype) where
+  {shape : ApplContList conts} -> (allEq : AllEq shape dtype) =>
+    Eq (TensorA shape dtype) where
       (==) = tensorEq
 
 
 
 namespace ShowT
   public export
-  data AllShow : (shape : ApplV conts) -> (dtype : Type) -> Type where
+  data AllShow : (shape : ApplContList conts) -> (dtype : Type) -> Type where
     NilShow : Show dtype => AllShow [] dtype
-    ConsShow : {c : Cont} -> {cs : ApplV conts} ->
+    ConsShow : {c : Cont} -> {cs : ApplContList conts} ->
       Applicative (Ext c) =>
-      Show (c `fullOf` (Tensor cs dtype)) =>
+      Show (c `fullOf` (TensorA cs dtype)) =>
       AllShow (c :: cs) dtype
 
   ||| TODO this works, but we need to actually implement pretty printing
   public export
-  tensorShow : {shape : ApplV conts} -> (allShow : AllShow shape dtype) =>
-    Tensor shape dtype -> String
+  tensorShow : {shape : ApplContList conts} -> (allShow : AllShow shape dtype) =>
+    TensorA shape dtype -> String
   tensorShow {allShow = NilShow} (TZ val) = show val
   tensorShow {allShow = ConsShow} (TS xs) = show xs
 
   public export
-  {shape : ApplV conts} ->
+  {shape : ApplContList conts} ->
   (allShow : AllShow shape dtype) =>
-    Show (Tensor shape dtype) where
+    Show (TensorA shape dtype) where
       show = tensorShow
 
 namespace FunctorT
   public export
-  Functor (Tensor shape) where
+  Functor (TensorA shape) where
     map f (TZ val) = TZ $ f val
     map f (TS xs) = TS $ (map f) <$> xs
 
 
 namespace ApplicativeT
   ||| Datatype for witnessing that all the containers in a shape are applicative
-  -- public export -- Not used below since Applicative is baked in to Tensor
+  -- public export -- Not used below since Applicative is baked in to TensorA
   -- data AllApplicative : (shape : Vect n Cont) -> Type where
   --   Nil : AllApplicative []
   --   Cons : Applicative (Ext c) => AllApplicative cs -> AllApplicative (c :: cs)
 
   ||| Unit of the monoidal functor
   public export
-  tensorReplicate : {shape : ApplV conts}
-    -> a -> Tensor shape a
+  tensorReplicate : {shape : ApplContList conts}
+    -> a -> TensorA shape a
   tensorReplicate {shape = []} a = TZ a
   tensorReplicate {shape = (c :: cs)} a = TS $ pure (tensorReplicate a)
 
   ||| Laxator of the monoidal functor
   public export
-  liftA2Tensor : {shape : ApplV conts} -> Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
-  liftA2Tensor (TZ a) (TZ b) = TZ (a, b)
-  liftA2Tensor (TS x) (TS y) = TS $ uncurry liftA2Tensor <$> (liftA2 x y)
+  liftA2TensorA : {shape : ApplContList conts} -> TensorA shape a -> TensorA shape b -> TensorA shape (a, b)
+  liftA2TensorA (TZ a) (TZ b) = TZ (a, b)
+  liftA2TensorA (TS x) (TS y) = TS $ uncurry liftA2TensorA <$> (liftA2 x y)
 
   public export
-  {shape : ApplV conts} -> Applicative (Tensor shape) where
+  {shape : ApplContList conts} -> Applicative (TensorA shape) where
     pure = tensorReplicate 
-    fs <*> xs = uncurry ($) <$> liftA2Tensor fs xs 
+    fs <*> xs = uncurry ($) <$> liftA2TensorA fs xs 
 
 namespace NumericT
   public export
-  {shape : ApplV conts} -> Num a => Num (Tensor shape a) where
+  {shape : ApplContList conts} -> Num a => Num (TensorA shape a) where
     fromInteger i = pure (fromInteger i)
     xs + ys = (uncurry (+)) <$> liftA2 xs ys
     xs * ys = (uncurry (*)) <$> liftA2 xs ys
 
   public export
-  {shape : ApplV conts} -> Neg a => Neg (Tensor shape a) where
+  {shape : ApplContList conts} -> Neg a => Neg (TensorA shape a) where
     negate = (negate <$>)
     xs - ys = (uncurry (-)) <$> liftA2 xs ys
 
   public export
-  {shape : ApplV conts} -> Abs a => Abs (Tensor shape a) where
+  {shape : ApplContList conts} -> Abs a => Abs (TensorA shape a) where
     abs = (abs <$>)
 
   public export
-  {shape : ApplV conts} -> Fractional a => Fractional (Tensor shape a) where
+  {shape : ApplContList conts} -> Fractional a => Fractional (TensorA shape a) where
     t / v = (uncurry (/)) <$> liftA2 t v
 
   public export
-  {shape : ApplV conts} -> Exp a => Exp (Tensor shape a) where
+  {shape : ApplContList conts} -> Exp a => Exp (TensorA shape a) where
     exp = (exp <$>)
 
 
 
 namespace AlgebraT
   public export
-  data AllAlgebra : (shape : ApplV conts) -> (dtype : Type) -> Type where
+  data AllAlgebra : (shape : ApplContList conts) -> (dtype : Type) -> Type where
     Nil : AllAlgebra [] a
-    (::) : {c : Cont} -> {cs : ApplV conts} ->
+    (::) : {c : Cont} -> {cs : ApplContList conts} ->
       Applicative (Ext c) =>
-      (alg : Algebra (Ext c) (Tensor cs a)) =>
+      (alg : Algebra (Ext c) (TensorA cs a)) =>
       (allAlg : AllAlgebra cs a) => AllAlgebra (c :: cs) a
 
   public export
-  reduceTensor : {shape : ApplV conts} -> (allAlgebra : AllAlgebra shape a) => Tensor shape a -> a
-  reduceTensor {allAlgebra = []} (TZ val) = val
-  reduceTensor {allAlgebra = ((::) {allAlg=cs})} (TS xs) = reduceTensor @{cs} (reduce xs)
+  reduceTensorA : {shape : ApplContList conts} -> (allAlgebra : AllAlgebra shape a) => TensorA shape a -> a
+  reduceTensorA {allAlgebra = []} (TZ val) = val
+  reduceTensorA {allAlgebra = ((::) {allAlg=cs})} (TS xs) = reduceTensorA @{cs} (reduce xs)
 
 
   public export
-  {shape : ApplV conts} ->
+  {shape : ApplContList conts} ->
   (allAlgebra : AllAlgebra shape a) =>
-  Algebra (Tensor shape) a where
-    reduce = reduceTensor
+  Algebra (TensorA shape) a where
+    reduce = reduceTensorA
 
   public export
-  [appSumTensor] {shape : ApplV conts} ->
+  [appSumTensorA] {shape : ApplContList conts} ->
     {a : Type} ->
     Num a =>
     Applicative (Ext c) =>
     (allAlg : AllAlgebra shape a) =>
-    Algebra (Tensor shape) ((Ext c) a) where
+    Algebra (TensorA shape) ((Ext c) a) where
       reduce {allAlg = []} (TZ val) = val
       reduce {shape=(c::cs)} {allAlg = ((::) {allAlg=alg})} (TS xs) -- = ?fvhvh_2
-        = let t = reduce {f=(Tensor cs)} <$> xs
+        = let t = reduce {f=(TensorA cs)} <$> xs
           in ?ghhh -- reduce (reduce <$> xs)
 
 
 namespace FoldableT
 
   public export
-  data AllFoldable : (shape : ApplV conts) -> Type where
+  data AllFoldable : (shape : ApplContList conts) -> Type where
       NilFoldable : AllFoldable []
-      ConsFoldable : {c : Cont} -> {cs : ApplV conts} ->
+      ConsFoldable : {c : Cont} -> {cs : ApplContList conts} ->
         Foldable (Ext c) =>
         Applicative (Ext c) =>
         AllFoldable cs ->
@@ -210,25 +213,25 @@ namespace FoldableT
 
   public export
   tensorFoldr : (allFoldable : AllFoldable shape) =>
-    (el -> acc -> acc) -> acc -> Tensor shape el -> acc
+    (el -> acc -> acc) -> acc -> TensorA shape el -> acc
   tensorFoldr {allFoldable = NilFoldable} f z (TZ val) = f val z
   tensorFoldr {allFoldable = (ConsFoldable recAllFoldable)} f z (TS xs) =
       foldr (\t, acc => tensorFoldr {allFoldable=recAllFoldable} f acc t) z xs
 
   public export
-  {conts : Vect n ApplC} ->
-  {shape : ApplV conts} ->
+  {conts : List ApplC} ->
+  {shape : ApplContList conts} ->
   (allFoldable : AllFoldable shape) =>
-  Foldable (Tensor shape) where
+  Foldable (TensorA shape) where
     foldr = tensorFoldr
 
 
-namespace TensorContractions
+namespace TensorAContractions
   public export
-  dot : {shape : ApplV conts} -> {a : Type} -> Num a =>
-    Algebra (Tensor shape) a =>
-    Tensor shape a -> Tensor shape a -> Tensor [] a
-  dot xs ys = TZ $ reduce $ (\(x, y) => x * y) <$> liftA2Tensor xs ys
+  dot : {shape : ApplContList conts} -> {a : Type} -> Num a =>
+    Algebra (TensorA shape) a =>
+    TensorA shape a -> TensorA shape a -> TensorA [] a
+  dot xs ys = TZ $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA xs ys
 
 
   -- Multiply a matrix and a vector
@@ -236,7 +239,7 @@ namespace TensorContractions
   multiplyMV : {a : Type} -> Num a =>
     Applicative (Ext f) => Applicative (Ext g) =>
     AllAlgebra [g] a =>
-    Tensor [f, g] a -> Tensor [g] a -> Tensor [f] a
+    TensorA [f, g] a -> TensorA [g] a -> TensorA [f] a
   multiplyMV (TS m) v = TS (dot v <$> m)
 
   -- Multiply a vector and a matrix
@@ -245,7 +248,7 @@ namespace TensorContractions
     Applicative (Ext f) =>
     Applicative (Ext g) =>
     (allAlgebra : AllAlgebra [f, g] a) =>
-    Tensor [f] a -> Tensor [f, g] a -> Tensor [g] a
+    TensorA [f] a -> TensorA [f, g] a -> TensorA [g] a
   multiplyVM {allAlgebra = (::)} (TS v) (TS m)
     = let t = liftA2 v m
           w = (\((TZ val), v') => (val *) <$> v') <$> t
@@ -258,7 +261,7 @@ namespace TensorContractions
     Applicative (Ext g) =>
     Applicative (Ext h) =>
     (allAlgebra : AllAlgebra [g, h] a) =>
-    Tensor [f, g] a -> Tensor [g, h] a -> Tensor [f, h] a
+    TensorA [f, g] a -> TensorA [g, h] a -> TensorA [f, h] a
   matMul (TS m1) m2 = TS $ m1 <&> (\row => multiplyVM row m2)
 
   -- ij,kj->ki
@@ -268,62 +271,63 @@ namespace TensorContractions
     Applicative (Ext g) =>
     Applicative (Ext h) =>
     (allAlgebra : AllAlgebra [g] a) =>
-    Tensor [f, g] a -> Tensor [h, g] a -> Tensor [h, f] a
+    TensorA [f, g] a -> TensorA [h, g] a -> TensorA [h, f] a
   multiplyMMT m (TS n) = TS (multiplyMV m <$> n)
+
 
 
 -- TODO rename since this is not array for non-cubical tensors
 public export
-Array : (shape : ApplV conts) -> (dtype : Type) -> Type
+Array : (shape : ApplContList conts) -> (dtype : Type) -> Type
 Array [] dtype = dtype
 Array (c :: cs) dtype = c `fullOf` (Array cs dtype)
 
 public export
-fromArray : {shape : ApplV conts} -> Array shape a -> Tensor shape a
+fromArray : {shape : ApplContList conts} -> Array shape a -> TensorA shape a
 fromArray {shape = []} x = TZ x
 fromArray {shape = (_ :: _)} xs = TS $ fromArray <$> xs
 
 public export
-toArray : {shape : ApplV conts} -> Tensor shape a -> Array shape a
+toArray : {shape : ApplContList conts} -> TensorA shape a -> Array shape a
 toArray (TZ val) = val
 toArray (TS xs) = toArray <$> xs
 
 
-namespace NestedTensorStuff
+namespace NestedTensorAStuff
   public export
-  toNestedTensor : {n : Cont} -> {ns : ApplV conts} ->
+  toNestedTensorA : {n : Cont} -> {ns : ApplContList conts} ->
     Applicative (Ext n) =>
-    Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
-  toNestedTensor (TS vs) = TS (TZ <$> vs)
+    TensorA (n :: ns) a -> TensorA [n] (TensorA ns a)
+  toNestedTensorA (TS vs) = TS (TZ <$> vs)
 
   public export infix 4 <-$
 
   public export
-  (<-$) : {n : Cont} -> {ns : ApplV conts} ->
+  (<-$) : {n : Cont} -> {ns : ApplContList conts} ->
     Applicative (Ext n) =>
-    Tensor (n :: ns) a -> Tensor [n] (Tensor ns a)
-  (<-$) = toNestedTensor
+    TensorA (n :: ns) a -> TensorA [n] (TensorA ns a)
+  (<-$) = toNestedTensorA
 
   public export
-  fromNestedTensor : {n : Cont} -> {ns : ApplV conts} ->
+  fromNestedTensorA : {n : Cont} -> {ns : ApplContList conts} ->
     Applicative (Ext n) =>
-    Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
-  fromNestedTensor (TS vs) = TS $ (\(TZ jk) => jk) <$> vs
+    TensorA [n] (TensorA ns a) -> TensorA (n :: ns) a
+  fromNestedTensorA (TS vs) = TS $ (\(TZ jk) => jk) <$> vs
 
   public export infixr 4 $->
   public export
-  ($->) : {n : Cont} -> {ns : ApplV conts} ->
+  ($->) : {n : Cont} -> {ns : ApplContList conts} ->
     Applicative (Ext n) =>
-    Tensor [n] (Tensor ns a) -> Tensor (n :: ns) a
-  ($->) = fromNestedTensor
+    TensorA [n] (TensorA ns a) -> TensorA (n :: ns) a
+  ($->) = fromNestedTensorA
 
   public export
   tensorMapFirstAxis : {rest : Cont}
-    -> {s1, s2 : ApplV conts}
+    -> {s1, s2 : ApplContList conts}
     -> Applicative (Ext rest)
-    => (f : Tensor s1 a -> Tensor s2 a)
-    -> Tensor (rest :: s1) a -> Tensor (rest :: s2) a
-  tensorMapFirstAxis f t = fromNestedTensor $ map f $ toNestedTensor t
+    => (f : TensorA s1 a -> TensorA s2 a)
+    -> TensorA (rest :: s1) a -> TensorA (rest :: s2) a
+  tensorMapFirstAxis f t = fromNestedTensorA $ map f $ toNestedTensorA t
 
 
   public export infixr 4 <-$->
@@ -331,10 +335,10 @@ namespace NestedTensorStuff
   ||| Map, but for nested tensors
   public export
   (<-$->) : {rest : Cont}
-    -> {shape : ApplV conts}
+    -> {shape : ApplContList conts}
     -> Applicative (Ext rest)
-    => (f : Tensor shape a -> Tensor shape a)
-    -> Tensor (rest :: shape) a -> Tensor (rest :: shape) a
+    => (f : TensorA shape a -> TensorA shape a)
+    -> TensorA (rest :: shape) a -> TensorA (rest :: shape) a
   (<-$->) = tensorMapFirstAxis
 
 
@@ -342,13 +346,13 @@ namespace NestedTensorStuff
 namespace CubicalTensor
   -- This recovers usual tensors in Tensor.Tensor
   -- public export
-  -- Tensor'' : (shape : Vect n Nat) -> Type -> Type
-  -- Tensor'' shape = Tensor $ vectApplV shape
+  -- Tensor' : (shape : Vect n Nat) -> Type -> Type
+  -- Tensor' shape = TensorA $ natsToApplConts shape
 
   -- public export infixr 5 +++
   -- public export
   -- (+++) : {cs : Vect n ApplC} -> {ds : Vect m ApplC}
-  --   -> ApplV cs -> ApplV ds -> ApplV (cs ++ ds)
+  --   -> ApplContList cs -> ApplContList ds -> ApplContList (cs ++ ds)
   -- [] +++ ys = ys
   -- (c :: cs) +++ ys = c :: (cs +++ ys)
 
@@ -359,156 +363,157 @@ namespace CubicalTensor
 
 
   ||| This is a helper datatype for cubical tensors, i.e. those made only out of VectCont
-  ||| It allows specifying a tensor only by the size of the content, and is needed (instead of Tensor'') to aid type inference
+  ||| It allows specifying a tensor only by the size of the content, and is needed (instead of Tensor') to aid type inference
   ||| There might be a more ergonomic way to do this
   public export
-  record Tensor' (shape : Vect n Nat) a where
+  record Tensor (shape : List Nat) a where
     constructor MkT
-    GetT : Tensor (vectApplV shape) a
+    GetT : TensorA (natsToApplConts shape) a
 
   public export
-  toCubicalTensor : {shape : Vect n Nat} -> Tensor (vectApplV shape) a -> Tensor' shape a
+  toCubicalTensor : {shape : List Nat} -> TensorA (natsToApplConts shape) a -> Tensor shape a
   toCubicalTensor t = MkT t
 
   public export
-  fromCubicalTensor : {shape : Vect n Nat} -> Tensor' shape a -> Tensor (vectApplV shape) a
+  fromCubicalTensor : {shape : List Nat} ->
+    Tensor shape a -> TensorA (natsToApplConts shape) a
   fromCubicalTensor t = GetT t
 
-  namespace Tensor'Interfaces
+  namespace TensorInterfaces
     public export
-    {shape : Vect n Nat} ->
-    AllEq (vectApplV shape) a =>
-    Eq (Tensor' shape a) where
+    {shape : List Nat} ->
+    AllEq (natsToApplConts shape) a =>
+    Eq (Tensor shape a) where
         (MkT t) == (MkT t') = tensorEq t t'
 
     public export
-    {shape : Vect n Nat} ->
-    AllShow (vectApplV shape) a =>
-    Show (Tensor' shape a) where
+    {shape : List Nat} ->
+    AllShow (natsToApplConts shape) a =>
+    Show (Tensor shape a) where
       show (MkT t) = show t
 
     public export
-    {shape : Vect n Nat} -> Num a => Num (Tensor' shape a) where
-      fromInteger i = MkT $ fromInteger {ty=(Tensor (vectApplV shape) a)} i
-      (MkT xs) + (MkT ys) = MkT $ (+) {ty=(Tensor (vectApplV shape) a)} xs ys
-      (MkT xs) * (MkT ys) = MkT $ (*) {ty=(Tensor (vectApplV shape) a)} xs ys
+    {shape : List Nat} -> Num a => Num (Tensor shape a) where
+      fromInteger i = MkT $ fromInteger {ty=(TensorA (natsToApplConts shape) a)} i
+      (MkT xs) + (MkT ys) = MkT $ (+) {ty=(TensorA (natsToApplConts shape) a)} xs ys
+      (MkT xs) * (MkT ys) = MkT $ (*) {ty=(TensorA (natsToApplConts shape) a)} xs ys
 
     public export
-    {shape : Vect n Nat} -> Neg a => Neg (Tensor' shape a) where
+    {shape : List Nat} -> Neg a => Neg (Tensor shape a) where
       negate (MkT t) = MkT $ negate t
-      (MkT xs) - (MkT ys) = MkT $ (-) {ty=(Tensor (vectApplV shape) a)} xs ys
+      (MkT xs) - (MkT ys) = MkT $ (-) {ty=(TensorA (natsToApplConts shape) a)} xs ys
 
     public export
-    {shape : Vect n Nat} -> Abs a => Abs (Tensor' shape a) where
+    {shape : List Nat} -> Abs a => Abs (Tensor shape a) where
       abs (MkT t) = MkT $ abs t
 
     public export
-    Functor (Tensor' shape) where
+    Functor (Tensor shape) where
       map f (MkT t) = MkT $ map f t
 
 
     public export
-    tensorReplicate' : {shape : Vect n Nat}
-      -> a -> Tensor' shape a
+    tensorReplicate' : {shape : List Nat}
+      -> a -> Tensor shape a
     tensorReplicate' {shape = []} a = MkT $ TZ a
     tensorReplicate' {shape = (c :: cs)} a = MkT $ TS $ pure (tensorReplicate a)
 
     public export
-    {shape : Vect n Nat} ->
-    AllAlgebra (vectApplV shape) a =>
-    Algebra (Tensor' shape) a where
+    {shape : List Nat} ->
+    AllAlgebra (natsToApplConts shape) a =>
+    Algebra (Tensor shape) a where
         reduce (MkT t) = reduce t
 
     public export
-    tensorCFoldr : {shape : Vect n Nat} ->
-      (el -> acc -> acc) -> acc -> Tensor (vectApplV shape) el -> acc
+    tensorCFoldr : {shape : List Nat} ->
+      (el -> acc -> acc) -> acc -> TensorA (natsToApplConts shape) el -> acc
     tensorCFoldr {shape = []} f z t = foldr f z t
     tensorCFoldr {shape = (s :: ss)} f z (TS xs)
       = foldr (\t, acc => tensorCFoldr f acc t) z xs
 
 
     public export
-    {shape : Vect n Nat} ->
-    Foldable (Tensor' shape) where
+    {shape : List Nat} ->
+    Foldable (Tensor shape) where
       foldr f z (MkT t) = tensorCFoldr f z t
 
-    -- TODO implement Traversable for Tensor, and then port it here
+    -- TODO implement Traversable for TensorA, and then port it here
     public export
-    tensorCTraverse : {shape : Vect n Nat} -> Applicative f =>
-      (a -> f b) -> Tensor (vectApplV shape) a -> f (Tensor (vectApplV shape) b)
+    tensorCTraverse : {shape : List Nat} -> Applicative f =>
+      (a -> f b) -> TensorA (natsToApplConts shape) a -> f (TensorA (natsToApplConts shape) b)
     tensorCTraverse {shape = []} fn (TZ val) = TZ <$> fn val
     tensorCTraverse {shape = (s :: ss)} fn (TS xs)
       = TS <$> ?alllao -- (fromVect <$> traverse (tensorCTraverse fn) (toVect xs))
 
     public export
-    {shape : Vect n Nat} ->
-    Traversable (Tensor' shape) where
+    {shape : List Nat} ->
+    Traversable (Tensor shape) where
       traverse f (MkT t) = MkT <$> tensorCTraverse f t
 
   public export
-  dot' : {shape : Vect n Nat} -> {a : Type}
-    -> Num a => AllAlgebra (vectApplV shape) a
-    => Tensor' shape a -> Tensor' shape a -> Tensor' [] a
-  dot' (MkT xs) (MkT ys) = MkT $ TZ $ reduce $ (\(x, y) => x * y) <$> liftA2Tensor xs ys
+  dot' : {shape : List Nat} -> {a : Type}
+    -> Num a => AllAlgebra (natsToApplConts shape) a
+    => Tensor shape a -> Tensor shape a -> Tensor [] a
+  dot' (MkT xs) (MkT ys) = MkT $ TZ $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA xs ys
 
   public export
-  Array' : (shape : Vect n Nat) -> (dtype : Type) -> Type
+  Array' : (shape : List Nat) -> (dtype : Type) -> Type
   Array' [] dtype = dtype
   Array' (s :: ss) dtype = Vect s (Array' ss dtype)
 
   public export
-  fromArrayHelper : {shape : Vect n Nat}
+  fromArrayHelper : {shape : List Nat}
     -> Array' shape a
-    -> Tensor (vectApplV shape) a
+    -> TensorA (natsToApplConts shape) a
   fromArrayHelper {shape=[]} x = TZ x
   fromArrayHelper {shape=(_ :: _)} x = TS $ fromVect $ fromArrayHelper <$> x
 
   public export
-  fromArray' : {shape : Vect n Nat} -> Array' shape a -> Tensor' shape a
+  fromArray' : {shape : List Nat} -> Array' shape a -> Tensor shape a
   fromArray' a = MkT $ fromArrayHelper a
 
 namespace IndexT
   public export
   data IndexTData : Type where
-    NonCubical : (shape : ApplV conts) -> IndexTData
-    Cubical : (shape : Vect n Nat) -> IndexTData -- assuming every Naperian functor has shape=Fin d for some d, this describes Naperian Tensors
+    NonCubical : (shape : ApplContList conts) -> IndexTData
+    Cubical : (shape : Vect n Nat) -> IndexTData -- assuming every Naperian functor has shape=Fin d for some d, this describes Naperian TensorAs
 
   -- vnn : IndexTData -> Type -> Type
-  -- vnn (NonCubical shape) = Tensor shape
+  -- vnn (NonCubical shape) = TensorA shape
   -- vnn (Cubical shape) = \_ => Unit
 
-  vnnn : (conts : Vect n ApplC) -> Cont
-  vnnn conts = foldr ?acc CUnit (GetC <$> conts)
+  -- -- vnnn : (conts : Vect n ApplC) -> Cont
+  -- -- vnnn conts = foldr ?acc CUnit (GetC <$> conts)
 
-  -- ||| Tensors too are a container
+  -- ||| TensorAs too are a container
   -- tensorCont : Type -> Cont
   -- tensorCont dtype = (s : IndexTData) !> vnn s
     
-  ||| Machinery for indexing into a Tensor
+  ||| Machinery for indexing into a TensorA
   ||| For general, non-cubical tensors this depends on the tensor itself
   ||| TODO remove this dependence for cubical tensors
   public export
-  data IndexT : (shape : ApplV conts) -> (t : Tensor shape dtype) -> Type where
+  data IndexT : (shape : ApplContList conts) -> (t : TensorA shape dtype) -> Type where
     Nil : {val : dtype} -> IndexT [] (TZ val)
-    (::) :  {e : ((!>) shp' pos') `fullOf` (Tensor cs dtype)} -> 
+    (::) :  {e : ((!>) shp' pos') `fullOf` (TensorA cs dtype)} -> 
       Applicative (Ext ((!>) shp' pos')) =>
       (p : pos' (shapeExt e)) ->
       IndexT cs (indexCont e p) -> 
       IndexT ((!>) shp' pos' :: cs) (TS e)
 
   public export
-  indexTensor : (t : Tensor shape a)
+  indexTensorA : (t : TensorA shape a)
               -> (index : IndexT shape t)
               -> a
-  indexTensor (TZ val) [] = val
-  indexTensor (TS xs) (i :: is) = indexTensor (indexCont xs i) is 
+  indexTensorA (TZ val) [] = val
+  indexTensorA (TS xs) (i :: is) = indexTensorA (indexCont xs i) is 
 
   public export
-  indexTensor' : {shape : Vect n Nat}
-               -> (t : Tensor' shape a)
-               -> (index : IndexT (vectApplV shape) (GetT t))
+  indexTensor : {shape : List Nat}
+               -> (t : Tensor shape a)
+               -> (index : IndexT (natsToApplConts shape) (GetT t))
                -> a
-  indexTensor' (MkT t) index = indexTensor t index
+  indexTensor (MkT t) index = indexTensorA t index
 
 
 
@@ -516,16 +521,16 @@ namespace IndexT
   public export infixr 9 @@
 
   public export
-  (@@) : (t : Tensor shape a) -> IndexT shape t -> a
-  (@@) = indexTensor
+  (@@) : (t : TensorA shape a) -> IndexT shape t -> a
+  (@@) = indexTensorA
 
 
   public export infixr 9 @@@
 
   public export
-  (@@@) : {shape : Vect n Nat}
-    -> (t : Tensor' shape a) -> IndexT (vectApplV shape) (GetT t) -> a
-  (@@@) (MkT t) i = indexTensor t i
+  (@@@) : {shape : List Nat}
+    -> (t : Tensor shape a) -> IndexT (natsToApplConts shape) (GetT t) -> a
+  (@@@) (MkT t) i = indexTensorA t i
 
 
 namespace SliceT
@@ -533,12 +538,12 @@ namespace SliceT
   ||| Crucially, different from the indexing one in the definition of (::)
   ||| Here we have Fin (S m) instead of Fin m
   public export
-  data SliceT : (shape : Vect n Nat) -> Type where
+  data SliceT : (shape : List Nat) -> Type where
     Nil : SliceT []
     (::) : Fin (S m) -> SliceT ms -> SliceT (m :: ms)
 
   public export
-  sliceToShape : {shape : Vect n Nat} -> SliceT shape -> Vect n Nat
+  sliceToShape : {shape : List Nat} -> SliceT shape -> List Nat
   sliceToShape Nil = []
   sliceToShape (s :: ss) = finToNat s :: sliceToShape ss
 
@@ -548,13 +553,13 @@ namespace SliceT
   takeFinVect' s x = fromVect (takeFin s (toVect x))
 
   public export --
-  takeTensor' : {shape : Vect n Nat} ->
+  takeTensor : {shape : List Nat} ->
     (slice : SliceT shape) ->
-    Tensor' shape a ->
-    Tensor' (sliceToShape slice) a
-  takeTensor' [] (MkT (TZ val)) = MkT (TZ val)
-  takeTensor' (s :: ss) (MkT (TS xs)) = MkT $ TS $ 
-    (\t => GetT ((takeTensor' ss) (MkT t))) <$> takeFinVect' s xs
+    Tensor shape a ->
+    Tensor (sliceToShape slice) a
+  takeTensor [] (MkT (TZ val)) = MkT (TZ val)
+  takeTensor (s :: ss) (MkT (TS xs)) = MkT $ TS $ 
+    (\t => GetT ((takeTensor ss) (MkT t))) <$> takeFinVect' s xs
 
 
 

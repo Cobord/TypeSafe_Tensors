@@ -3,7 +3,7 @@ module Data.Tensor.EinsumTests
 import Data.Either
 import Decidable.Equality
 
-import Data.Tensor.Einsum
+import Data.Tensor.Einsum.EinsumExpr
 import Misc
 
 
@@ -40,3 +40,6 @@ test8 = %search
 
 test9 : IsLeft (parseEinsumString "i->j->k")
 test9 = %search
+
+test10 : IsLeft (parseEinsumString "i@j->@i")
+test10 = %search

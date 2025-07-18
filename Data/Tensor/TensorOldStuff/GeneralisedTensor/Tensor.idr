@@ -163,8 +163,8 @@ dot xs ys = GTZ $ reduce $ (\(x, y) => x ~*~ y) <$> liftA2Tensor xs ys
 
 ||| This recovers usual tensors in Tensor.Tensor
 public export
-Tensor' : (shape : Vect n Nat) -> Type -> Type
-Tensor' shape = Tensor $ (\n => # (Vect n)) <$> shape
+Tensor : (shape : Vect n Nat) -> Type -> Type
+Tensor shape = Tensor $ (\n => # (Vect n)) <$> shape
 
 public export
 GenArray : (shape : Vect rank ApplF) -> (dtype : Type) -> Type

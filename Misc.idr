@@ -44,13 +44,23 @@ public export
   xs * ys = uncurry (*) <$> liftA2 xs ys
   fromInteger = pure . fromInteger
 
-public export
-sum : Num a => Vect n a -> a
-sum = foldr (+) (fromInteger 0)
+namespace Vect
+  public export
+  sum : Num a => Vect n a -> a
+  sum = foldr (+) (fromInteger 0)
+  
+  public export
+  prod : Num a => Vect n a -> a
+  prod = foldr (*) (fromInteger 1)
 
-public export
-prod : Num a => Vect n a -> a
-prod = foldr (*) (fromInteger 1)
+namespace List
+  public export
+  sum : Num a => List a -> a
+  sum = foldr (+) (fromInteger 0)
+  
+  public export
+  prod : Num a => List a -> a
+  prod = foldr (*) (fromInteger 1)
 
 public export
 maxInList : Ord a => List a -> Maybe a
@@ -260,10 +270,10 @@ failing
 interface Comult (f : Type -> Type) a where
   comult : f a -> f (f a)
 
-{shape : Vect n Nat} -> Num a => Comult (Tensor shape) a where
+{shape : Vect n Nat} -> Num a => Comult (TensorA shape) a where
   comult t = ?eir
 
-gg : Tensor [3] Double -> Tensor [3, 3] Double
+gg : TensorA [3] Double -> TensorA [3, 3] Double
 gg (TS xs) = TS $ map ?fn ?gg_rhs_0
 
 -- [1, 2, 3]

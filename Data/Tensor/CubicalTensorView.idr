@@ -122,8 +122,8 @@ dotStr {shape} x with (strides shape)
     in ?dotStr_rhs
 
 
-hmmm : (n : Nat) -> Fin m
-hmmm n ?= natToFinLT n
+-- hmmm : (n : Nat) -> Fin m
+-- hmmm n ?= natToFinLT n
 -- Fin 3, Fin 4 -> Fin 12
 -- 0, 1, 2
 -- 0, 1, 2, 3
