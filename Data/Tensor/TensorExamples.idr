@@ -82,12 +82,12 @@ failing
 
 ||| Dot product of two vectors
 dotProduct : Tensor [] Double
-dotProduct = dot' t0 t0
+dotProduct = dot t0 t0
 
 failing
   ||| Can't dot product two different-sized vectors
   dotProductFail : Tensor [] Double
-  dotProductFail = dot' t0 (the (Tensor [5] Double) range)
+  dotProductFail = dot t0 (the (Tensor [5] Double) range)
 
 
 ----------------------------------------
@@ -105,7 +105,7 @@ t1again = fromCubicalTensor t1
 
 ||| Instead of an n-element vector, here's tree with leaves as elements.
 ex1 : TensorA [BTreeLeafCont] Double
-ex1 = fromArray $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+ex1 = fromArrayA $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 {- 
         *
       /   \
@@ -119,7 +119,7 @@ ex1 = fromArray $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
 ||| Here's another one, with a different number of elements
 ex2 : TensorA [BTreeLeafCont] Double
-ex2 = fromArray $ fromBTreeLeaf $ Node' (Leaf 10) (Leaf 100)
+ex2 = fromArrayA $ fromBTreeLeaf $ Node' (Leaf 10) (Leaf 100)
 {- 
         *
       /   \
@@ -129,11 +129,11 @@ ex2 = fromArray $ fromBTreeLeaf $ Node' (Leaf 10) (Leaf 100)
 ||| We can take their dot product!
 ||| It does not matter that they have the same number of elements, it matters that the functor is the same
 dotProduct2 : TensorA [] Double
-dotProduct2 = dot ex1 ex2
+dotProduct2 = dotA ex1 ex2
 
 ||| Here's a tree with nodes as elements
 ex3 : TensorA [BTreeNodeCont] Double
-ex3 = fromArray $ fromBTreeNode $ Node 127 Leaf' (Node 14 Leaf' Leaf')
+ex3 = fromArrayA $ fromBTreeNode $ Node 127 Leaf' (Node 14 Leaf' Leaf')
 {- 
    127
   /   \
@@ -144,7 +144,7 @@ ex3 = fromArray $ fromBTreeNode $ Node 127 Leaf' (Node 14 Leaf' Leaf')
 
 ||| Or elements themselves can be vectors!
 ex4 : TensorA [BTreeLeafCont, VectCont 2] Double
-ex4 = fromArray $ fromBTreeLeaf $ (Leaf $ fromVect [1,2])
+ex4 = fromArrayA $ fromBTreeLeaf $ (Leaf $ fromVect [1,2])
 
 ||| We can index into those structures
 indexTreeExample : Double

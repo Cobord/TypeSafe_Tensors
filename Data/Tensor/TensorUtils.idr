@@ -11,20 +11,20 @@ import Data.Functor.Naperian -- needed for range
 import Misc
 
 public export
-zeros : Num a => {shape : ApplContList conts} -> TensorA shape a
+zerosA : Num a => {shape : ApplContList conts} -> TensorA shape a
+zerosA = tensorReplicateA (fromInteger 0)
+
+public export
+zeros : Num a => {shape : List Nat} -> Tensor shape a
 zeros = tensorReplicate (fromInteger 0)
 
 public export
-zeros' : Num a => {shape : List Nat} -> Tensor shape a
-zeros' = tensorReplicate' (fromInteger 0)
+onesA : Num a => {shape : ApplContList conts} -> TensorA shape a
+onesA = tensorReplicateA (fromInteger 1)
 
 public export
-ones : Num a => {shape : ApplContList conts} -> TensorA shape a
+ones : Num a => {shape : List Nat} -> Tensor shape a
 ones = tensorReplicate (fromInteger 1)
-
-public export
-ones' : Num a => {shape : List Nat} -> Tensor shape a
-ones' = tensorReplicate' (fromInteger 1)
 
 public export
 range : {n : Nat} -> Cast Nat a => Tensor [n] a

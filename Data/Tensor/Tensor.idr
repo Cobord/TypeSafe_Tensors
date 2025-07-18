@@ -123,10 +123,10 @@ namespace ApplicativeT
 
   ||| Unit of the monoidal functor
   public export
-  tensorReplicate : {shape : ApplContList conts}
+  tensorReplicateA : {shape : ApplContList conts}
     -> a -> TensorA shape a
-  tensorReplicate {shape = []} a = TZ a
-  tensorReplicate {shape = (c :: cs)} a = TS $ pure (tensorReplicate a)
+  tensorReplicateA {shape = []} a = TZ a
+  tensorReplicateA {shape = (c :: cs)} a = TS $ pure (tensorReplicateA a)
 
   ||| Laxator of the monoidal functor
   public export
@@ -136,7 +136,7 @@ namespace ApplicativeT
 
   public export
   {shape : ApplContList conts} -> Applicative (TensorA shape) where
-    pure = tensorReplicate 
+    pure = tensorReplicateA 
     fs <*> xs = uncurry ($) <$> liftA2TensorA fs xs 
 
 namespace NumericT
@@ -228,69 +228,68 @@ namespace FoldableT
 
 namespace TensorAContractions
   public export
-  dot : {shape : ApplContList conts} -> {a : Type} -> Num a =>
+  dotA : {shape : ApplContList conts} -> {a : Type} -> Num a =>
     Algebra (TensorA shape) a =>
     TensorA shape a -> TensorA shape a -> TensorA [] a
-  dot xs ys = TZ $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA xs ys
+  dotA xs ys = TZ $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA xs ys
 
 
   -- Multiply a matrix and a vector
   public export
-  multiplyMV : {a : Type} -> Num a =>
+  matrixVectorProductA : {a : Type} -> Num a =>
     Applicative (Ext f) => Applicative (Ext g) =>
     AllAlgebra [g] a =>
     TensorA [f, g] a -> TensorA [g] a -> TensorA [f] a
-  multiplyMV (TS m) v = TS (dot v <$> m)
+  matrixVectorProductA (TS m) v = TS (dotA v <$> m)
 
   -- Multiply a vector and a matrix
   public export
-  multiplyVM : {a : Type} -> {f, g : Cont} -> Num a =>
+  vectorMatrixProductA : {a : Type} -> {f, g : Cont} -> Num a =>
     Applicative (Ext f) =>
     Applicative (Ext g) =>
     (allAlgebra : AllAlgebra [f, g] a) =>
     TensorA [f] a -> TensorA [f, g] a -> TensorA [g] a
-  multiplyVM {allAlgebra = (::)} (TS v) (TS m)
+  vectorMatrixProductA {allAlgebra = (::)} (TS v) (TS m)
     = let t = liftA2 v m
           w = (\((TZ val), v') => (val *) <$> v') <$> t
       in reduce {f=(Ext f)} w
 
   -- ij,jk->ik
   public export
-  matMul : {f, g, h : Cont} -> {a : Type} -> Num a =>
+  matMulA : {f, g, h : Cont} -> {a : Type} -> Num a =>
     Applicative (Ext f) =>
     Applicative (Ext g) =>
     Applicative (Ext h) =>
     (allAlgebra : AllAlgebra [g, h] a) =>
     TensorA [f, g] a -> TensorA [g, h] a -> TensorA [f, h] a
-  matMul (TS m1) m2 = TS $ m1 <&> (\row => multiplyVM row m2)
+  matMulA (TS m1) m2 = TS $ m1 <&> (\row => vectorMatrixProductA row m2)
 
   -- ij,kj->ki
   public export
-  multiplyMMT : {f, g, h : Cont} -> {a : Type} -> Num a =>
+  matrixMatrixProductA : {f, g, h : Cont} -> {a : Type} -> Num a =>
     Applicative (Ext f) =>
     Applicative (Ext g) =>
     Applicative (Ext h) =>
     (allAlgebra : AllAlgebra [g] a) =>
     TensorA [f, g] a -> TensorA [h, g] a -> TensorA [h, f] a
-  multiplyMMT m (TS n) = TS (multiplyMV m <$> n)
+  matrixMatrixProductA m (TS n) = TS (matrixVectorProductA m <$> n)
 
 
-
--- TODO rename since this is not array for non-cubical tensors
-public export
-Array : (shape : ApplContList conts) -> (dtype : Type) -> Type
-Array [] dtype = dtype
-Array (c :: cs) dtype = c `fullOf` (Array cs dtype)
 
 public export
-fromArray : {shape : ApplContList conts} -> Array shape a -> TensorA shape a
-fromArray {shape = []} x = TZ x
-fromArray {shape = (_ :: _)} xs = TS $ fromArray <$> xs
+ArrayA : (shape : ApplContList conts) -> (dtype : Type) -> Type
+ArrayA [] dtype = dtype
+ArrayA (c :: cs) dtype = c `fullOf` (ArrayA cs dtype)
 
 public export
-toArray : {shape : ApplContList conts} -> TensorA shape a -> Array shape a
-toArray (TZ val) = val
-toArray (TS xs) = toArray <$> xs
+fromArrayA : {shape : ApplContList conts} -> ArrayA shape a -> TensorA shape a
+fromArrayA {shape = []} x = TZ x
+fromArrayA {shape = (_ :: _)} xs = TS $ fromArrayA <$> xs
+
+public export
+toArrayA : {shape : ApplContList conts} -> TensorA shape a -> ArrayA shape a
+toArrayA (TZ val) = val
+toArrayA (TS xs) = toArrayA <$> xs
 
 
 namespace NestedTensorAStuff
@@ -322,12 +321,12 @@ namespace NestedTensorAStuff
   ($->) = fromNestedTensorA
 
   public export
-  tensorMapFirstAxis : {rest : Cont}
+  tensorMapFirstAxisA : {rest : Cont}
     -> {s1, s2 : ApplContList conts}
     -> Applicative (Ext rest)
     => (f : TensorA s1 a -> TensorA s2 a)
     -> TensorA (rest :: s1) a -> TensorA (rest :: s2) a
-  tensorMapFirstAxis f t = fromNestedTensorA $ map f $ toNestedTensorA t
+  tensorMapFirstAxisA f t = fromNestedTensorA $ map f $ toNestedTensorA t
 
 
   public export infixr 4 <-$->
@@ -339,7 +338,7 @@ namespace NestedTensorAStuff
     -> Applicative (Ext rest)
     => (f : TensorA shape a -> TensorA shape a)
     -> TensorA (rest :: shape) a -> TensorA (rest :: shape) a
-  (<-$->) = tensorMapFirstAxis
+  (<-$->) = tensorMapFirstAxisA
 
 
 
@@ -371,7 +370,8 @@ namespace CubicalTensor
     GetT : TensorA (natsToApplConts shape) a
 
   public export
-  toCubicalTensor : {shape : List Nat} -> TensorA (natsToApplConts shape) a -> Tensor shape a
+  toCubicalTensor : {shape : List Nat} ->
+    TensorA (natsToApplConts shape) a -> Tensor shape a
   toCubicalTensor t = MkT t
 
   public export
@@ -413,10 +413,10 @@ namespace CubicalTensor
 
 
     public export
-    tensorReplicate' : {shape : List Nat}
+    tensorReplicate : {shape : List Nat}
       -> a -> Tensor shape a
-    tensorReplicate' {shape = []} a = MkT $ TZ a
-    tensorReplicate' {shape = (c :: cs)} a = MkT $ TS $ pure (tensorReplicate a)
+    tensorReplicate {shape = []} a = MkT $ TZ a
+    tensorReplicate {shape = (c :: cs)} a = MkT $ TS $ pure (tensorReplicateA a)
 
     public export
     {shape : List Nat} ->
@@ -425,51 +425,51 @@ namespace CubicalTensor
         reduce (MkT t) = reduce t
 
     public export
-    tensorCFoldr : {shape : List Nat} ->
+    tensorFoldrA : {shape : List Nat} ->
       (el -> acc -> acc) -> acc -> TensorA (natsToApplConts shape) el -> acc
-    tensorCFoldr {shape = []} f z t = foldr f z t
-    tensorCFoldr {shape = (s :: ss)} f z (TS xs)
-      = foldr (\t, acc => tensorCFoldr f acc t) z xs
+    tensorFoldrA {shape = []} f z t = foldr f z t
+    tensorFoldrA {shape = (s :: ss)} f z (TS xs)
+      = foldr (\t, acc => tensorFoldrA f acc t) z xs
 
 
     public export
     {shape : List Nat} ->
     Foldable (Tensor shape) where
-      foldr f z (MkT t) = tensorCFoldr f z t
+      foldr f z (MkT t) = tensorFoldrA f z t
 
     -- TODO implement Traversable for TensorA, and then port it here
     public export
-    tensorCTraverse : {shape : List Nat} -> Applicative f =>
+    tensorTraverseA : {shape : List Nat} -> Applicative f =>
       (a -> f b) -> TensorA (natsToApplConts shape) a -> f (TensorA (natsToApplConts shape) b)
-    tensorCTraverse {shape = []} fn (TZ val) = TZ <$> fn val
-    tensorCTraverse {shape = (s :: ss)} fn (TS xs)
+    tensorTraverseA {shape = []} fn (TZ val) = TZ <$> fn val
+    tensorTraverseA {shape = (s :: ss)} fn (TS xs)
       = TS <$> ?alllao -- (fromVect <$> traverse (tensorCTraverse fn) (toVect xs))
 
     public export
     {shape : List Nat} ->
     Traversable (Tensor shape) where
-      traverse f (MkT t) = MkT <$> tensorCTraverse f t
+      traverse f (MkT t) = MkT <$> tensorTraverseA f t
 
   public export
-  dot' : {shape : List Nat} -> {a : Type}
+  dot : {shape : List Nat} -> {a : Type}
     -> Num a => AllAlgebra (natsToApplConts shape) a
     => Tensor shape a -> Tensor shape a -> Tensor [] a
-  dot' (MkT xs) (MkT ys) = MkT $ TZ $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA xs ys
+  dot (MkT xs) (MkT ys) = MkT $ TZ $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA xs ys
 
   public export
-  Array' : (shape : List Nat) -> (dtype : Type) -> Type
-  Array' [] dtype = dtype
-  Array' (s :: ss) dtype = Vect s (Array' ss dtype)
+  Array : (shape : List Nat) -> (dtype : Type) -> Type
+  Array [] dtype = dtype
+  Array (s :: ss) dtype = Vect s (Array ss dtype)
 
   public export
   fromArrayHelper : {shape : List Nat}
-    -> Array' shape a
+    -> Array shape a
     -> TensorA (natsToApplConts shape) a
   fromArrayHelper {shape=[]} x = TZ x
   fromArrayHelper {shape=(_ :: _)} x = TS $ fromVect $ fromArrayHelper <$> x
 
   public export
-  fromArray' : {shape : List Nat} -> Array' shape a -> Tensor shape a
+  fromArray' : {shape : List Nat} -> Array shape a -> Tensor shape a
   fromArray' a = MkT $ fromArrayHelper a
 
 namespace IndexT

@@ -51,7 +51,7 @@ transposeMatrix : {i, j : Cont} ->
   (allNaperian : AllNaperian [i, j]) =>
   TensorA [i, j] a -> TensorA [j, i] a
 transposeMatrix {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))}
-  = fromArray . Naperian.transpose . toArray
+  = fromArrayA . Naperian.transpose . toArrayA
 
 
 public export

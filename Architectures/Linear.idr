@@ -17,7 +17,7 @@ linearImpl : {x, y : Cont} -> {a : Type} -> Num a =>
   Applicative (Ext x) => Applicative (Ext y) => 
   AllAlgebra [x] a =>
   TensorA [y, x] a -> TensorA [y] a -> TensorA [x] a -> TensorA [y] a
-linearImpl weights bias input = multiplyMV weights input + bias
+linearImpl weights bias input = matrixVectorProductA weights input + bias
 
 linearImpl' : {i, j : Nat} -> {a : Type} -> Num a =>
   Tensor [j, i] a -> Tensor [j] a -> Tensor [i] a -> Tensor [j] a

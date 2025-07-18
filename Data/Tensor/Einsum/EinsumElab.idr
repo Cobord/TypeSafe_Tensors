@@ -107,7 +107,8 @@ einsumTest str = case str of
 partial
 esVal : List Double
 esVal = let t = einsumTest "c"
-        in %runElab t 3.7
+            g = %runElab t
+        in ?hooesval
 
 einsumTestImpl : (str : String) -> isRight (einsumTestO str)
   
@@ -141,7 +142,7 @@ einsum exprStr args = case parseEinsumString exprStr of
         -- Generate the output shape as a vector literal from the output type
         outputShape = generateShapeVect (toList outputTy)
         -- Create zeros' with the correct output shape and generic type 'a'
-        implBody = `(zeros' {shape = ~outputShape} {a = a})
+        implBody = `(zeros {shape = ~outputShape} {a = a})
 
         -- Build the full lambda expression
         fullImpl = foldr (\(paramName, shape), body => 

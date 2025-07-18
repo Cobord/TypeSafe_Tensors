@@ -30,8 +30,8 @@ parameters {a : Type} {auto _ : Num a}
     TensorA [crossStructure, features] a
   crossAttention {allAlg = ((::) {allAlg=_})} softmax q k v =
     let attentionMatrix : TensorA [crossStructure, inputStructure] a
-        attentionMatrix = softmax <-$-> (q `multiplyMMT` k)
-    in attentionMatrix `matMul` v
+        attentionMatrix = softmax <-$-> (q `matrixMatrixProductA` k)
+    in attentionMatrix `matMulA` v
   
 
   ||| Self-attention is cross-attention where inputStructure = crossStructure
@@ -78,9 +78,9 @@ parameters {a : Type} {auto _ : Num a}
     (params : SelfAttentionParams features) ->
     TensorA [inputStructure, features] a
   SAImpl {allAlg = ((::) {allAlg=_})} softmax input (MkSAParams queryMat keyMat valueMat)
-    = let queries = queryMat `multiplyMMT` input
-          keys = keyMat `multiplyMMT` input
-          values = valueMat `multiplyMMT` input
+    = let queries = queryMat `matrixMatrixProductA` input
+          keys = keyMat `matrixMatrixProductA` input
+          values = valueMat `matrixMatrixProductA` input
     in selfAttention softmax queries keys values
 
   ||| Self-attention as a parametric map
@@ -142,7 +142,7 @@ inputMatrix = fromArray' [ [1, 3]
 ||| Parameters for self-attention
 ||| Here just a matrix of ones
 params : {d : Nat} -> SelfAttentionParams (VectCont d) {a=Double}
-params = MkSAParams ones ones ones
+params = MkSAParams onesA onesA onesA
 
 ||| Example output for cubical self-attention
 SAOutputMatrix : Tensor [4, 2] Double
@@ -157,7 +157,7 @@ SATreeForwardPass = Run SelfAttentionTree
 
 
 tree1 : TensorA [BTreeLeafCont, VectCont 2] Double
-tree1 = fromArray $ fromBTreeLeaf $ 
+tree1 = fromArrayA $ fromBTreeLeaf $ 
   Node' (Leaf (fromVect [4, 5])) (Leaf (fromVect [-12, 25]))
 
 ||| Example output for tree self-attention
