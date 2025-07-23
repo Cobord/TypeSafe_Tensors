@@ -1,5 +1,6 @@
 module Data.Tensor
 
+import Data.DPair
 import public Data.Fin
 import public Data.Vect
 
@@ -66,7 +67,8 @@ toArrayA (TS xs) = toArrayA <$> xs
 
 
 -----------------
--- Hancock tensor product
+-- Composition product
+-- TensorA defined above can be thought of as a composition (in the composition of containers) of applicative containers defining its shape
 -----------------
 
 fromTensorA : {conts : List ApplC} -> {shape : ApplContList conts} ->
@@ -74,16 +76,16 @@ fromTensorA : {conts : List ApplC} -> {shape : ApplContList conts} ->
 fromTensorA {shape = []} (TZ val) = () <| \_ => val
 fromTensorA {shape = (c :: cs)} (TS ex)
   = let (cs' <| index') = fromTensorA {shape=cs} <$> ex
-    in ?fromTensorA_rhs_2  <| ?fromTensorA_rhs_3
+    in (cs' <| shapeExt . index') <| uncurry (\x => indexCont (index' x))
 
--- toTensorA : {conts : List ApplC} -> {shape : ApplContList conts} ->
---   Ext (prodApplConts shape) a -> TensorA shape a
--- toTensorA x = ?toTensorA_rhs
--- toTensorA {shape = []} (() <| index) = TZ $ index ()
--- toTensorA {shape = (c :: cs)} (cs' <| index')
---   = let ex = toTensorA {shape=cs} <$> index' cs'
---     in TS ex
-
+-- 
+public export
+toTensorA : {conts : List ApplC} -> {shape : ApplContList conts} ->
+  (prodApplConts shape) `fullOf` a -> TensorA shape a
+toTensorA {shape = []} (() <| indexCont) = TZ (indexCont ())
+toTensorA {shape = (c :: cs)} ((cshTerm <| cposTerm) <| indexCont)
+  = TS $ cshTerm <| \d => toTensorA $ cposTerm d <| curry indexCont d
+    
 
 namespace EqTensorA
   public export
