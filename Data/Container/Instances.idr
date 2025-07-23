@@ -15,16 +15,24 @@ import public Data.Container.TreeUtils -- rexport all the stuff inside
 %hide Data.Vect.fromList
 
 
+||| Examples
 namespace MainContainerExamples
-  ||| Examples
+  ||| Container with a single thing
+  public export
+  ScalarCont : Cont
+  ScalarCont = (_ : Unit) !> Unit
+
+  ||| Product
   public export
   PairCont : Cont
   PairCont = (_ : Unit) !> Bool
-  
+
+  ||| Coproduct
   public export
-  VectCont : Nat -> Cont
-  VectCont n = (_ : Unit) !> Fin n
-  
+  EitherCont : Cont
+  EitherCont = (_ : Bool) !> Unit
+
+  ||| +1  
   public export
   MaybeCont : Cont
   MaybeCont = (b : Bool) !> (if b then Unit else Void)
@@ -32,33 +40,44 @@ namespace MainContainerExamples
   public export
   ListCont : Cont
   ListCont = (n : Nat) !> (Fin n)
+  
+  ||| Container of n things 
+  public export
+  VectCont : Nat -> Cont
+  VectCont n = (_ : Unit) !> Fin n
 
+  ||| Container of an infinite number of things
   public export
   StreamCont : Cont
   StreamCont = (_ : Unit) !> Nat
   
-  ||| Trees with data stored at nodes
+  ||| Binary trees with data stored at nodes
   public export
   BTreeNodeCont : Cont
   BTreeNodeCont = (b : BTreeShape) !> FinBTreeNode b
   
-  ||| Trees with data stored at leaves
+  ||| Binary trees with data stored at leaves
   public export
   BTreeLeafCont : Cont
   BTreeLeafCont = (b : BTreeShape) !> FinBTreeLeaf b
 
 
 namespace ExtensionsOfMainContainerExamples
+  ||| Isomorphic to the Identity
+  public export
+  Scalar' : Type -> Type
+  Scalar' = Ext ScalarCont
+
   ||| Isomorphic to Pair
   public export
   Pair' : Type -> Type
   Pair' = Ext PairCont
   
-  ||| Isomorphic to Vect
+  ||| Isomorphic to Either
   public export
-  Vect' : (n : Nat) -> Type -> Type
-  Vect' n x = (VectCont n) `fullOf` x
-  
+  Either' : Type -> Type
+  Either' = Ext EitherCont
+
   ||| Isomorphic to Maybe
   public export
   Maybe' : Type -> Type
@@ -68,6 +87,17 @@ namespace ExtensionsOfMainContainerExamples
   public export
   List' : Type -> Type
   List' = Ext ListCont
+
+  ||| Isomorphic to Vect
+  public export
+  Vect' : (n : Nat) -> Type -> Type
+  Vect' n x = (VectCont n) `fullOf` x
+
+  ||| Isomorphic to Stream
+  public export
+  Stream' : Type -> Type
+  Stream' = Ext StreamCont
+
   
   ||| Isomorphic to Trees with data at only nodes
   public export
@@ -158,10 +188,10 @@ namespace VectInstances
   {n : Nat} -> Foldable (Ext (VectCont n)) where
     foldr f z v = foldr f z (toVect v)
   
-  public export
-  {n : Nat} -> Applicative (Ext (VectCont n)) where
-    pure a = fromVect $ pure a
-    fs <*> vs = fromVect $ toVect fs <*> toVect vs
+  -- public export
+  -- {n : Nat} -> Applicative (Ext (VectCont n)) where
+  --   pure a = fromVect $ pure a
+  --   fs <*> vs = fromVect $ toVect fs <*> toVect vs
 
   public export
   {n : Nat} -> Num a => Algebra (Ext (VectCont n)) a where

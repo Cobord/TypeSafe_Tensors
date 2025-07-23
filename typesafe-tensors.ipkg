@@ -1,4 +1,4 @@
-package TypeSafeTensors
+package typesafe-tensors
 -- version =
 authors = "Bruno Gavranovic"
 -- maintainers =
@@ -19,11 +19,11 @@ depends = contrib, hashmap, elab-util
 modules = Data.Container.Definition,
           Data.Container.Morphism,
           Data.Container.Instances,
+          Data.Container.Applicative,
           Data.Container.TreeUtils,
-          Data.Tensor.Tensor,
-          Data.Tensor.TensorExamples,
+          Data.Tensor,
           Data.Tensor.NaperianTensor,
-          Data.Tensor.TensorUtils,
+          Data.Tensor.Utils,
           Data.Functor.Naperian,
           Data.Tree,
           Data.Tensor.Einsum.EinsumExpr,
@@ -35,7 +35,8 @@ modules = Data.Container.Definition,
           Architectures.Linear,
           Algebra,
           Misc,
-          Data.ElabUtilTest
+          Data.ElabUtilTest,
+          Examples.Tensors
 
 -- main file (i.e. file to load at REPL)
 -- main =

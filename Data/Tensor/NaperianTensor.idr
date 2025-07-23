@@ -3,10 +3,9 @@ module Data.Tensor.NaperianTensor
 import Data.Fin
 import Data.Vect
 
-
 import Data.Container.Definition
 import Data.Container.Instances
-import Data.Tensor.Tensor
+import Data.Tensor
 import Data.Functor.Naperian
 
 
@@ -45,16 +44,16 @@ Naperian (TensorA shape) where
   tabulate {allNaperian} = tensorTabulate allNaperian
 
 public export
-transposeMatrix : {i, j : Cont} ->
+transposeMatrixA : {i, j : Cont} ->
   Applicative (Ext i) =>
   Applicative (Ext j) =>
   (allNaperian : AllNaperian [i, j]) =>
   TensorA [i, j] a -> TensorA [j, i] a
-transposeMatrix {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))}
+transposeMatrixA {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))}
   = fromArrayA . Naperian.transpose . toArrayA
 
 
 public export
-transposeMatrix' : {i, j : Nat} ->
+transposeMatrix : {i, j : Nat} ->
   Tensor [i, j] a -> Tensor [j, i] a
-transposeMatrix'  = toCubicalTensor . transposeMatrix . fromCubicalTensor
+transposeMatrix  = ToCubicalTensor . transposeMatrixA . FromCubicalTensor

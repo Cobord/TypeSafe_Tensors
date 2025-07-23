@@ -5,7 +5,7 @@ import Data.Vect
 import Data.Container.Definition
 import Data.Container.Instances
 import Data.Tensor.Tensor
-import Data.Tensor.TensorUtils
+import Data.Tensor.Utils
 import Para.Para
 import Architectures.Softmax
 import Algebra

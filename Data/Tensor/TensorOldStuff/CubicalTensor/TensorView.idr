@@ -11,7 +11,7 @@ import Misc
 -- But that's fine, because reshape only works for cube-shaped tensors
 public export
 record TensorView (shape : Vect n Nat) (dtype : Type) where
-    constructor MkTensorView
+    constructor ToCubicalTensorensorView
     flatData : Vect (prod shape) dtype
  
 {-
@@ -43,7 +43,7 @@ cc (s :: ss) (i :: is) = (finToNat i * (prod ss)) + cc ss is
 
 
 aTensor : TensorView [10] Int
-aTensor = MkTensorView a
+aTensor = ToCubicalTensorensorView a
 
 prff : {a : Nat} -> LTE (S a) (S a)
 prff {a = 0} = LTESucc LTEZero
@@ -68,7 +68,7 @@ indexTensorView : {shape : Vect n Nat}
   -> (i : IndexT shape)
   -> TensorView shape dtype
   -> dtype
-indexTensorView i (MkTensorView flatData) = index (indexCount i) flatData
+indexTensorView i (ToCubicalTensorensorView flatData) = index (indexCount i) flatData
 
 
 

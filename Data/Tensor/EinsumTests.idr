@@ -26,7 +26,7 @@ test3 = %search
 test4 : IsLeft (parseEinsumString "invalid")
 test4 = %search
 
-test5 : IsLeft (parseEinsumString "")           -- Should fail with EmptyInput
+test5 : IsLeft (parseEinsumString "")
 test5 = %search
 
 test6 : IsLeft (parseEinsumString "123,456->789")

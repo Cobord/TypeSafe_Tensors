@@ -96,7 +96,7 @@ public export
 Matrix : (rows, cols : Nat) -> (dtype : Type) -> Type
 Matrix rows cols dtype = Tensor [rows, cols] dtype
 
-namespace ApplicativeT
+namespace ApplicativeTensorA
   -- unit of a monoidal functor
   public export
   tensorReplicate : {shape : Vect n Nat} -> a -> Tensor shape a
@@ -116,7 +116,7 @@ namespace ApplicativeT
     pure x = tensorReplicate x
     fs <*> xs = uncurry ($) <$> liftA2Tensor fs xs 
 
-namespace NumericT
+namespace NumericTensorA
   -- Pointwise Num structure
   public export
   {shape : Vect n Nat} -> Num a => Num (Tensor shape a) where

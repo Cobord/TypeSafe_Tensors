@@ -10,7 +10,7 @@ import Misc
 ||| This is okay, because reshape only works for cube-shaped tensors
 public export
 record TensorView (shape : Vect n Nat) (dtype : Type) where
-    constructor MkTensorView
+    constructor ToCubicalTensorensorView
     flatData : Vect (prod shape) dtype
 
 {-
@@ -69,7 +69,10 @@ Given shape : Vect n Nat, the way we compute index is by taking a dot product of
 That other vector is called strides.
 -}
 
-
+||| Helper function for computing strides
+||| On empty list it returns empty
+||| On non-empty list it removes the first element, and reverses the rest
+||| stridesHelp [3, 4, 5] = [1, 5, 4]
 stridesHelp : (shape : Vect n Nat) -> Vect n Nat
 stridesHelp [] = []
 stridesHelp (x :: xs) =  [1] ++ reverse xs
@@ -111,7 +114,12 @@ ddFin {n=0} FZ _ impossible
 ddFin {n=0} (FS x) _ impossible
 ddFin {n = (S k)} i stride = ddFin i stride
 
-
+||| Given a shape and an index, compute the index in the flattened tensor
+||| Example:
+||| dotStr [3, 4, 5] [0, 1, 2] = 11 : Fin (60)
+||| dotStr [3, 4, 5] [1, 0, 4] = 24 : Fin (60)
+||| dotStr [3, 4] [0, 1] = 1
+||| dotStr [3] [0] = 0
 dotStr : {shape : Vect n Nat} -> IndexT shape -> Fin (prod shape)
 dotStr {shape} x with (strides shape)
   dotStr {shape=[]} []                 | [] = 0

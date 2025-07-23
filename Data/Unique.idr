@@ -178,7 +178,7 @@ complement (x :: xs) ys = case decElemNotInUniqueList x ys of
 
 
 data TestList : (a : Type) -> DecEq a => Type where
-  MkTestList : DecEq a =>
+  ToCubicalTensorestList : DecEq a =>
     (xs : List a) ->
     {ul : UniqueList a} ->
     {auto prf : fromListMaybe xs = Just ul} ->
@@ -187,7 +187,7 @@ data TestList : (a : Type) -> DecEq a => Type where
 
 
 test : TestList Nat
-test = MkTestList [1,2,3]
+test = ToCubicalTensorestList [1,2,3]
 
 namespace UniqueListFrom
   ||| A list of unique elements with elements from ls

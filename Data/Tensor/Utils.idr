@@ -1,12 +1,12 @@
-module Data.Tensor.TensorUtils
+module Data.Tensor.Utils
 
 import Data.List
-import Data.Vect 
 import Data.Nat -- Add import for Cast
 -- import System.Random
 
 
-import Data.Tensor.Tensor
+import Data.Tensor
+import Data.Container.Morphism
 import Data.Functor.Naperian -- needed for range
 import Misc
 
@@ -28,7 +28,7 @@ ones = tensorReplicate (fromInteger 1)
 
 public export
 range : {n : Nat} -> Cast Nat a => Tensor [n] a
-range {n} = fromArray' $ cast . finToNat <$> positions {f=Vect n}
+range {n} = fromArray $ cast . finToNat <$> positions {f=Vect n}
 
 ||| Number of elements in a cubical tensor
 size : {shape : List Nat} -> (0 _ : Tensor shape a) -> Nat
@@ -64,3 +64,17 @@ max = maxInList . flatten
 -- public export
 -- eye : Num a => TensorA [n, n] a
 -- eye = ?eye_rhs
+
+
+-- TO DO reshapes, we need this functorial action for general tensors, and for that, we need fold over hancock product, but that has some problems!
+public export
+reshapeA : {conts1, conts2 : List ApplC} ->
+  {shape1 : ApplContList conts1} -> {shape2 : ApplContList conts2} ->
+  (prodApplConts shape1 =%> prodApplConts shape2) ->
+  TensorA shape1 a -> TensorA shape2 a
+--   (Ext (prodApplConts shape1) a -> Ext (prodApplConts shape2) a)
+reshapeA dLens t1
+  = let tt = contMapExt dLens 
+    in ?alaooo
+
+  

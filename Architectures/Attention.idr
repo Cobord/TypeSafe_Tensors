@@ -7,7 +7,7 @@ import Data.Container.Instances
 import Data.Container.TreeUtils
 
 import Data.Tensor.Tensor
-import Data.Tensor.TensorUtils
+import Data.Tensor.Utils
 import Data.Tree
 import Para.Para
 import Architectures.Softmax
@@ -55,8 +55,8 @@ parameters {a : Type} {auto _ : Num a}
     (k : Tensor [inputSize, featureSize] a) ->
     (v : Tensor [inputSize, featureSize] a) ->
     Tensor [inputSize, featureSize] a
-  selfAttention' softmax' (MkT q) (MkT k) (MkT v)
-    = MkT $ selfAttention (fromCubicalTensor . softmax' . toCubicalTensor) q k v
+  selfAttention' softmax' (ToCubicalTensor q) (ToCubicalTensor k) (ToCubicalTensor v)
+    = ToCubicalTensor $ selfAttention (FromCubicalTensor . softmax' . ToCubicalTensor) q k v
 
 
   ||| Data structure for holding parameters of self-attention
@@ -104,7 +104,7 @@ parameters {a : Type} {auto _ : Num a}
          (Tensor [inputSize, featureSize] a)
   SelfAttention' softmax' = MkPara
     (const (SelfAttentionParams (VectCont featureSize)))
-    (\inp => toCubicalTensor . (SAImpl {features=VectCont featureSize} (fromCubicalTensor . softmax' . toCubicalTensor) (fromCubicalTensor inp)))
+    (\inp => ToCubicalTensor . (SAImpl {features=VectCont featureSize} (FromCubicalTensor . softmax' . ToCubicalTensor) (FromCubicalTensor inp)))
   
 
 -- Self Attention for matrices
@@ -134,7 +134,7 @@ SAMatrixForwardPass = Run SelfAttentionMat
 
 
 inputMatrix : Tensor [4, 2] Double
-inputMatrix = fromArray' [ [1, 3]
+inputMatrix = fromArray [ [1, 3]
                          , [2, 8]
                          , [0, 0]
                          , [1, 3]]
