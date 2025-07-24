@@ -3,7 +3,7 @@
 This is framework for pure functional tensor processing, implemented in Idris 2. It
 * Is **type-safe**: tensor indexing and contractions fail at compile time if types do not match
 * **implements non-cubical tensors**: tensors of trees and streams instead of just arrays are supported
-* **is made with ergonomics in mind**: it aims to provide the familiar numpy/Pytorch interface to the user
+* **is made with ergonomics in mind**: it aims to provide the standard numpy/Pytorch interface to the user on the tensor side, and functional programming interface on the programming side
 
 
 It is expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) as described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).

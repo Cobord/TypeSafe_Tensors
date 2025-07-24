@@ -32,6 +32,7 @@ t2 = fromArray [ [0, 1, 2, 3, 4]
                , [5, 6, 7, 8, 9]]
 
 
+
 ||| Safe elementwise addition
 tSum : Tensor [3, 4] Double
 tSum = t1 + t1
@@ -87,6 +88,12 @@ t0again = FromCubicalTensor t0
 
 t1again : TensorA [VectCont 3, VectCont 4] Double
 t1again = FromCubicalTensor t1 
+
+-- dLens : ComposeContainers [VectCont 3, VectCont 4] =%> ComposeContainers [VectCont 12]
+-- dLens = (\_ => EmptyExt) <%! \x, y' => ?dLens_rhs_1
+-- 
+-- t1Reshaped : TensorA [VectCont 12] Double
+-- t1Reshaped = reshapeTensorA dLens t1again
 
 {- 
 Instead of an n-element vector, here's tree with leaves as elements

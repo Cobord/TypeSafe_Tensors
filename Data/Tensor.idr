@@ -6,6 +6,7 @@ import public Data.Vect
 
 import public Data.Container.Definition
 import public Data.Container.Instances
+import public Data.Container.Morphism
 import public Data.Container.Applicative
 import public Algebra
 import public Data.Tree
@@ -71,20 +72,30 @@ toArrayA (TS xs) = toArrayA <$> xs
 -- TensorA defined above can be thought of as a composition (in the composition of containers) of applicative containers defining its shape
 -----------------
 
+public export
 fromTensorA : {conts : List ApplC} -> {shape : ApplContList conts} ->
-  TensorA shape a -> Ext (prodApplConts shape) a
+  TensorA shape a -> Ext (ComposeContainers conts) a
 fromTensorA {shape = []} (TZ val) = () <| \_ => val
 fromTensorA {shape = (c :: cs)} (TS ex)
   = let (cs' <| index') = fromTensorA {shape=cs} <$> ex
     in (cs' <| shapeExt . index') <| uncurry (\x => indexCont (index' x))
 
--- 
 public export
 toTensorA : {conts : List ApplC} -> {shape : ApplContList conts} ->
-  (prodApplConts shape) `fullOf` a -> TensorA shape a
+  (ComposeContainers conts) `fullOf` a -> TensorA shape a
 toTensorA {shape = []} (() <| indexCont) = TZ (indexCont ())
 toTensorA {shape = (c :: cs)} ((cshTerm <| cposTerm) <| indexCont)
   = TS $ cshTerm <| \d => toTensorA $ cposTerm d <| curry indexCont d
+
+
+||| General, dependent-lens based applicative tensor reshaping
+||| Also should capture views, traversals, and other that don't touch content 
+public export
+reshapeTensorA : {contsOld, contsNew : List ApplC} ->
+  {oldShape : ApplContList contsOld} -> {newShape : ApplContList contsNew} ->
+  (ComposeContainers contsOld =%> ComposeContainers contsNew) ->
+  TensorA oldShape a -> TensorA newShape a
+reshapeTensorA dLens = toTensorA . (contMapExt dLens) . fromTensorA
     
 
 namespace EqTensorA
@@ -358,17 +369,17 @@ namespace CubicalTensor
 
   public export
   Tensor' : (shape : List Nat) -> Type -> Type
-  Tensor' shape = TensorA (natsToApplConts shape)
+  Tensor' shape = TensorA (NatsToApplConts shape)
 
   public export
   {shape : List Nat} ->
-  AllEq (natsToApplConts shape) a =>
+  AllEq (NatsToApplConts shape) a =>
   Eq (Tensor' shape a) where
     (==) = tensorEq
 
   public export
   {shape : List Nat} ->
-  AllShow (natsToApplConts shape) a =>
+  AllShow (NatsToApplConts shape) a =>
   Show (Tensor' shape a) where
     show = tensorShow
 
@@ -408,7 +419,7 @@ namespace CubicalTensor
 
   public export
   ToCubicalTensor' : {shape : List Nat} ->
-    TensorA (natsToApplConts shape) a -> Tensor' shape a
+    TensorA (NatsToApplConts shape) a -> Tensor' shape a
   -- ToCubicalTensor' t = ToCubicalTensor t
   ToCubicalTensor' t = ?ToCubicalTensor'_rhs
   -}
@@ -433,31 +444,31 @@ namespace CubicalTensor
   public export
   record Tensor (shape : List Nat) a where
     constructor ToCubicalTensor
-    FromCubicalTensor : TensorA (natsToApplConts shape) a
+    FromCubicalTensor : TensorA (NatsToApplConts shape) a
 
   namespace TensorInterfaces
     public export
     {shape : List Nat} ->
-    AllEq (natsToApplConts shape) a =>
+    AllEq (NatsToApplConts shape) a =>
     Eq (Tensor shape a) where
         (ToCubicalTensor t) == (ToCubicalTensor t') = tensorEq t t'
 
     public export
     {shape : List Nat} ->
-    AllShow (natsToApplConts shape) a =>
+    AllShow (NatsToApplConts shape) a =>
     Show (Tensor shape a) where
       show (ToCubicalTensor t) = show t
 
     public export
     {shape : List Nat} -> Num a => Num (Tensor shape a) where
-      fromInteger i = ToCubicalTensor $ fromInteger {ty=(TensorA (natsToApplConts shape) a)} i
-      (ToCubicalTensor xs) + (ToCubicalTensor ys) = ToCubicalTensor $ (+) {ty=(TensorA (natsToApplConts shape) a)} xs ys
-      (ToCubicalTensor xs) * (ToCubicalTensor ys) = ToCubicalTensor $ (*) {ty=(TensorA (natsToApplConts shape) a)} xs ys
+      fromInteger i = ToCubicalTensor $ fromInteger {ty=(TensorA (NatsToApplConts shape) a)} i
+      (ToCubicalTensor xs) + (ToCubicalTensor ys) = ToCubicalTensor $ (+) {ty=(TensorA (NatsToApplConts shape) a)} xs ys
+      (ToCubicalTensor xs) * (ToCubicalTensor ys) = ToCubicalTensor $ (*) {ty=(TensorA (NatsToApplConts shape) a)} xs ys
 
     public export
     {shape : List Nat} -> Neg a => Neg (Tensor shape a) where
       negate (ToCubicalTensor t) = ToCubicalTensor $ negate t
-      (ToCubicalTensor xs) - (ToCubicalTensor ys) = ToCubicalTensor $ (-) {ty=(TensorA (natsToApplConts shape) a)} xs ys
+      (ToCubicalTensor xs) - (ToCubicalTensor ys) = ToCubicalTensor $ (-) {ty=(TensorA (NatsToApplConts shape) a)} xs ys
 
     public export
     {shape : List Nat} -> Abs a => Abs (Tensor shape a) where
@@ -476,13 +487,13 @@ namespace CubicalTensor
 
     public export
     {shape : List Nat} ->
-    AllAlgebra (natsToApplConts shape) a =>
+    AllAlgebra (NatsToApplConts shape) a =>
     Algebra (Tensor shape) a where
         reduce (ToCubicalTensor t) = reduce t
 
     public export
     tensorFoldrA : {shape : List Nat} ->
-      (el -> acc -> acc) -> acc -> TensorA (natsToApplConts shape) el -> acc
+      (el -> acc -> acc) -> acc -> TensorA (NatsToApplConts shape) el -> acc
     tensorFoldrA {shape = []} f z t = foldr f z t
     tensorFoldrA {shape = (s :: ss)} f z (TS xs)
       = foldr (\t, acc => tensorFoldrA f acc t) z xs
@@ -496,7 +507,7 @@ namespace CubicalTensor
     -- TODO implement Traversable for TensorA, and then port it here
     public export
     tensorTraverseA : {shape : List Nat} -> Applicative f =>
-      (a -> f b) -> TensorA (natsToApplConts shape) a -> f (TensorA (natsToApplConts shape) b)
+      (a -> f b) -> TensorA (NatsToApplConts shape) a -> f (TensorA (NatsToApplConts shape) b)
     tensorTraverseA {shape = []} fn (TZ val) = TZ <$> fn val
     tensorTraverseA {shape = (s :: ss)} fn (TS xs)
       = TS <$> ?alllao -- (fromVect <$> traverse (tensorCTraverse fn) (toVect xs))
@@ -508,7 +519,7 @@ namespace CubicalTensor
 
   public export
   dot : {shape : List Nat} -> {a : Type}
-    -> Num a => AllAlgebra (natsToApplConts shape) a
+    -> Num a => AllAlgebra (NatsToApplConts shape) a
     => Tensor shape a -> Tensor shape a -> Tensor [] a
   dot (ToCubicalTensor xs) (ToCubicalTensor ys) = ToCubicalTensor $ TZ $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA xs ys
 
@@ -520,7 +531,7 @@ namespace CubicalTensor
   public export
   fromArrayHelper : {shape : List Nat}
     -> Array shape a
-    -> TensorA (natsToApplConts shape) a
+    -> TensorA (NatsToApplConts shape) a
   fromArrayHelper {shape=[]} x = TZ x
   fromArrayHelper {shape=(_ :: _)} x = TS $ fromVect $ fromArrayHelper <$> x
 
@@ -531,6 +542,10 @@ namespace CubicalTensor
   reshape : {oldShape, newShape : List Nat} ->
     {auto prf : prod oldShape = prod newShape} ->
     Tensor oldShape a -> Tensor newShape a
+  reshape = ToCubicalTensor
+          . (reshapeTensorA $
+            cubicalTensorProdNat %>> dLensProductReshape %>> prodNatToCubicalTensor)
+          . FromCubicalTensor
 
 namespace IndexTensor
   public export
@@ -571,7 +586,7 @@ namespace IndexTensor
   public export
   indexTensor : {shape : List Nat}
                -> (t : Tensor shape a)
-               -> (index : IndexT (natsToApplConts shape) (FromCubicalTensor t))
+               -> (index : IndexT (NatsToApplConts shape) (FromCubicalTensor t))
                -> a
   indexTensor (ToCubicalTensor t) index = indexTensorA t index
 
@@ -589,7 +604,7 @@ namespace IndexTensor
 
   public export
   (@@@) : {shape : List Nat}
-    -> (t : Tensor shape a) -> IndexT (natsToApplConts shape) (FromCubicalTensor t) -> a
+    -> (t : Tensor shape a) -> IndexT (NatsToApplConts shape) (FromCubicalTensor t) -> a
   (@@@) (ToCubicalTensor t) i = indexTensorA t i
 
 

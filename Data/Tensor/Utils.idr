@@ -70,9 +70,9 @@ max = maxInList . flatten
 public export
 reshapeA : {conts1, conts2 : List ApplC} ->
   {shape1 : ApplContList conts1} -> {shape2 : ApplContList conts2} ->
-  (prodApplConts shape1 =%> prodApplConts shape2) ->
+  (ComposeContainers conts1 =%> ComposeContainers conts2) ->
   TensorA shape1 a -> TensorA shape2 a
---   (Ext (prodApplConts shape1) a -> Ext (prodApplConts shape2) a)
+--   (Ext (ComposeContainers shape1) a -> Ext (ComposeContainers shape2) a)
 reshapeA dLens t1
   = let tt = contMapExt dLens 
     in ?alaooo

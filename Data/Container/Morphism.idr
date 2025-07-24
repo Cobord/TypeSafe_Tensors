@@ -36,7 +36,7 @@ valContMap {c1=(shp !> pos)} {c2=(shp' !> pos')} (fwd <&! fwd')
   = fwd <%! (\x, k, x' => k (fwd' x x'))
 
 ||| Ext itself is a functor: Cont -> [Type, Type]
-||| It maps every dLens to a natural transformation
+||| On morphisms, it maps every dLens to a natural transformation
 ||| Can be used to reshape tensors, among others
 public export
 contMapExt : {c1, c2 : Cont} ->
@@ -56,11 +56,15 @@ contMapExt (fwd <%! bwd) (sh <| index) = fwd sh <| (\y' => index (bwd sh y'))
 -- %pair (=%>) fwd bwd
 
 
--- Composition of container morphisms
--- public export
--- (⨾) : a =%> b -> b =%> c -> a =%> c
--- (⨾) x y =
---     (y.fwd . x.fwd) <%!
---     (\z => x.bwd z . y.bwd (x.fwd z))
+||| Composition of dependent lenses
+public export
+compDepLens : a =%> b -> b =%> c -> a =%> c
+compDepLens x y =
+    (y.fwd . x.fwd) <%!
+    (\z => x.bwd z . y.bwd (x.fwd z))
 
--- export infixl 5 ⨾
+public export
+(%>>) : a =%> b -> b =%> c -> a =%> c
+(%>>) = compDepLens
+
+public export infixl 5 %>>

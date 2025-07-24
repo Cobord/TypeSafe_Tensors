@@ -73,12 +73,12 @@ That other vector is called strides.
 ||| On empty list it returns empty
 ||| On non-empty list it removes the first element, and reverses the rest
 ||| stridesHelp [3, 4, 5] = [1, 5, 4]
-stridesHelp : (shape : Vect n Nat) -> Vect n Nat
+stridesHelp : (shape : List Nat) -> List Nat
 stridesHelp [] = []
 stridesHelp (x :: xs) =  [1] ++ reverse xs
 
 ||| Given a list of numbers, return a new list where each element is the product of all preceding ones
-foldProd : Vect n Nat -> Vect n Nat
+foldProd : List Nat -> List Nat
 foldProd [] = []
 foldProd (x :: xs) = x :: ((x*) <$> foldProd xs)
 
@@ -88,12 +88,12 @@ foldProd (x :: xs) = x :: ((x*) <$> foldProd xs)
 -- Shape = [3, 4] -> Strides = [4, 1]
 -- Shape = [3] -> Strides = [1]
 -- Here strides are in terms of number of elements, not bytes
-strides : (shape : Vect n Nat) -> Vect n Nat
+strides : (shape : List Nat) -> List Nat
 strides = reverse . foldProd . stridesHelp
 
 ||| 0-based indexing
 public export
-data IndexT : (shape : Vect n Nat) -> Type where
+data IndexT : (shape : List Nat) -> Type where
   Nil  : IndexT []
   (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
 
@@ -120,14 +120,14 @@ ddFin {n = (S k)} i stride = ddFin i stride
 ||| dotStr [3, 4, 5] [1, 0, 4] = 24 : Fin (60)
 ||| dotStr [3, 4] [0, 1] = 1
 ||| dotStr [3] [0] = 0
-dotStr : {shape : Vect n Nat} -> IndexT shape -> Fin (prod shape)
-dotStr {shape} x with (strides shape)
-  dotStr {shape=[]} []                 | [] = 0
-  dotStr {shape=(s :: ss)} (is :: iss) | (st :: sts) = 
-    let amt : Fin (S ((pred s) * st)) := ddFin is st
-        rest : Fin (prod ss) := dotStr iss -- do we know prod ss = S ?n  ?
-        aa = Data.Fin.Arith.(+) amt
-    in ?dotStr_rhs
+dotStr : {shape : List Nat} -> IndexT shape -> Fin (prod shape)
+-- dotStr {shape} x with (strides shape)
+--   dotStr {shape=[]} []                 | [] = 0
+--   dotStr {shape=(s :: ss)} (is :: iss) | (st :: sts) = 
+--     let amt : Fin (S ((pred s) * st)) := ddFin is st
+--         rest : Fin (prod ss) := dotStr iss -- do we know prod ss = S ?n  ?
+--         aa = Data.Fin.Arith.(+) amt
+--     in ?dotStr_rhs
 
 
 -- hmmm : (n : Nat) -> Fin m
@@ -146,7 +146,7 @@ stride = 3   0   3    6
 -}
 
 ||| Note: (prod shape) can be zero. This means the argument (i : IndexT shape) can never be produced, as (prod shape) == 0 implies that one of the elements of shape is zero. This prevents us from being required to produce an uninhabited output type: Fin 0.
-indexCount : (shape : Vect n Nat) -> (i : IndexT shape) -> Fin (prod shape)
+indexCount : (shape : List Nat) -> (i : IndexT shape) -> Fin (prod shape)
 indexCount shape i
   = let str = strides shape
     in ?indexCount_rhs

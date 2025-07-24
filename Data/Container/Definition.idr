@@ -59,6 +59,10 @@ Functor (Ext c) where
   map {c=shp !> pos} f (s <| v) = s <| f . v
 
 public export
+EmptyExt : Ext (Const2 () l) ()
+EmptyExt = () <| \_ => ()
+
+public export
 liftA2ConstCont : Ext (Const2 () l) a -> Ext (Const2 () l) b -> Ext (Const2 () l) (a, b)
 liftA2ConstCont (() <| va) (() <| vb) = () <| (\x => (va x, vb x))
 
@@ -81,6 +85,7 @@ public export
 
 public export infixr 0 ><
 ||| Hancock, Dirichlet, or tensor product of containers
+||| Monoid with CUnit
 public export
 (><) : Cont -> Cont -> Cont
 (shp !> pos) >< (shp' !> pos') = ((s, s') : (shp, shp')) !> (pos s, pos' s')
@@ -94,8 +99,18 @@ public export
   Right s' => pos' s')
 
 
+public export infixr 0 >@<
+||| Composition of containers (polynomial composition)
+||| Non-symmetric in general
+||| Monoid with CUnit
+public export
+(>@<) : Cont -> Cont -> Cont
+c >@< d = ((sh <| ind) : Ext c (d.shp)) !> (cp : c.pos sh ** d.pos (ind cp))
+
+
+
 ||| Specialised to Hancock tensor product
-||| Coult be as simple as foldr (><) CUnit, but want to take care of associativity
+||| Could be as simple as foldr (><) CUnit, but want to take care of associativity
 public export
 prodConts : List Cont -> Cont
 prodConts = foldr (><) CUnit
