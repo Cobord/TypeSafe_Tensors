@@ -20,15 +20,15 @@ generateShapeVect [] = `([])
 generateShapeVect (x :: xs) = 
   `(~(IVar EmptyFC (charToVarName x)) :: ~(generateShapeVect xs))
 
-||| Generate Tensor [i, j] a from shape ['i', 'j']
+||| Generate Tensor [i, j] dtype from shape ['i', 'j']
 public export
 generateTensorAType : List Char -> TTImp
 generateTensorAType shape = 
   let shapeVect = generateShapeVect shape
-  in `(Tensor ~(shapeVect) a)
+  in `(Tensor ~(shapeVect) dtype)
 
 
-||| ['i', 'j', 'k'] -> {a : Type} -> Num a => {i, j, k : Nat} -> TensorA [i, j, k] a
+||| ['i', 'j', 'k'] -> {dtype : Type} -> Num a => {i, j, k : Nat} -> TensorA [i, j, k] dtype
 public export
 generateOutputType : List Char -> TTImp
 generateOutputType cs =
@@ -38,9 +38,9 @@ generateOutputType cs =
         IPi EmptyFC MW ImplicitArg (Just (charToVarName var)) `(Nat) acc) outputTensorAType cs
 
       -- Add Num a constraint
-      withNumConstraint : TTImp := IPi EmptyFC MW AutoImplicit Nothing `(Num a) withNatParams
+      withNumConstraint : TTImp := IPi EmptyFC MW AutoImplicit Nothing `(Num dtype) withNatParams
 
-      fullType : TTImp := IPi EmptyFC MW ImplicitArg (Just (UN (Basic "a"))) `(Type) withNumConstraint
+      fullType : TTImp := IPi EmptyFC MW ImplicitArg (Just (UN (Basic "dtype"))) `(Type) withNumConstraint
   in fullType
 
 
@@ -62,10 +62,10 @@ buildEinsumFunctionType uniqueVars inputShapes outputShape =
       IPi EmptyFC MW ImplicitArg (Just (charToVarName var)) `(Nat) acc) mainFunctionType uniqueVars
     
     -- Add Num a constraint
-    withNumConstraint : TTImp := IPi EmptyFC MW AutoImplicit Nothing `(Num a) withNatParams
+    withNumConstraint : TTImp := IPi EmptyFC MW AutoImplicit Nothing `(Num dtype) withNatParams
     
     -- Add implicit {a : Type} parameter FIRST (before everything else)
-    fullType : TTImp := IPi EmptyFC MW ImplicitArg (Just (UN (Basic "a"))) `(Type) withNumConstraint
+    fullType : TTImp := IPi EmptyFC MW ImplicitArg (Just (UN (Basic "dtype"))) `(Type) withNumConstraint
     
   in fullType
 

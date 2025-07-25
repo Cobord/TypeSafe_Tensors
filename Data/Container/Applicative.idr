@@ -21,7 +21,7 @@ public export prefix 0 #
 
 %pair ApplC GetC applPrf
 
-||| Every natural number n corresponds to an VectCont n, which is applicative
+||| Every natural number n corresponds to a VectCont n, which is applicative
 ||| Used in cubical tensors whose shapes are defined by lists of natural numbers
 public export
 NatToVectCont : (n : Nat) -> ApplC

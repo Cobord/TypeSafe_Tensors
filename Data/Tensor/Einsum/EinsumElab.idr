@@ -91,26 +91,46 @@ partial
 isRight : Either a b -> b 
 isRight (Right x) = x
 
-einsumTestO : String -> Either Unit Type
-einsumTestO "a" = Right (Int -> Int)
-einsumTestO "b" = Right (Char -> Char)
-einsumTestO "c" = Right (Double -> List Double)
-einsumTestO _ = Left ()
+{-
+Hi all,
+
+I've been playing around with elaborator reflection recently and I'm wondering whether it's possible to provide an interface by which it's possible to interact with functions that use elaborator reflection without using %runElab at call sites.
+
+ -}
+
+exType : Bool -> Type
+exType True = Int
+exType False = Char
+
+exVal : (b : Bool) -> Elab (exType b)
+exVal True = pure 3 -- here imagine I need to use a complicated elaborator reflection function, where for each possible value b I do a complex computation
+exVal False = pure 'x'
+
+-- exUsage : (b : Bool) -> exType b
+-- exUsage b = %runElab (exVal b)
+
+einsumTestO : String -> (n : Nat) -> Either Unit Type
+einsumTestO "a" n = Right (Vect n Int -> Int)
+einsumTestO "b" _ = Right (Double -> List Double)
+einsumTestO _ _ = Left ()
 
 partial
-einsumTest : (str : String) -> Elab (isRight (einsumTestO str))
-einsumTest str = case str of
-  "a" => pure (*2)
-  "b" => pure (\_ => 'x')
-  "c" => pure (\d => [d, d, d])
+einsumTest : (str : String) -> (n : Nat) -> Elab (isRight (einsumTestO str n))
+einsumTest str n = case str of
+  "a" => pure (\xs => foldr (+) 0 xs)
+  "b" => pure (\d => [d, d, d])
+
+
+-- einsumTestImpl : (str : String) -> (n : Nat) -> isRight (einsumTestO str n)
+-- einsumTestImpl str n = %runElab (einsumTest str n)
 
 partial
 esVal : List Double
-esVal = let t = einsumTest "c"
-            g = %runElab t
-        in ?hooesval
-
-einsumTestImpl : (str : String) -> isRight (einsumTestO str)
+esVal = let a : Elab (Vect 7 Int -> Int) := einsumTest "a" 7
+            c : Elab (Double -> List Double) := einsumTest "b" 7
+            ae : Vect 7 Int -> Int := %runElab (einsumTest "a" 7)
+            ce : Double -> List Double := %runElab (einsumTest "b" 7)
+        in (%runElab (einsumTest "b" 7)) 3.7
   
 -- Macro that provides NumPy-like einsum("ij,jk->ik", m, n) syntax  
 -- This automatically generates einsum functions on-demand with dummy implementation
@@ -142,7 +162,7 @@ einsum exprStr args = case parseEinsumString exprStr of
         -- Generate the output shape as a vector literal from the output type
         outputShape = generateShapeVect (toList outputTy)
         -- Create zeros' with the correct output shape and generic type 'a'
-        implBody = `(zeros {shape = ~outputShape} {a = a})
+        implBody = `(zeros {shape = ~outputShape} {a = dtype})
 
         -- Build the full lambda expression
         fullImpl = foldr (\(paramName, shape), body => 
@@ -183,18 +203,34 @@ einsumImpl : {a : Type} -> Num a => {shapes : List (List Nat)} ->
 einsumImpl exprStr args = 
   let t = einsum exprStr args
   in ?lall -- %runElab t
-       
+
+{-
+runElab : Elab a -> a
+`(_) : ? -> TTImp
+quote : (0 val : Type) -> Elaboration m
+  => (0 _ : val) -> m TTImp
+check : {0 expected : Type} -> Elaboration m =>
+  TTImp -> m expected
+ -}
+
+gg : Elab Int       
+gg = pure 3
+
+gh : Int
+gh = %runElab gg
+
+ghQuote : Int
+ghQuote = %runElab check `(3)
 
 m : Tensor [2, 3] Double
-m = fromArray' [[1, 2, 3], [4, 5, 6]]
+m = fromArray [[1, 2, 3], [4, 5, 6]]
 
 n : Tensor [3, 4] Double
-n = fromArray' [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
-
+n = fromArray [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]]
 
 -- Test the fixed einsum macro with a unique pattern
 testNewPattern : Tensor [3, 2] Double
-testNewPattern = %runElab einsum "ij->ji" [m]
+testNewPattern = %runElab einsum "ab->ba" [m]
 
 einsumImplementation : {a : Type} -> Num a =>
   {is : List Nat} ->  -- free indices

@@ -12,7 +12,7 @@ import Misc
 ----------------------------------------
 
 test0 : IsRight (parseEinsumString "ij,ij->")
-test0 = %search 
+test0 = %search
 
 test1 : IsRight (parseEinsumString "ij,jk->ik")
 test1 = %search
