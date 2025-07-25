@@ -108,10 +108,6 @@ stridesProof : (shape : Vect 7 Nat) ->
   strides (tail shape) = tail computedStrides
 stridesProof shape prf = ?stridesProof_rhs
 
-strideHeadRewrite : {s : Nat} -> {ss : Vect n Nat} ->
-  (head (strides (s :: ss))) * s = prod (s :: ss)
-strideHeadRewrite = believe_me ()
-
 
 {-
 Now that we have strides, we need to define a function that takes a shape and an index into that shape, and computes the index into the flat data.
@@ -137,6 +133,29 @@ data IndexT : (shape : List Nat) -> Type where
 --   = let t = stridesNonZero nzs
 --     in ?stridesNonZero_rhs_0
 
+tt : (n : Nat) -> Fin n -> Double
+tt 0 FZ impossible
+tt 0 (FS x) impossible
+tt (S k) x = ?tt_rhs_1
+
+strideHeadRewrite : {s : Nat} -> {ss : Vect n Nat} ->
+  (head (strides (s :: ss))) * s = prod (s :: ss)
+strideHeadRewrite = believe_me ()
+
+outputTypeStrides : (shape : Vect n Nat) ->
+  Type
+outputTypeStrides [] = Unit
+outputTypeStrides (s :: ss) = IsSucc (head (strides (s :: ss)))
+
+stridesProofHeadNonZero : {shape : Vect n Nat} ->
+  {auto prf : All IsSucc shape} ->
+  outputTypeStrides shape
+stridesProofHeadNonZero {shape = []}  = ()
+stridesProofHeadNonZero {shape = (s :: ss)} {prf = (p :: ps)}
+  = let t = stridesProofHeadNonZero {shape=ss} {prf=ps} 
+    in ?stridesProofHeadNonZero_rhs_2
+
+
 ||| Given a shape and an index, compute the index in the flattened tensor
 ||| Example:
 ||| indexCount [3, 4, 5] [0, 3, 4] = 19 : Fin (60)
@@ -147,17 +166,27 @@ data IndexT : (shape : List Nat) -> Type where
 indexCount : {shape : List Nat} -> {auto allNonZero : All IsSucc shape} ->
   IndexT shape -> Fin (prod shape)
 indexCount {shape = []} {allNonZero = []} i = FZ
-indexCount {shape = (s :: ss)} {allNonZero = (nz :: nzs)} (i :: is)
-  = let (strd :: strds) = strides (fromList (s :: ss)) 
+indexCount {shape = (0 :: ss)} {allNonZero = (nz :: nzs)} (i :: is) impossible
+indexCount {shape = sh@((S s) :: ss)} {allNonZero = (nz :: nzs)} (i :: is)
+  = let (strd :: strds) = strides (fromList sh)
         restCount = indexCount is -- fpn = 13 : Fin (20)
-        restCountWeakened = weakenMultN s restCount -- fpnWeakened = 13 : Fin (prod (s::ss)) 
+        restCountWeakened = weakenMultN (S s) restCount -- fpnWeakened = 13 : Fin (prod (s::ss)) 
         sm = shiftMul strd {prf = believe_me ()} i
-        smm : Fin (prod (s :: ss)) := coerce (believe_me ()) sm
-    in addFinsBounded smm restCountWeakened-- rewrite strideHeadRewrite {s=s} {ss=ss} in ?alllsm
+        smm : Fin (prod ((S s) :: ss)) := coerce (believe_me ()) sm
+    in addFinsBounded smm restCountWeakened
+indexCount _ = believe_me () -- will never be reached, the coverage checker doesn't understand we don't need this case, so it was added to keep it happy
 
 iCTest : indexCount {shape = [3, 4, 5]} [0, 3, 4] = 19
 iCTest = ?iCTest_rhs
 
+
+-- indexCount {shape = (s :: ss)} {allNonZero = (nz :: nzs)} (i :: is)
+--   = let (strd :: strds) = strides (fromList (s :: ss)) 
+--         restCount = indexCount is -- fpn = 13 : Fin (20)
+--         restCountWeakened = weakenMultN s restCount -- fpnWeakened = 13 : Fin (prod (s::ss)) 
+--         sm = shiftMul strd {prf = believe_me ()} i
+--         smm : Fin (prod (s :: ss)) := coerce (believe_me ()) sm
+--     in addFinsBounded smm restCountWeakened-- rewrite strideHeadRewrite {s=s} {ss=ss} in ?alllsm
 
     -- key plan here, use Vect for shape, and then use strideHeadRewrite
 -- dotStr {shape = []} [] = FZ
