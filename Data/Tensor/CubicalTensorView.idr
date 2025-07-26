@@ -71,27 +71,18 @@ What all of these examples share in common?
 Given shape : List Nat, the way we compute index is by taking a dot product of it with another vector computed *from* shape.
 That other vector is called strides.
 
-To define strides : List Nat -> List Nat function, we need first a function that computes the aggregate product of a list, and then a helper function that takes care of the off by one issue
+We now define the stride : Vect n Nat -> Vect n Nat function
 -}
-
-
-||| Given a list of numbers, return a new list where each element is the product of all preceding ones
-aggrProd : Vect n Nat -> Vect n Nat
-aggrProd [] = []
-aggrProd (x :: xs) = x :: ((x*) <$> aggrProd xs)
-
-||| Helper function for taking care of reversal, and off by one issue
-stridesHelp : (shape : Vect n Nat) -> Vect n Nat
-stridesHelp [] = []
-stridesHelp (x :: xs) =  [1] ++ reverse xs
 
 -- Shape = [3, 4, 5] -> Strides = [20, 5, 1]
 -- Shape = [3, 4, 5, 6] -> Strides = [120, 30, 6, 1]
 -- Shape = [3, 4] -> Strides = [4, 1]
 -- Shape = [3] -> Strides = [1]
 -- Here strides are in terms of number of elements, not bytes
+public export
 strides : (shape : Vect n Nat) -> Vect n Nat
-strides = reverse . aggrProd . stridesHelp
+strides [] = []
+strides (s :: ss) = prod ss :: strides ss
 
 test0 : strides [2,3,4,5] = [60, 20, 5, 1]
 test0 = Refl
@@ -102,59 +93,22 @@ test1 = Refl
 test2 : strides [4, 5] = [5, 1]
 test2 = Refl
 
-stridesProof : (shape : Vect 7 Nat) ->
-  {computedStrides : Vect 7 Nat} -> 
-  strides shape = computedStrides ->
-  strides (tail shape) = tail computedStrides
-stridesProof shape prf = ?stridesProof_rhs
-
-
 {-
-Now that we have strides, we need to define a function that takes a shape and an index into that shape, and computes the index into the flat data.
-Meaning we first need to define the indexing type
+We also need a datatype defining the type of the index given a shape.
  -}
 
 ||| 0-based indexing
 public export
-data IndexT : (shape : List Nat) -> Type where
+data IndexT : (shape : Vect n Nat) -> Type where
   Nil  : IndexT []
   (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
 
--- outputTypeForLength : (n : Nat) -> (shape : Vect n Nat) -> Type
--- outputTypeForLength 0 shape = Unit
--- outputTypeForLength (S k) shape = IsSucc (head (strides shape))
--- 
--- stridesNonZero : {shape : Vect n Nat} ->
---   All IsSucc shape ->
---   outputTypeForLength n shape
--- stridesNonZero {n=0} {shape = []} [] = ()
--- stridesNonZero {n=(S k)} {shape = (s :: ss)} (nz :: nzs) = ?aoo
--- stridesNonZero {n=(S (S k))} {shape = (s :: s' :: ss)} (nz :: nzs)
---   = let t = stridesNonZero nzs
---     in ?stridesNonZero_rhs_0
-
-tt : (n : Nat) -> Fin n -> Double
-tt 0 FZ impossible
-tt 0 (FS x) impossible
-tt (S k) x = ?tt_rhs_1
-
-strideHeadRewrite : {s : Nat} -> {ss : Vect n Nat} ->
-  (head (strides (s :: ss))) * s = prod (s :: ss)
-strideHeadRewrite = believe_me ()
-
-outputTypeStrides : (shape : Vect n Nat) ->
-  Type
-outputTypeStrides [] = Unit
-outputTypeStrides (s :: ss) = IsSucc (head (strides (s :: ss)))
-
-stridesProofHeadNonZero : {shape : Vect n Nat} ->
+public export
+stridesProofHeadNonZero : {shape : Vect (S n) Nat} ->
   {auto prf : All IsSucc shape} ->
-  outputTypeStrides shape
-stridesProofHeadNonZero {shape = []}  = ()
-stridesProofHeadNonZero {shape = (s :: ss)} {prf = (p :: ps)}
-  = let t = stridesProofHeadNonZero {shape=ss} {prf=ps} 
-    in ?stridesProofHeadNonZero_rhs_2
-
+  IsSucc (head (strides shape))
+stridesProofHeadNonZero {shape = (_ :: ss)} {prf = (_ :: ps)}
+  = allSuccThenProdSucc ss
 
 ||| Given a shape and an index, compute the index in the flattened tensor
 ||| Example:
@@ -163,21 +117,49 @@ stridesProofHeadNonZero {shape = (s :: ss)} {prf = (p :: ps)}
 ||| indexCount [3, 4, 5] [1, 2, 3] = 33 : Fin (60)
 ||| indexCount [3, 4] [0, 1] = 1
 ||| indexCount [3] [0] = 0
-indexCount : {shape : List Nat} -> {auto allNonZero : All IsSucc shape} ->
+indexCount : {shape : Vect n Nat} -> {auto allNonZero : All IsSucc shape} ->
   IndexT shape -> Fin (prod shape)
-indexCount {shape = []} {allNonZero = []} i = FZ
-indexCount {shape = (0 :: ss)} {allNonZero = (nz :: nzs)} (i :: is) impossible
-indexCount {shape = sh@((S s) :: ss)} {allNonZero = (nz :: nzs)} (i :: is)
-  = let (strd :: strds) = strides (fromList sh)
-        restCount = indexCount is -- fpn = 13 : Fin (20)
-        restCountWeakened = weakenMultN (S s) restCount -- fpnWeakened = 13 : Fin (prod (s::ss)) 
-        sm = shiftMul strd {prf = believe_me ()} i
-        smm : Fin (prod ((S s) :: ss)) := coerce (believe_me ()) sm
-    in addFinsBounded smm restCountWeakened
-indexCount _ = believe_me () -- will never be reached, the coverage checker doesn't understand we don't need this case, so it was added to keep it happy
+indexCount {shape = []} _ = FZ
+indexCount {shape = (s :: ss)} {allNonZero = (pz :: ps)} (i :: is)
+  = let restCount = indexCount is
+        restCountWeakened = weakenMultN s restCount
+        
+        strideHeadNonZero = stridesProofHeadNonZero {shape=(s :: ss)}
+        hereCount = shiftMul (head (strides (s :: ss))) i
+    in addFinsBounded hereCount restCountWeakened
 
-iCTest : indexCount {shape = [3, 4, 5]} [0, 3, 4] = 19
-iCTest = ?iCTest_rhs
+-- hereCountRewritten = rewrite multCommutative (prod ss) s in hereCount
+-- indexCount {shape = []} {allNonZero = []} i = FZ
+-- indexCount {shape = (0 :: ss)} {allNonZero = (nz :: nzs)} (i :: is) impossible
+-- indexCount {shape = sh@((S s) :: ss)} {allNonZero = (nz :: nzs)} (i :: is)
+--   = let (strd :: strds) = strides ((S s) :: ss)
+--         restCount = indexCount is -- fpn = 13 : Fin (20)
+--         restCountWeakened = weakenMultN (S s) restCount -- fpnWeakened = 13 : Fin (prod (s::ss)) 
+--         strdSucc = stridesProofHeadNonZero {shape=(S s :: ss)} 
+--         sm = shiftMul (head (strides ((S s) :: ss))) i
+--         smm : Fin (prod ((S s) :: ss)) := coerce (believe_me ()) sm
+--     in addFinsBounded smm restCountWeakened
+-- indexCount _ = believe_me () -- will never be reached, the coverage checker doesn't understand we don't need this case, so it was added to keep it happy
+
+iCTest1 : indexCount {shape = [3, 4, 5]} [0, 3, 4] = 19
+iCTest1 = Refl
+
+iCTest2 : indexCount {shape = [3, 4]} [0, 1] = 1
+iCTest2 = Refl
+
+
+
+
+-- Fix shape = [3, 4]. This is 12 positions.
+-- - i - -
+-- - - - -
+-- - - - -
+-- 
+-- Fix index i = [0, 1]. This means indexing in the 1st row, 2nd column.
+-- As flat data, this means
+-- i = 0 * (4)
+--   + 1 * 1
+--   = 1
 
 
 -- indexCount {shape = (s :: ss)} {allNonZero = (nz :: nzs)} (i :: is)

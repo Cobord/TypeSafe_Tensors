@@ -16,6 +16,10 @@ public export
 liftA2 : Applicative f => f a -> f b -> f (a, b)
 liftA2 fa fb = ((,) <$> fa) <*> fb
 
+public export
+strength : Applicative f => a -> f b -> f (a, b)
+strength a fb = liftA2 (pure a) fb
+
 ||| Starting with (Fin l -> x) and an extra x, we produce a map (Fin (S l) -> x) whose first element is the extra x 
 public export
 addBeginning : x -> (Fin l -> x) -> (Fin (S l) -> x)
@@ -47,17 +51,17 @@ public export
 namespace Vect
   public export
   sum : Num a => Vect n a -> a
-  sum = foldr (+) (fromInteger 0)
+  sum xs = foldr (+) (fromInteger 0) xs
   
   public export
   prod : Num a => Vect n a -> a
-  prod = foldr (*) (fromInteger 1)
+  prod [] = fromInteger 1
+  prod (x :: xs) = x * prod xs
 
 namespace List
   public export
   sum : Num a => List a -> a
-  sum = foldr (+) (fromInteger 0)
-  
+  sum = foldr (+) (fromInteger 0) 
   public export
   prod : Num a => List a -> a
   prod = foldr (*) (fromInteger 1)
@@ -189,6 +193,90 @@ namespace ElemVector
       NotElem x (y :: xs)
 
 
+public export
+constUnit : a -> Unit
+constUnit _ = ()
+
+public export
+const2Unit : a -> b -> Unit
+const2Unit _ _ = ()
+
+namespace FinArithmetic
+  ||| Like weakenN from Data.Fin, but where n is on the other side of +
+  public export
+  weakenN' : (0 n : Nat) -> Fin m -> Fin (n + m)
+  weakenN' n x = rewrite plusCommutative n m in weakenN n x
+  
+  ||| Like weakenN, but with mutliplication
+  ||| Like shiftMul, but without changing the value of the index
+  public export
+  weakenMultN : {n : Nat} ->
+    (m : Nat) -> {auto prf : IsSucc m} ->
+    (i : Fin n) -> Fin (m * n)
+  weakenMultN (S 0) {prf = ItIsSucc} i = rewrite multOneLeftNeutral n in i
+  weakenMultN (S (S k)) {prf = ItIsSucc} i = weakenN' n (weakenMultN (S k) i)
+
+  multRightUnit : (m : Nat) -> m * 1 = m
+  multRightUnit 0 = Refl
+  multRightUnit (S k) = cong S (multRightUnit k)
+
+  multRightZeroCancel : (m : Nat) -> m * 0 = 0
+  multRightZeroCancel 0 = Refl
+  multRightZeroCancel (S k) = multRightZeroCancel k
+
+  ||| Variant of `shift` from Data.Fin, but with multiplication
+  ||| Given an index i : Fin n, it recasts it as one where steps are stride sized
+  ||| That is, returns stride * i : Fin (stride * n)
+  ||| Implemented by recursing on i, adding stride each time
+  public export
+  shiftMul : {n : Nat} ->
+    (stride : Nat) -> {auto prf : IsSucc stride} ->
+    (i : Fin n) -> Fin (n * stride)
+  shiftMul (S s) {prf = ItIsSucc} FZ = FZ
+  shiftMul stride (FS i) = shift stride (shiftMul stride i)
+
+  shiftMulTest : shiftMul {n=3} 5 1 = 5
+  shiftMulTest = Refl
+
+
+--         restCount = indexCount is -- fpn = 13 : Fin (20)
+-- iCTest1 : indexCount {shape = [3, 4, 5]} [1, 2, 3] = 33
+-- iCTest1 = ?iCTest_rhs
+  
+  ||| Like finS, but without wrapping
+  ||| finS' last = last
+  public export
+  finS' : {n : Nat} -> Fin n -> Fin n
+  finS' {n = 1} x = x
+  finS' {n = (S (S k))} FZ = FS FZ
+  finS' {n = (S (S k))} (FS x) = FS $ finS' x
+  --finS' {n = S _} x = case strengthen x of
+  --    Nothing => x
+  --    Just y => FS y
+
+  finSTest : finS' {n = 5} 3 = 4
+  finSTest = Refl
+
+  finSTest2 : finS' {n = 5} 4 = 4
+  finSTest2 = Refl
+  
+  
+  ||| Adds two Fin n, and bounds the result
+  ||| Meaning (93:Fin 5) + (4 : Fin 5) = 4
+  public export
+  addFinsBounded : {n : Nat} -> Fin n -> Fin n -> Fin n
+  addFinsBounded x FZ = x
+  addFinsBounded x (FS y) = addFinsBounded (finS' x) (weaken y)
+
+
+public export
+multSucc : {m, n : Nat} -> IsSucc m -> IsSucc n -> IsSucc (m * n)
+multSucc {m = S m'} {n = S n'} ItIsSucc ItIsSucc = ItIsSucc
+
+public export
+allSuccThenProdSucc : (xs : Vect n Nat) -> {auto ps : All IsSucc xs} -> IsSucc (prod xs)
+allSuccThenProdSucc [] {ps = []} = ItIsSucc
+allSuccThenProdSucc (_ :: xs') {ps = p :: _} = multSucc p (allSuccThenProdSucc xs')
 
 -- t : Bool -> Type
 -- t False = Int
@@ -204,6 +292,15 @@ Einsumpe : {s, x : Type}
 rnnCell : {s, x : Type}
   -> (s, x) -> Einsumpe (s, x)
 
+
+
+testt : (shape : List Nat) -> Type
+testt [] = Unit
+testt (x :: xs) = (Fin x, testt xs)
+
+ggh : (shape : List Nat) -> testt shape
+ggh [] = ()
+ggh (x :: xs) = ?ggh_rhs_1
 
 
 interface Interface1 a where
