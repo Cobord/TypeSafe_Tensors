@@ -12,8 +12,15 @@ import Misc
 ||| This is okay, because reshape only works for cube-shaped tensors
 public export
 record TensorView (shape : List Nat) (dtype : Type) where
-    constructor ToCubicalTensorensorView
+    constructor MkTensorView
     flatData : Vect (prod shape) dtype
+
+reshape : {oldShape : List Nat} -> {newShape : List Nat} ->
+  {auto prf : prod newShape = prod oldShape} ->
+  TensorView oldShape a ->
+  TensorView newShape a
+reshape {prf} (MkTensorView flatData) = MkTensorView (rewrite prf in flatData)
+
 
 {-
 Fix shape = [3, 4, 5]. This is 60 positions (prod shape). Three 4x5 matrices.
@@ -74,35 +81,22 @@ That other vector is called strides.
 We now define the stride : Vect n Nat -> Vect n Nat function
 -}
 
--- Shape = [3, 4, 5] -> Strides = [20, 5, 1]
--- Shape = [3, 4, 5, 6] -> Strides = [120, 30, 6, 1]
--- Shape = [3, 4] -> Strides = [4, 1]
--- Shape = [3] -> Strides = [1]
 -- Here strides are in terms of number of elements, not bytes
 public export
 strides : (shape : Vect n Nat) -> Vect n Nat
 strides [] = []
 strides (s :: ss) = prod ss :: strides ss
 
-test0 : strides [2,3,4,5] = [60, 20, 5, 1]
-test0 = Refl
+example1 : strides [2,3,4,5] = [60, 20, 5, 1]
+example1 = Refl
 
-test1 : strides [3,4,5] = [20, 5, 1]
-test1 = Refl
+example2 : strides [3,4,5] = [20, 5, 1]
+example2 = Refl
 
-test2 : strides [4, 5] = [5, 1]
-test2 = Refl
+example3 : strides [4, 5] = [5, 1]
+example3 = Refl
 
-{-
-We also need a datatype defining the type of the index given a shape.
- -}
-
-||| 0-based indexing
-public export
-data IndexT : (shape : Vect n Nat) -> Type where
-  Nil  : IndexT []
-  (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
-
+||| It will be important to prove later that if all elements of shape are non-zero, then the head of the strides is also non-zero
 public export
 stridesProofHeadNonZero : {shape : Vect (S n) Nat} ->
   {auto prf : All IsSucc shape} ->
@@ -110,17 +104,18 @@ stridesProofHeadNonZero : {shape : Vect (S n) Nat} ->
 stridesProofHeadNonZero {shape = (_ :: ss)} {prf = (_ :: ps)}
   = allSuccThenProdSucc ss
 
+||| Datatype defining the type of the index given a shape
+||| This is 0-based indexing
+public export
+data IndexT : (shape : Vect n Nat) -> Type where
+  Nil  : IndexT []
+  (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
+
 ||| Given a shape and an index, compute the index in the flattened tensor
-||| Example:
-||| indexCount [3, 4, 5] [0, 3, 4] = 19 : Fin (60)
-||| indexCount [3, 4, 5] [0, 2, 1] = 11 : Fin (60)
-||| indexCount [3, 4, 5] [1, 2, 3] = 33 : Fin (60)
-||| indexCount [3, 4] [0, 1] = 1
-||| indexCount [3] [0] = 0
 indexCount : {shape : Vect n Nat} -> {auto allNonZero : All IsSucc shape} ->
   IndexT shape -> Fin (prod shape)
 indexCount {shape = []} _ = FZ
-indexCount {shape = (s :: ss)} {allNonZero = (pz :: ps)} (i :: is)
+indexCount {shape = (s :: ss)} {allNonZero = (_ :: ps)} (i :: is)
   = let restCount = indexCount is
         restCountWeakened = weakenMultN s restCount
         
@@ -128,91 +123,20 @@ indexCount {shape = (s :: ss)} {allNonZero = (pz :: ps)} (i :: is)
         hereCount = shiftMul (head (strides (s :: ss))) i
     in addFinsBounded hereCount restCountWeakened
 
--- hereCountRewritten = rewrite multCommutative (prod ss) s in hereCount
--- indexCount {shape = []} {allNonZero = []} i = FZ
--- indexCount {shape = (0 :: ss)} {allNonZero = (nz :: nzs)} (i :: is) impossible
--- indexCount {shape = sh@((S s) :: ss)} {allNonZero = (nz :: nzs)} (i :: is)
---   = let (strd :: strds) = strides ((S s) :: ss)
---         restCount = indexCount is -- fpn = 13 : Fin (20)
---         restCountWeakened = weakenMultN (S s) restCount -- fpnWeakened = 13 : Fin (prod (s::ss)) 
---         strdSucc = stridesProofHeadNonZero {shape=(S s :: ss)} 
---         sm = shiftMul (head (strides ((S s) :: ss))) i
---         smm : Fin (prod ((S s) :: ss)) := coerce (believe_me ()) sm
---     in addFinsBounded smm restCountWeakened
--- indexCount _ = believe_me () -- will never be reached, the coverage checker doesn't understand we don't need this case, so it was added to keep it happy
+indexCountExample1 : indexCount {shape = [3, 4, 5]} [0, 3, 4] = 19 -- : Fin 60
+indexCountExample1 = Refl
 
-iCTest1 : indexCount {shape = [3, 4, 5]} [0, 3, 4] = 19
-iCTest1 = Refl
+indexCountExample2 : indexCount {shape = [3, 4, 5]} [0, 2, 1] = 11 -- : Fin 60
+indexCountExample2 = Refl
 
-iCTest2 : indexCount {shape = [3, 4]} [0, 1] = 1
-iCTest2 = Refl
+indexCountExample3 : indexCount {shape = [3, 4, 5]} [1, 2, 3] = 33 -- : Fin 60
+indexCountExample3 = Refl
+
+indexCountExample4 : indexCount {shape = [3, 4]} [0, 1] = 1 -- : Fin 12
+indexCountExample4 = Refl
 
 
 
-
--- Fix shape = [3, 4]. This is 12 positions.
--- - i - -
--- - - - -
--- - - - -
--- 
--- Fix index i = [0, 1]. This means indexing in the 1st row, 2nd column.
--- As flat data, this means
--- i = 0 * (4)
---   + 1 * 1
---   = 1
-
-
--- indexCount {shape = (s :: ss)} {allNonZero = (nz :: nzs)} (i :: is)
---   = let (strd :: strds) = strides (fromList (s :: ss)) 
---         restCount = indexCount is -- fpn = 13 : Fin (20)
---         restCountWeakened = weakenMultN s restCount -- fpnWeakened = 13 : Fin (prod (s::ss)) 
---         sm = shiftMul strd {prf = believe_me ()} i
---         smm : Fin (prod (s :: ss)) := coerce (believe_me ()) sm
---     in addFinsBounded smm restCountWeakened-- rewrite strideHeadRewrite {s=s} {ss=ss} in ?alllsm
-
-    -- key plan here, use Vect for shape, and then use strideHeadRewrite
--- dotStr {shape = []} [] = FZ
--- dotStr {shape = (s :: ss)} (i :: is) =
---   let (strd :: strds) = strides (fromList (s :: ss))
---       fpn = dotStr is -- fpn = 13 : Fin (20)
---       fpnWeakened = weakenMultN -- fpnWeakened = 13 : Fin (prod (s::ss)) 
---       -- sm = shiftMul strd i -- sm = 20 : Fin (60)
---       -- i : Fin 3
---       -- strd = 20
---   in ?dotStr_rhs_s -- Fin (60)
--- dotStr {shape} x with (strides shape)
---   dotStr {shape=[]} []                 | [] = 0
---   dotStr {shape=(s :: ss)} (is :: iss) | (st :: sts) = 
---     let amt : Fin (S ((pred s) * st)) := ddFin is st
---         rest : Fin (prod ss) := dotStr iss -- do we know prod ss = S ?n  ?
---         aa = Data.Fin.Arith.(+) amt
---     in ?dotStr_rhs
-
-ddFin' : {n : Nat} ->
-  (i : Fin (S n)) ->
-  (stride : Nat) ->
-  Fin (S (n * stride))
-ddFin' i 0 = FZ
-ddFin' i (S k) = rewrite multRightSuccPlus n k in i + ddFin' i k
-
-
-||| Multiplies an index i : Fin n with a stride, i.e. i * stride, but bounded
-||| Produces an index where each step is 'stride' sized
-ddFin : {n : Nat} ->
-  (i : Fin n) ->
-  (stride : Nat) ->
-  Fin (S ((pred n) * stride))
-ddFin {n=0} FZ _ impossible
-ddFin {n=0} (FS x) _ impossible
-ddFin {n = (S k)} i stride = ddFin i stride
-
-
--- hmmm : (n : Nat) -> Fin m
--- hmmm n ?= natToFinLT n
--- Fin 3, Fin 4 -> Fin 12
--- 0, 1, 2
--- 0, 1, 2, 3
--- 0, 1, 2, 3, 4, 5, 6
 
 {-
              0   1    2 

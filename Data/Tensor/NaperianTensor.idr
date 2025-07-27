@@ -56,4 +56,6 @@ transposeMatrixA {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))}
 public export
 transposeMatrix : {i, j : Nat} ->
   Tensor [i, j] a -> Tensor [j, i] a
-transposeMatrix  = ToCubicalTensor . transposeMatrixA . FromCubicalTensor
+transposeMatrix t
+  = let tt = transposeMatrixA 
+    in ToCubicalTensor $ ?hooo $ FromCubicalTensor t -- ToCubicalTensor . transposeMatrixA . FromCubicalTensor

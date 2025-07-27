@@ -2,16 +2,18 @@ module Examples.Tensors
 
 import Data.Tensor
 import Data.Tensor.Utils
-import Data.Tensor.NaperianTensor
+-- import Data.Tensor.NaperianTensor
 
+{-
+Need to compute stride-based functionality for:
+ * Slice
+ * Take
+ * Transpose
+ -}
 
 ----------------------------------------
 -- Examples of standard, cubical tensors
 ----------------------------------------
-
-||| Analogous to np.arange, except the range is specified in the type
-t0 : Tensor [7] Double
-t0 = range
 
 ||| We can construct Tensors directly
 t1 : Tensor [3, 4] Double
@@ -19,30 +21,36 @@ t1 = fromArray [ [0, 1, 2, 3]
                , [4, 5, 6, 7]
                , [8, 9, 10, 11]]
 
+||| Or use functions analogous to np.reshape and np.arange, fully type-checked
+t2 : Tensor [4, 5] Double
+t2 = reshape $ range {n=20}
+
 failing
-   ||| And we'll get errors if we supply the wrong shape
-   t1Fail : Tensor [3, 4] Double
-   t1Fail = fromArray [ [0, 1, 2, 3, 999]
-                      , [4, 5, 6, 7]
-                      , [8, 9, 10, 11]]
+  ||| Getting errors if we supply an array with the wrong shape
+  t1Fail : Tensor [3, 4] Double
+  t1Fail = fromArray [ [0, 1, 2, 3, 999]
+                     , [4, 5, 6, 7]
+                     , [8, 9, 10, 11]]
+
+  ||| Or if the reshape is not possible
+  t2Fail : Tensor [4, 5] Double
+  t2Fail = reshape $ range {n=21}
 
 
-t2 : Tensor [2, 5] Double
-t2 = fromArray [ [0, 1, 2, 3, 4]
-               , [5, 6, 7, 8, 9]]
-
-
-
-||| Safe elementwise addition
+||| We can perform safe elementwise addition
 tSum : Tensor [3, 4] Double
 tSum = t1 + t1
 
+||| And all sorts of numeric operations
+numericOps : Tensor [4, 5] Double
+numericOps = abs ((t2 * negate t2) <&> (+7))
+
 failing
-  ||| Can't add tensors of different shapes
+  ||| Failing if we add tensors of different shapes
   tSumFail : Tensor [3, 4] Double
   tSumFail = t1 + t2
 
-||| Safe indexing
+||| We can safely index into tensors
 indexExample : Double
 indexExample = t1 @@@ [1, 2]
 
@@ -51,30 +59,30 @@ failing
    indexExampleFail : Double
    indexExampleFail = t1 @@@ [7, 2]
 
-||| Safe transposition
-t1Transposed : Tensor [4, 3] Double
-t1Transposed = transposeMatrix t1
+-- ||| Safe transposition
+-- t1Transposed : Tensor [4, 3] Double
+-- t1Transposed = transposeMatrix t1
 
-||| We can do all sorts of numeric operations
-numericOps : Tensor [2, 5] Double
-numericOps = abs ((t2 * negate t2) <&> (+7))
 
-||| Safe slicing, takeTensor [10, 2] t1 would not compile
-takeExample : Tensor [2, 1] Double
-takeExample = takeTensor [2, 1] t1
+-- ||| Safe slicing, takeTensor [10, 2] t1 would not compile
+-- takeExample : Tensor [2, 1] Double
+-- takeExample = takeTensor [2, 1] t1
 
 failing
   takeExampleFail : Tensor [10, 2] Double
   takeExampleFail = takeTensor [10, 2] t1
 
+v : Tensor [5] Double
+v = range
+
 ||| Dot product of two vectors
 dotProduct : Tensor [] Double
-dotProduct = dot t0 t0
+dotProduct = dot v v
 
 failing
   ||| Can't dot product two different-sized vectors
   dotProductFail : Tensor [] Double
-  dotProductFail = dot t0 (the (Tensor [5] Double) range)
+  dotProductFail = dot v (range {n=6})
 
 
 ----------------------------------------
@@ -83,17 +91,11 @@ failing
 ----------------------------------------
 
 ||| TensorA can do everything that Tensor can
-t0again : TensorA [VectCont 7] Double
-t0again = FromCubicalTensor t0
+t0again : TensorA [VectCont 5] Double
+t0again = FromCubicalTensor v
 
 t1again : TensorA [VectCont 3, VectCont 4] Double
 t1again = FromCubicalTensor t1 
-
--- dLens : ComposeContainers [VectCont 3, VectCont 4] =%> ComposeContainers [VectCont 12]
--- dLens = (\_ => EmptyExt) <%! \x, y' => ?dLens_rhs_1
--- 
--- t1Reshaped : TensorA [VectCont 12] Double
--- t1Reshaped = reshapeTensorA dLens t1again
 
 {- 
 Instead of an n-element vector, here's tree with leaves as elements
