@@ -32,12 +32,12 @@ softmax' {temperature} t = let exps = exp <$> (t <&> (/ temperature))
 
 public export
 softmaxBTreeLeaf : {a : Type} -> Fractional a => Exp a =>
-  TensorA [BTreeLeafCont] a -> TensorA [BTreeLeafCont] a
+  TensorA [BTreeLeaf] a -> TensorA [BTreeLeaf] a
 softmaxBTreeLeaf = softmax
 
 public export
 softmaxBTreeNode : {a : Type} -> Fractional a => Exp a =>
-  TensorA [BTreeNodeCont] a -> TensorA [BTreeNodeCont] a
+  TensorA [BTreeNode] a -> TensorA [BTreeNode] a
 softmaxBTreeNode = softmax
 
 
@@ -73,13 +73,13 @@ softmaxBTreeNode = softmax
              
 
 
--- softmaxVect' : {n : Nat} -> TensorA [VectCont n] Double -> TensorA [VectCont n] Double
+-- softmaxVect' : {n : Nat} -> TensorA [Vect n] Double -> TensorA [Vect n] Double
 -- softmaxVect' = softmax'
 -- 
--- softmaxBTreeLeaf' : TensorA [BTreeLeafCont] Double -> TensorA [BTreeLeafCont] Double
+-- softmaxBTreeLeaf' : TensorA [BTreeLeaf] Double -> TensorA [BTreeLeaf] Double
 -- softmaxBTreeLeaf' = softmax'
 -- 
--- softmaxBTreeNode' : TensorA [BTreeNodeCont] Double -> TensorA [BTreeNodeCont] Double
+-- softmaxBTreeNode' : TensorA [BTreeNode] Double -> TensorA [BTreeNode] Double
 -- softmaxBTreeNode' = softmax'
  
 

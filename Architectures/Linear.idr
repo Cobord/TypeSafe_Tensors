@@ -21,13 +21,13 @@ linearImpl weights bias input = matrixVectorProductA weights input + bias
 
 linearImpl' : {i, j : Nat} -> {a : Type} -> Num a =>
   Tensor [j, i] a -> Tensor [j] a -> Tensor [i] a -> Tensor [j] a
-linearImpl' = ?ghh -- linearImpl {x=VectCont i, y=VectCont j} {a}
+linearImpl' = ?ghh -- linearImpl {x=Vect i, y=Vect j} {a}
 
 linearImplTreeLeaf : {a : Type} -> Num a =>
-  TensorA [BTreeLeafCont, BTreeLeafCont] a ->
-  TensorA [BTreeLeafCont] a ->
-  TensorA [BTreeLeafCont] a ->
-  TensorA [BTreeLeafCont] a
+  TensorA [BTreeLeaf, BTreeLeaf] a ->
+  TensorA [BTreeLeaf] a ->
+  TensorA [BTreeLeaf] a ->
+  TensorA [BTreeLeaf] a
 linearImplTreeLeaf = linearImpl
 
 public export
@@ -42,4 +42,4 @@ linearPara = MkPara
 
 -- linearPara' : {i, j : Nat} -> {a : Type} -> Num a =>
 --   Para (Tensor [i] a) (Tensor [j] a)
--- linearPara' = ?ghh -- linearPara {x=VectCont i, y=VectCont j} {a}
+-- linearPara' = ?ghh -- linearPara {x=Vect i, y=Vect j} {a}

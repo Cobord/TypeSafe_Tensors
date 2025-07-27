@@ -103,8 +103,8 @@ parameters {a : Type} {auto _ : Num a}
     Para (Tensor [inputSize, featureSize] a)
          (Tensor [inputSize, featureSize] a)
   SelfAttention' softmax' = MkPara
-    (const (SelfAttentionParams (VectCont featureSize)))
-    (\inp => ToCubicalTensor . (SAImpl {features=VectCont featureSize} (FromCubicalTensor . softmax' . ToCubicalTensor) (FromCubicalTensor inp)))
+    (const (SelfAttentionParams (Vect featureSize)))
+    (\inp => ToCubicalTensor . (SAImpl {features=Vect featureSize} (FromCubicalTensor . softmax' . ToCubicalTensor) (FromCubicalTensor inp)))
   
 
 -- Self Attention for matrices
@@ -114,8 +114,8 @@ SelfAttentionMat = SelfAttention' softmax'
 
 -- Self Attention for trees
 SelfAttentionTree : {d : Nat} -> Para
-  (TensorA [BTreeLeafCont, VectCont d] Double)
-  (TensorA [BTreeLeafCont, VectCont d] Double)
+  (TensorA [BTreeLeaf, Vect d] Double)
+  (TensorA [BTreeLeaf, Vect d] Double)
 SelfAttentionTree = SelfAttention softmaxBTreeLeaf
 
 
@@ -141,7 +141,7 @@ inputMatrix = fromArray [ [1, 3]
 
 ||| Parameters for self-attention
 ||| Here just a matrix of ones
-params : {d : Nat} -> SelfAttentionParams (VectCont d) {a=Double}
+params : {d : Nat} -> SelfAttentionParams (Vect d) {a=Double}
 params = MkSAParams onesA onesA onesA
 
 ||| Example output for cubical self-attention
@@ -150,16 +150,16 @@ SAOutputMatrix = SAMatrixForwardPass inputMatrix params
 
 ||| Consume a tree of vectors of features, parameters, and produce the output of a self-attention layer
 SATreeForwardPass : {d : Nat}
-  -> (input : TensorA [BTreeLeafCont, VectCont d] Double)
+  -> (input : TensorA [BTreeLeaf, Vect d] Double)
   -> (p : Param SelfAttentionTree input)
-  -> TensorA [BTreeLeafCont, VectCont d] Double
+  -> TensorA [BTreeLeaf, Vect d] Double
 SATreeForwardPass = Run SelfAttentionTree
 
 
-tree1 : TensorA [BTreeLeafCont, VectCont 2] Double
+tree1 : TensorA [BTreeLeaf, Vect 2] Double
 tree1 = fromArrayA $ fromBTreeLeaf $ 
   Node' (Leaf (fromVect [4, 5])) (Leaf (fromVect [-12, 25]))
 
 ||| Example output for tree self-attention
-SAOutputTree : TensorA [BTreeLeafCont, VectCont 2] Double
+SAOutputTree : TensorA [BTreeLeaf, Vect 2] Double
 SAOutputTree = SATreeForwardPass tree1 params

@@ -21,15 +21,15 @@ public export prefix 0 #
 
 %pair ApplC GetC applPrf
 
-||| Every natural number n corresponds to a VectCont n, which is applicative
+||| Every natural number n corresponds to a Vect n, which is applicative
 ||| Used in cubical tensors whose shapes are defined by lists of natural numbers
 public export
-NatToVectCont : (n : Nat) -> ApplC
-NatToVectCont n = # (VectCont n)
+NatToVect : (n : Nat) -> ApplC
+NatToVect n = # (Vect n)
 
 public export
-NatsToVectCont : (shape : List Nat) -> ApplC
-NatsToVectCont shape = NatToVectCont (prod shape)
+NatsToVect : (shape : List Nat) -> ApplC
+NatsToVect shape = NatToVect (prod shape)
 
 ||| Specialised to composition product of containers
 public export
@@ -50,13 +50,13 @@ data ApplContList : List ApplC -> Type where
 ||| TODO can be removed, likely just like the above stuff was possible to remove, by operating directly on conts : List ApplC
 ||| Used to convert a cubical tensor's shape to an applicative container list
 public export
-NatsToApplConts : (shape : List Nat) -> ApplContList (NatToVectCont <$> shape)
+NatsToApplConts : (shape : List Nat) -> ApplContList (NatToVect <$> shape)
 NatsToApplConts [] = []
-NatsToApplConts (s :: ss) = VectCont s :: NatsToApplConts ss
+NatsToApplConts (s :: ss) = Vect s :: NatsToApplConts ss
 
 public export
-FlatStorage : (shape : List Nat) -> ApplContList [NatsToVectCont shape]
-FlatStorage shape = [VectCont (prod shape)]
+FlatStorage : (shape : List Nat) -> ApplContList [NatsToVect shape]
+FlatStorage shape = [Vect (prod shape)]
 
 
 ||| Given a list of natural numbers, when we convert this to composition product of containers, this will have a unit shape
@@ -64,7 +64,7 @@ FlatStorage shape = [VectCont (prod shape)]
 ||| Hence, just like with EmptyExt we provide convenience functions to create this unit shape easily
 public export
 emptyShapeCubicalTensor : {shape : List Nat} ->
-  (ComposeContainers (NatToVectCont <$> shape)) .shp
+  (ComposeContainers (NatToVect <$> shape)) .shp
 emptyShapeCubicalTensor {shape = []} = ()
 emptyShapeCubicalTensor {shape = (_ :: _)}
   = () <| (\_ => emptyShapeCubicalTensor)
@@ -80,7 +80,7 @@ CubicalTensorCont shape = (_ : Unit) !> (natsToFinProd shape)
 
 public export
 cubicalTensorToFlat : {shape : List Nat} ->
-  ComposeContainers [NatsToVectCont shape] =%> 
+  ComposeContainers [NatsToVect shape] =%> 
   CubicalTensorCont shape
 cubicalTensorToFlat {shape = []} = constUnit <%! (\(() <| _), _ => (FZ ** ()))
 cubicalTensorToFlat {shape = (s :: ss)}
@@ -90,14 +90,14 @@ cubicalTensorToFlat {shape = (s :: ss)}
 public export
 flatToCubicalTensor : {shape : List Nat} ->
   CubicalTensorCont shape =%> 
-  ComposeContainers [NatsToVectCont shape]
+  ComposeContainers [NatsToVect shape]
 flatToCubicalTensor {shape = []} = (\_ => EmptyExt) <%! (\_, _ => FZ)
 flatToCubicalTensor {shape = (s :: ss)}
   = (\_ => EmptyExt) <%! (\(), (cp ** ()) => cp)
 
 -- public export
 -- cubicalTensorProdNat : {shape : List Nat} ->
---   ComposeContainers (NatToVectCont <$> shape) =%> 
+--   ComposeContainers (NatToVect <$> shape) =%> 
 --   CubicalTensorCont shape
 -- cubicalTensorProdNat {shape = []} = constUnit <%! const2Unit
 -- cubicalTensorProdNat {shape = (_ :: _)}
@@ -124,7 +124,7 @@ dLensProductReshape {prf}
 -- public export
 -- prodNatToCubicalTensor : {shape : List Nat} ->
 --   CubicalTensorCont shape =%> 
---   ComposeContainers (NatToVectCont <$> shape)
+--   ComposeContainers (NatToVect <$> shape)
 -- prodNatToCubicalTensor {shape = []} = constUnit <%! const2Unit
 -- prodNatToCubicalTensor {shape = (s :: ss)}
 --   = let (fwss <%! bwss) = prodNatToCubicalTensor {shape=ss}
@@ -133,7 +133,7 @@ dLensProductReshape {prf}
 
 
 -- shapeOfCubicalTensorIsUnit : {shape : List Nat} ->
---   (ComposeContainers (NatToVectCont <$> shape)) .shp = ()
+--   (ComposeContainers (NatToVect <$> shape)) .shp = ()
 -- shapeOfCubicalTensorIsUnit {shape = []} = Refl
 -- shapeOfCubicalTensorIsUnit {shape = (s :: ss)}
 --   = rewrite shapeOfCubicalTensorIsUnit {shape = ss} in ?afasdf

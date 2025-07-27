@@ -91,11 +91,14 @@ failing
 ----------------------------------------
 
 ||| TensorA can do everything that Tensor can
-t0again : TensorA [VectCont 5] Double
+t0again : TensorA [Vect 5] Double
 t0again = FromCubicalTensor v
 
-t1again : TensorA [VectCont 3, VectCont 4] Double
-t1again = FromCubicalTensor t1 
+-- t1again : TensorA [Vect 3, Vect 4] Double -- I think here we want to automatically flatten, like numpy does. But then we lose shape information. This is something to fix
+-- t1again = FromCubicalTensor t1 
+
+t1again' : TensorA [Vect 12] Double 
+t1again' = FromCubicalTensor t1 
 
 {- 
 Instead of an n-element vector, here's tree with leaves as elements
@@ -105,8 +108,11 @@ Instead of an n-element vector, here's tree with leaves as elements
     / \
 (-42)  46 
 -}
-ex1 : TensorA [BTreeLeafCont] Double
+ex1 : TensorA [BTreeLeaf] Double
 ex1 = fromArrayA $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+
+ex1' : TensorA [BTreeLeaf] Double
+ex1' = fromArrayAConcrete $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
 
 {- 
@@ -115,12 +121,12 @@ Here's another tree, with a different number of elements
       /   \
      10   100 
 -}
-ex2 : TensorA [BTreeLeafCont] Double
+ex2 : TensorA [BTreeLeaf] Double
 ex2 = fromArrayA $ fromBTreeLeaf $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take the dot product of these two trees
 ||| The fact that they don't have the same number of elements does not matter
-||| What matters is that the container defining them 'BTreeLeafCont' is the same
+||| What matters is that the container defining them 'BTreeLeaf' is the same
 dotProduct2 : TensorA [] Double
 dotProduct2 = dotA ex1 ex2
 
@@ -132,12 +138,15 @@ Here's a tree with nodes as elements
       / \
      *   * 
 -}
-ex3 : TensorA [BTreeNodeCont] Double
+ex3 : TensorA [BTreeNode] Double
 ex3 = fromArrayA $ fromBTreeNode $ Node 127 Leaf' (Node 14 Leaf' Leaf')
 
 ||| And here's a tree with whose nodes are vectors of size 2
-ex4 : TensorA [BTreeLeafCont, VectCont 2] Double
+ex4 : TensorA [BTreeLeaf, Vect 2] Double
 ex4 = fromArrayA $ fromBTreeLeaf $ (Leaf $ fromVect [1,2])
+
+ex4' : TensorA [BTreeLeaf, Vect 2] Double
+ex4' = fromArrayAConcrete $ Node' (Leaf [4,1]) (Leaf [17, 4])
 
 {- 
 We can index into any of these structures

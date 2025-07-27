@@ -68,7 +68,7 @@ liftA2ConstCont (() <| va) (() <| vb) = () <| (\x => (va x, vb x))
 
 ||| The extension of any container with a unit shape
 ||| is an applicative functor
-||| Examples: ScalarCont, PairCont, VectCont n, StreamCont
+||| Examples: Scalar, Pair, Vect n, Stream
 public export
 Applicative (Ext (Const2 () l)) where
   pure a = () <| (\_ => a)

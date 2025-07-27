@@ -2,7 +2,7 @@ module Misc
 
 import Data.Vect
 import Data.Fin.Arith
-import Data.Vect.Quantifiers
+import Data.List.Quantifiers
 import Decidable.Equality
 import Decidable.Equality.Core
 import Data.String
@@ -53,7 +53,9 @@ namespace Vect
   sum : Num a => Vect n a -> a
   sum xs = foldr (+) (fromInteger 0) xs
   
-  public export
+  -- Because of the way foldr for Vect is implemented in Idris 
+  -- we have to use this approach below, otherwise allSuccThenProdSucc breaks
+  public export 
   prod : Num a => Vect n a -> a
   prod [] = fromInteger 1
   prod (x :: xs) = x * prod xs
@@ -62,6 +64,7 @@ namespace List
   public export
   sum : Num a => List a -> a
   sum = foldr (+) (fromInteger 0) 
+
   public export
   prod : Num a => List a -> a
   prod = foldr (*) (fromInteger 1)
@@ -72,6 +75,13 @@ maxInList [] = Nothing
 maxInList (x :: xs) = do
   mx <- maxInList xs
   pure (Prelude.max x mx)
+
+||| Dual to concat from Data.Vect
+public export
+unConcat : {n, m : Nat} -> Vect (n * m) a -> Vect n (Vect m a)
+unConcat {n = 0} _ = []
+unConcat {n = (S k)} xs = let (f, s) = splitAt m xs
+                          in f :: unConcat s
 
 
 -- for reshaping a tensor
@@ -274,7 +284,7 @@ multSucc : {m, n : Nat} -> IsSucc m -> IsSucc n -> IsSucc (m * n)
 multSucc {m = S m'} {n = S n'} ItIsSucc ItIsSucc = ItIsSucc
 
 public export
-allSuccThenProdSucc : (xs : Vect n Nat) -> {auto ps : All IsSucc xs} -> IsSucc (prod xs)
+allSuccThenProdSucc : (xs : List Nat) -> {auto ps : All IsSucc xs} -> IsSucc (prod xs)
 allSuccThenProdSucc [] {ps = []} = ItIsSucc
 allSuccThenProdSucc (_ :: xs') {ps = p :: _} = multSucc p (allSuccThenProdSucc xs')
 
@@ -330,24 +340,24 @@ ll2 = ?ll2_rhs
 lk : (a :  Type ** List (Interface1 a => a))
 lk = (Nat ** [3, 5])
 
-private prefix 0 #
-record ApplF (lprop : Vect m ((Type -> Type) -> Type)) where
-  constructor (#)
-  F : Type -> Type
-  {auto 0 prf : All (\p => p F) lprop}
+-- private prefix 0 #
+-- record ApplF (lprop : Vect m ((Type -> Type) -> Type)) where
+--   constructor (#)
+--   F : Type -> Type
+--   {auto 0 prf : All (\p => p F) lprop}
 
 interface MyInterface f where
   tttt : (a -> b) -> (f a -> f b)
 
 
-ex0 : List (ApplF [Functor, Applicative])
-ex0 = [# Vect 4]
-
-ex1 : List (ApplF [Functor, Applicative])
-ex1 = [# List, # Vect 4]
-
-ex2 : List (ApplF [Functor, Applicative])
-ex2 = [# Maybe, # List, # Vect 100]
+-- ex0 : List (ApplF [Functor, Applicative])
+-- ex0 = [# Vect 4]
+-- 
+-- ex1 : List (ApplF [Functor, Applicative])
+-- ex1 = [# List, # Vect 4]
+-- 
+-- ex2 : List (ApplF [Functor, Applicative])
+-- ex2 = [# Maybe, # List, # Vect 100]
 
 data Repr : Type -> Type where
   MkRepr : (a -> Int) -> Repr a

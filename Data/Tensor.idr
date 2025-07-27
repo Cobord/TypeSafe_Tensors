@@ -53,6 +53,23 @@ MatrixA (# row) (# col) dtype = TensorA [row, col] dtype
 -- ArrayA
 -----------------
 
+--   public export
+--   data AllShow : (shape : ApplContList conts) -> (dtype : Type) -> Type where
+--     NilShow : Show dtype => AllShow [] dtype
+--     ConsShow : {c : Cont} -> {cs : ApplContList conts} ->
+--       Applicative (Ext c) =>
+--       Show (c `fullOf` (TensorA cs dtype)) =>
+--       AllShow (c :: cs) dtype
+
+public export
+data AllConcrete : (shape : ApplContList conts) -> (dtype : Type) -> Type where
+  NilConcrete : AllConcrete [] dtype
+  ConsConcrete : {c : Cont} -> {cs : ApplContList conts} -> 
+    Applicative (Ext c) =>
+    (fr : FromConcrete c) =>
+    (afr : AllConcrete cs dtype) =>
+    AllConcrete (c :: cs) dtype
+
 ||| Convenience function for constructing a TensorA from a list of containers
 public export
 ArrayA : (shape : ApplContList conts) -> (dtype : Type) -> Type
@@ -60,9 +77,26 @@ ArrayA [] dtype = dtype
 ArrayA (c :: cs) dtype = c `fullOf` (ArrayA cs dtype)
 
 public export
+ArrayAConcrete : (shape : ApplContList conts) ->
+  (dtype : Type) ->
+  (concr : AllConcrete shape dtype) =>
+  Type
+ArrayAConcrete [] dtype = dtype
+ArrayAConcrete (c :: cs) {concr = ConsConcrete {fr}} dtype
+  = concreteType @{fr} (ArrayAConcrete cs dtype)
+
+public export
 fromArrayA : {shape : ApplContList conts} -> ArrayA shape a -> TensorA shape a
 fromArrayA {shape = []} x = TZ x
 fromArrayA {shape = (_ :: _)} xs = TS $ fromArrayA <$> xs
+
+public export
+fromArrayAConcrete : {shape : ApplContList conts} ->
+  (concr : AllConcrete shape dtype) =>
+  ArrayAConcrete shape dtype -> TensorA shape dtype
+fromArrayAConcrete {shape = []} x = TZ x
+fromArrayAConcrete {shape = (_ :: _)} {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor fromConcrete)}} xs
+  = TS $ fromConcrete $ fromArrayAConcrete <$> xs
 
 public export
 toArrayA : {shape : ApplContList conts} -> TensorA shape a -> ArrayA shape a
@@ -438,10 +472,10 @@ namespace CubicalTensor
 
 
   -- vvv : (shape : Vect n Nat) -> Vect n ApplC
-  -- vvv shape = (\n => # (VectCont n)) <$> shape
+  -- vvv shape = (\n => # (Vect n)) <$> shape
 
 
-  ||| This is a helper datatype for cubical tensors, i.e. those made only out of VectCont
+  ||| This is a helper datatype for cubical tensors, i.e. those made only out of Vect
   ||| It allows specifying a tensor only by the size of the content, and is needed (instead of Tensor') to aid type inference
   ||| There might be a more ergonomic way to do this
   public export
@@ -580,14 +614,17 @@ namespace CubicalTensor
   fromArrayHelper {shape = (s :: ss)} a = concat (fromArrayHelper <$> a)
 
   public export
+  toArrayHelper : {shape : List Nat} -> Vect (prod shape) a -> Array shape a
+  toArrayHelper {shape = []} [a] = a
+  toArrayHelper {shape = (s :: ss)} xs = toArrayHelper <$> (unConcat xs)
+
+  public export
   fromArray : {shape : List Nat} -> Array shape a -> Tensor shape a
   fromArray = ToCubicalTensor . fromArrayA . fromVect . fromArrayHelper
 
-  -- public export
-  -- fromArray : {shape : List Nat} -> Array shape a -> Tensor shape a
-  -- fromArray {shape=[]} a = pure a -- ToCubicalTensor $ fromArrayHelper a
-  -- fromArray {shape=(s :: ss)} a = ToCubicalTensor $ TS $
-  --   () <| (pure . (\i => index i (?hh1) -- ToCubicalTensor $ fromArrayHelper a
+  public export
+  toArray : {shape : List Nat} -> Tensor shape a -> Array shape a
+  toArray = toArrayHelper . toVect . toArrayA . FromCubicalTensor
 
   public export
   reshape : {oldShape : List Nat} ->
@@ -659,6 +696,18 @@ namespace IndexTensor
     data IndexT : (shape : List Nat) -> Type where
       Nil  : IndexT []
       (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
+
+    ||| Maybe Index of a cubical tensor given a shape
+    ||| This is 0-based indexing
+    public export
+    data MIndexT : (shape : List Nat) -> Type where
+      MNil  : MIndexT []
+      (:::) : Maybe (Fin m) -> MIndexT ms -> MIndexT (m :: ms)
+
+    mIndexToShape : {shape : List Nat} -> MIndexT shape -> List Nat
+    mIndexToShape {shape = []} MNil = []
+    mIndexToShape {shape = (s :: ss)} (Nothing ::: is) = s :: mIndexToShape is
+    mIndexToShape ((Just i) ::: is) = finToNat i :: mIndexToShape is
   
     ||| Given a shape and an index, compute the index in the flattened tensor
     public export
@@ -729,6 +778,27 @@ namespace SliceTensor
   -- takeTensor [] (ToCubicalTensor (TZ val)) = ToCubicalTensor (TZ val)
   -- takeTensor (s :: ss) (ToCubicalTensor (TS xs)) = ToCubicalTensor $ TS $ 
   --   (\t => FromCubicalTensor ((takeTensor ss) (ToCubicalTensor t))) <$> takeFinVect' s xs
+
+  namespace FullSlicing
+    -- supporiting not just taking, but slicing
+    -- i.e. t[2, :, 1, :] notation
+    public export
+    data MSliceT : (shape : List Nat) -> Type where
+      Nil : MSliceT []
+      (::) : Maybe (Fin (S m)) -> MSliceT ms -> MSliceT (m :: ms)
+
+    ||| Computes the shape of the tensor after the slicing
+    public export
+    msliceToShape : {shape : List Nat} -> MSliceT shape -> List Nat
+    msliceToShape [] = []
+    msliceToShape {shape = (s :: _)} (Nothing :: sls) = s :: msliceToShape sls
+    msliceToShape ((Just sl) :: sls) = finToNat sl :: msliceToShape sls
+    
+    -- sliceToShape Nil = []
+    -- sliceToShape (s :: ss) = finToNat s :: sliceToShape ss
+
+    
+
 
 
 

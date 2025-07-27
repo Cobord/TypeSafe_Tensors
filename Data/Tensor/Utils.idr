@@ -2,7 +2,7 @@ module Data.Tensor.Utils
 
 import Data.List
 import Data.Nat -- Add import for Cast
--- import System.Random
+import System.Random
 
 
 import Data.Tensor
@@ -39,42 +39,46 @@ size {shape} _ = prod shape
 ||| Requires that we have Foldable on all the components
 ||| In general we won't know the number of elements of a non-cubical tensor at compile time
 public export
-flatten : {shape : ApplContList conts} -> Foldable (TensorA shape) =>
+flattenA : {shape : ApplContList conts} -> Foldable (TensorA shape) =>
   TensorA shape a -> List a
-flatten = toList
+flattenA = toList
 
 ||| Flatten a cubical tensor into a vector
-||| This means we know the number of elements at compile time (it could be zero!)
-||| TODO this is just a reshape!
-flatten' : {shape : List Nat} ->
+||| Number of elements is known at compile time
+||| Can even be zero, if any of shape elements is zero
+flatten : {shape : List Nat} ->
   Tensor shape a -> Vect (prod shape) a
-flatten' t = ?todo
+flatten (ToCubicalTensor (TS ex)) = (\(TZ a) => a) <$> toVect ex
 
-||| Maximum value in a tensor. TensorA might be empty.
-max : {shape : ApplContList conts} -> Foldable (TensorA shape) => Ord a =>
+||| Maximum value in a tensor
+maxA : {shape : ApplContList conts} -> Foldable (TensorA shape) => Ord a =>
   TensorA shape a -> Maybe a
-max = maxInList . flatten
+maxA = maxInList . flattenA
 
+||| Maximum value in a cubical tensor
+max : {shape : List Nat} -> Ord a =>
+  Tensor shape a -> Maybe a
+max = maxA . FromCubicalTensor
 
--- Requires reshape
--- random : Random a => (shape : Vect n Nat) -> IO (Tensor shape a)
--- random shape = ?random_rhs
+-- Probably there's a faster way to do this
+public export
+{n : Nat} -> Random a => Random (Vect n a) where
+  randomIO = sequence $ replicate n randomIO
+  randomRIO (lo, hi) = sequence $ zipWith (\l, h => randomRIO (l, h)) lo hi
 
+public export
+{shape : List Nat} -> Random a => Random (Tensor shape a) where
+  randomIO = map (fromArray . toArrayHelper) randomIO
+  
+  randomRIO (lo, hi) = do
+    let loFlat = flatten lo
+    let hiFlat = flatten hi
+    randomVect <- randomRIO (loFlat, hiFlat)
+    pure $ fromArray (toArrayHelper randomVect)
+
+random : Random a => (shape : List Nat) -> IO (Tensor shape a)
+random shape = randomIO
 
 -- public export
 -- eye : Num a => TensorA [n, n] a
 -- eye = ?eye_rhs
-
-
--- TO DO reshapes, we need this functorial action for general tensors, and for that, we need fold over hancock product, but that has some problems!
-public export
-reshapeA : {conts1, conts2 : List ApplC} ->
-  {shape1 : ApplContList conts1} -> {shape2 : ApplContList conts2} ->
-  (ComposeContainers conts1 =%> ComposeContainers conts2) ->
-  TensorA shape1 a -> TensorA shape2 a
---   (Ext (ComposeContainers shape1) a -> Ext (ComposeContainers shape2) a)
-reshapeA dLens t1
-  = let tt = contMapExt dLens 
-    in ?alaooo
-
-  

@@ -19,100 +19,99 @@ import public Data.Container.TreeUtils -- rexport all the stuff inside
 namespace MainContainerExamples
   ||| Container with a single thing
   public export
-  ScalarCont : Cont
-  ScalarCont = (_ : Unit) !> Unit
+  Scalar : Cont
+  Scalar = (_ : Unit) !> Unit
 
   ||| Product
   public export
-  PairCont : Cont
-  PairCont = (_ : Unit) !> Bool
+  Pair : Cont
+  Pair = (_ : Unit) !> Bool
 
   ||| Coproduct
   public export
-  EitherCont : Cont
-  EitherCont = (_ : Bool) !> Unit
+  Either : Cont
+  Either = (_ : Bool) !> Unit
 
   ||| +1  
   public export
-  MaybeCont : Cont
-  MaybeCont = (b : Bool) !> (if b then Unit else Void)
+  Maybe : Cont
+  Maybe = (b : Bool) !> (if b then Unit else Void)
   
   public export
-  ListCont : Cont
-  ListCont = (n : Nat) !> (Fin n)
+  List : Cont
+  List = (n : Nat) !> (Fin n)
   
   ||| Container of n things 
   public export
-  VectCont : Nat -> Cont
-  VectCont n = (_ : Unit) !> Fin n
+  Vect : Nat -> Cont
+  Vect n = (_ : Unit) !> Fin n
 
   ||| Container of an infinite number of things
   public export
-  StreamCont : Cont
-  StreamCont = (_ : Unit) !> Nat
+  Stream : Cont
+  Stream = (_ : Unit) !> Nat
   
   ||| Binary trees with data stored at nodes
   public export
-  BTreeNodeCont : Cont
-  BTreeNodeCont = (b : BTreeShape) !> FinBTreeNode b
+  BTreeNode : Cont
+  BTreeNode = (b : BTreeShape) !> FinBTreeNode b
   
   ||| Binary trees with data stored at leaves
   public export
-  BTreeLeafCont : Cont
-  BTreeLeafCont = (b : BTreeShape) !> FinBTreeLeaf b
+  BTreeLeaf : Cont
+  BTreeLeaf = (b : BTreeShape) !> FinBTreeLeaf b
 
 
 namespace ExtensionsOfMainContainerExamples
   ||| Isomorphic to the Identity
   public export
   Scalar' : Type -> Type
-  Scalar' = Ext ScalarCont
+  Scalar' = Ext Scalar
 
   ||| Isomorphic to Pair
   public export
   Pair' : Type -> Type
-  Pair' = Ext PairCont
+  Pair' = Ext Pair
   
   ||| Isomorphic to Either
   public export
   Either' : Type -> Type
-  Either' = Ext EitherCont
+  Either' = Ext Either
 
   ||| Isomorphic to Maybe
   public export
   Maybe' : Type -> Type
-  Maybe' = Ext MaybeCont
+  Maybe' = Ext Maybe
   
   ||| Isomorphic to List
   public export
   List' : Type -> Type
-  List' = Ext ListCont
+  List' = Ext List
 
   ||| Isomorphic to Vect
   public export
   Vect' : (n : Nat) -> Type -> Type
-  Vect' n x = (VectCont n) `fullOf` x
+  Vect' n x = (Vect n) `fullOf` x
 
   ||| Isomorphic to Stream
   public export
   Stream' : Type -> Type
-  Stream' = Ext StreamCont
+  Stream' = Ext Stream
 
   
   ||| Isomorphic to Trees with data at only nodes
   public export
   BTreeNode' : Type -> Type
-  BTreeNode' = Ext BTreeNodeCont
+  BTreeNode' = Ext BTreeNode
   
   ||| Isomorphic to Trees with data only at leaves
   public export
   BTreeLeaf' : Type -> Type
-  BTreeLeaf' = Ext BTreeLeafCont
-
+  BTreeLeaf' = Ext BTreeLeaf
 
 -- public export
 -- Functor (Vect' n) where
---   map f a = map {f=(Ext (VectCont n))} f a
+--   map f a = map {f=(Ext (Vect n))} f a
 
 -- public export
 -- {n : Nat} -> Applicative (Vect' n) where
@@ -122,6 +121,10 @@ namespace ExtensionsOfMainContainerExamples
 
 
 namespace ConversionFunctions
+  public export
+  fromIdentity : a -> Scalar' a
+  fromIdentity a = () <| (\_ => a)
+
   public export
   fromList : List x -> List' x
   fromList [] = (0 <| absurd)
@@ -175,26 +178,67 @@ namespace ConversionFunctions
     Node' (toBTreeLeaf (l <| \posL => content (GoLLeaf posL)))
           (toBTreeLeaf (r <| \posR => content (GoRLeaf posR)))
 
+
+public export
+interface FromConcrete (cont : Cont) where
+  constructor MkConcrete
+  concreteType : Type -> Type
+  concreteFunctor : Functor (concreteType)
+  fromConcrete : concreteType a -> Ext cont a
+
+Functor Basics.id where
+  map = id
+
+public export
+FromConcrete Scalar where
+  concreteType = id
+  concreteFunctor = %search
+  fromConcrete = fromIdentity
+
+public export
+FromConcrete List where
+  concreteType = List
+  concreteFunctor = %search -- TODO how to find the result of the search?
+  fromConcrete = fromList
+
+public export
+{n : Nat} -> FromConcrete (Vect n) where
+  concreteType = Vect n
+  concreteFunctor = %search
+  fromConcrete = fromVect
+
+public export
+FromConcrete BTreeNode where
+  concreteType = BTreeNode
+  concreteFunctor = %search
+  fromConcrete = fromBTreeNode
+
+public export
+FromConcrete BTreeLeaf where
+  concreteType = BTreeLeaf
+  concreteFunctor = %search
+  fromConcrete = fromBTreeLeaf
+
 namespace VectInstances
   public export
-  {n : Nat} -> Eq x => Eq (Ext (VectCont n) x) where
+  {n : Nat} -> Eq x => Eq (Ext (Vect n) x) where
     v == v' = (toVect v) == (toVect v')
  
   public export
-  {n : Nat} -> Show x => Show (Ext (VectCont n) x) where
+  {n : Nat} -> Show x => Show (Ext (Vect n) x) where
     show v = show (toVect v)
 
   public export
-  {n : Nat} -> Foldable (Ext (VectCont n)) where
+  {n : Nat} -> Foldable (Ext (Vect n)) where
     foldr f z v = foldr f z (toVect v)
   
   -- public export
-  -- {n : Nat} -> Applicative (Ext (VectCont n)) where
+  -- {n : Nat} -> Applicative (Ext (Vect n)) where
   --   pure a = fromVect $ pure a
   --   fs <*> vs = fromVect $ toVect fs <*> toVect vs
 
   public export
-  {n : Nat} -> Num a => Algebra (Ext (VectCont n)) a where
+  {n : Nat} -> Num a => Algebra (Ext (Vect n)) a where
     reduce v = reduce (toVect v)
 
   -- TODO Naperian instance? Or is that covered by the one in Definiton.idr?
