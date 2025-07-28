@@ -109,10 +109,7 @@ Instead of an n-element vector, here's tree with leaves as elements
 (-42)  46 
 -}
 ex1 : TensorA [BTreeLeaf] Double
-ex1 = fromArrayA $ fromBTreeLeaf $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
-
-ex1' : TensorA [BTreeLeaf] Double
-ex1' = fromArrayAConcrete $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+ex1 = fromArrayA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
 
 {- 
@@ -122,7 +119,7 @@ Here's another tree, with a different number of elements
      10   100 
 -}
 ex2 : TensorA [BTreeLeaf] Double
-ex2 = fromArrayA $ fromBTreeLeaf $ Node' (Leaf 10) (Leaf 100)
+ex2 = fromArrayA $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take the dot product of these two trees
 ||| The fact that they don't have the same number of elements does not matter
@@ -139,14 +136,11 @@ Here's a tree with nodes as elements
      *   * 
 -}
 ex3 : TensorA [BTreeNode] Double
-ex3 = fromArrayA $ fromBTreeNode $ Node 127 Leaf' (Node 14 Leaf' Leaf')
+ex3 = fromArrayA $ Node 127 Leaf' (Node 14 Leaf' Leaf')
 
 ||| And here's a tree with whose nodes are vectors of size 2
 ex4 : TensorA [BTreeLeaf, Vect 2] Double
-ex4 = fromArrayA $ fromBTreeLeaf $ (Leaf $ fromVect [1,2])
-
-ex4' : TensorA [BTreeLeaf, Vect 2] Double
-ex4' = fromArrayAConcrete $ Node' (Leaf [4,1]) (Leaf [17, 4])
+ex4 = fromArrayA $ Node' (Leaf [4,1]) (Leaf [17, 4])
 
 {- 
 We can index into any of these structures

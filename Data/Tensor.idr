@@ -70,38 +70,47 @@ data AllConcrete : (shape : ApplContList conts) -> (dtype : Type) -> Type where
     (afr : AllConcrete cs dtype) =>
     AllConcrete (c :: cs) dtype
 
-||| Convenience function for constructing a TensorA from a list of containers
-public export
-ArrayA : (shape : ApplContList conts) -> (dtype : Type) -> Type
-ArrayA [] dtype = dtype
-ArrayA (c :: cs) dtype = c `fullOf` (ArrayA cs dtype)
+-- public export
+-- ArrayA : (shape : ApplContList conts) -> (dtype : Type) -> Type
+-- ArrayA [] dtype = dtype
+-- ArrayA (c :: cs) dtype = c `fullOf` (ArrayA cs dtype)
 
+-- public export
+-- fromArrayA : {shape : ApplContList conts} -> ArrayA shape a -> TensorA shape a
+-- fromArrayA {shape = []} x = TZ x
+-- fromArrayA {shape = (_ :: _)} xs = TS $ fromArrayA <$> xs
+
+
+-- public export -- toArrayA : {shape : ApplContList conts} -> TensorA shape a -> ArrayA shape a
+-- toArrayA (TZ val) = val
+-- toArrayA (TS xs) = toArrayA <$> xs
+
+||| Convenience function for constructing a TensorA
+||| The input is a nested list of containers with a FromConcrete instance
+||| Meaning that they're matched to a concrete inductively defined Idris type
 public export
-ArrayAConcrete : (shape : ApplContList conts) ->
+ArrayA : (shape : ApplContList conts) ->
   (dtype : Type) ->
   (concr : AllConcrete shape dtype) =>
   Type
-ArrayAConcrete [] dtype = dtype
-ArrayAConcrete (c :: cs) {concr = ConsConcrete {fr}} dtype
-  = concreteType @{fr} (ArrayAConcrete cs dtype)
+ArrayA [] dtype = dtype
+ArrayA (c :: cs) {concr = ConsConcrete {fr}} dtype
+  = concreteType @{fr} (ArrayA cs dtype)
+
 
 public export
-fromArrayA : {shape : ApplContList conts} -> ArrayA shape a -> TensorA shape a
-fromArrayA {shape = []} x = TZ x
-fromArrayA {shape = (_ :: _)} xs = TS $ fromArrayA <$> xs
-
-public export
-fromArrayAConcrete : {shape : ApplContList conts} ->
+fromArrayA : {shape : ApplContList conts} ->
   (concr : AllConcrete shape dtype) =>
-  ArrayAConcrete shape dtype -> TensorA shape dtype
-fromArrayAConcrete {shape = []} x = TZ x
-fromArrayAConcrete {shape = (_ :: _)} {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor fromConcrete)}} xs
-  = TS $ fromConcrete $ fromArrayAConcrete <$> xs
+  ArrayA shape dtype -> TensorA shape dtype
+fromArrayA {shape = []} x = TZ x
+fromArrayA {shape = (_ :: _)} {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor fromConcrete _)}} xs = TS $ fromConcrete $ fromArrayA <$> xs
 
 public export
-toArrayA : {shape : ApplContList conts} -> TensorA shape a -> ArrayA shape a
+toArrayA : {shape : ApplContList conts} ->
+  (concr : AllConcrete shape dtype) =>
+  TensorA shape dtype -> ArrayA shape dtype
 toArrayA (TZ val) = val
-toArrayA (TS xs) = toArrayA <$> xs
+toArrayA {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor _ toConcrete)} {afr} } (TS xs) = toConcrete $ toArrayA {concr=afr} <$> xs
 
 
 -----------------
@@ -620,11 +629,11 @@ namespace CubicalTensor
 
   public export
   fromArray : {shape : List Nat} -> Array shape a -> Tensor shape a
-  fromArray = ToCubicalTensor . fromArrayA . fromVect . fromArrayHelper
+  fromArray = ToCubicalTensor . fromArrayA . fromArrayHelper
 
   public export
   toArray : {shape : List Nat} -> Tensor shape a -> Array shape a
-  toArray = toArrayHelper . toVect . toArrayA . FromCubicalTensor
+  toArray = toArrayHelper . toArrayA . FromCubicalTensor
 
   public export
   reshape : {oldShape : List Nat} ->
