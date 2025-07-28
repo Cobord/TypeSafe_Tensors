@@ -31,7 +31,10 @@ MkD b = MkTangent $ (x : a) !> b x
 T : D a -> a -> Type
 T (MkTangent c) = c.pos
 
+--------------------------------
 -- Concrete instances
+--------------------------------
+
 %hint
 doubleTangent : D Double
 doubleTangent = MkD (\_ => Double) {mon=(\_ => Additive)}
@@ -120,8 +123,7 @@ copyDifferentiable = MkDiff (\_, da => (da, da))
 {-
 We'd want a module to turn pointful code into categories.
 Then we'd know how to differentiate categories
-
- -}
+-}
 
 fn : (Double, Double) -> Double
 fn (x, y) = t + 3

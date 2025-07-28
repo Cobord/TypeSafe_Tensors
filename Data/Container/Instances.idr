@@ -126,10 +126,20 @@ namespace ConversionFunctions
   fromIdentity a = () <| (\_ => a)
 
   public export
+  toIdentity : Scalar' a -> a
+  toIdentity (() <| f) = f ()
+
+  public export
   fromList : List x -> List' x
   fromList [] = (0 <| absurd)
   fromList (x :: xs) = let (l <| c) = fromList xs
                        in (S l <| addBeginning x c)
+
+  public export
+  toList : List' x -> List x
+  toList (0 <| _) = []
+  toList ((S k) <| ind) = let (x, c) = removeBeginning ind
+                          in x :: toList (k <| c)
   
   
   public export
@@ -159,6 +169,14 @@ namespace ConversionFunctions
               Root => node
               GoL posL => ltc posL
               GoR posR => rtc posR)
+
+  public export
+  toBTreeNode : BTreeNode' a -> BTreeNode a
+  toBTreeNode (LeafS <| indexCont) = Leaf ()
+  toBTreeNode ((NodeS lt rt) <| indexCont) = 
+    Node (indexCont Root)
+         (toBTreeNode (lt <| indexCont . GoL))
+         (toBTreeNode (rt <| indexCont . GoR))
   
   public export
   fromBTreeLeaf : BTreeLeaf a -> BTreeLeaf' a
@@ -185,6 +203,7 @@ interface FromConcrete (cont : Cont) where
   concreteType : Type -> Type
   concreteFunctor : Functor (concreteType)
   fromConcrete : concreteType a -> Ext cont a
+  toConcrete : Ext cont a -> concreteType a
 
 Functor Basics.id where
   map = id
@@ -194,30 +213,35 @@ FromConcrete Scalar where
   concreteType = id
   concreteFunctor = %search
   fromConcrete = fromIdentity
+  toConcrete = toIdentity
 
 public export
 FromConcrete List where
   concreteType = List
   concreteFunctor = %search -- TODO how to find the result of the search?
   fromConcrete = fromList
+  toConcrete = toList
 
 public export
 {n : Nat} -> FromConcrete (Vect n) where
   concreteType = Vect n
   concreteFunctor = %search
   fromConcrete = fromVect
+  toConcrete = toVect
 
 public export
 FromConcrete BTreeNode where
   concreteType = BTreeNode
   concreteFunctor = %search
   fromConcrete = fromBTreeNode
+  toConcrete = toBTreeNode
 
 public export
 FromConcrete BTreeLeaf where
   concreteType = BTreeLeaf
   concreteFunctor = %search
   fromConcrete = fromBTreeLeaf
+  toConcrete = toBTreeLeaf
 
 namespace VectInstances
   public export

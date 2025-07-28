@@ -70,20 +70,6 @@ data AllConcrete : (shape : ApplContList conts) -> (dtype : Type) -> Type where
     (afr : AllConcrete cs dtype) =>
     AllConcrete (c :: cs) dtype
 
--- public export
--- ArrayA : (shape : ApplContList conts) -> (dtype : Type) -> Type
--- ArrayA [] dtype = dtype
--- ArrayA (c :: cs) dtype = c `fullOf` (ArrayA cs dtype)
-
--- public export
--- fromArrayA : {shape : ApplContList conts} -> ArrayA shape a -> TensorA shape a
--- fromArrayA {shape = []} x = TZ x
--- fromArrayA {shape = (_ :: _)} xs = TS $ fromArrayA <$> xs
-
-
--- public export -- toArrayA : {shape : ApplContList conts} -> TensorA shape a -> ArrayA shape a
--- toArrayA (TZ val) = val
--- toArrayA (TS xs) = toArrayA <$> xs
 
 ||| Convenience function for constructing a TensorA
 ||| The input is a nested list of containers with a FromConcrete instance
@@ -211,7 +197,8 @@ namespace ApplicativeTensorA
 
   ||| Laxator of the monoidal functor
   public export
-  liftA2TensorA : {shape : ApplContList conts} -> TensorA shape a -> TensorA shape b -> TensorA shape (a, b)
+  liftA2TensorA : {shape : ApplContList conts} ->
+    TensorA shape a -> TensorA shape b -> TensorA shape (a, b)
   liftA2TensorA (TZ a) (TZ b) = TZ (a, b)
   liftA2TensorA (TS x) (TS y) = TS $ uncurry liftA2TensorA <$> (liftA2 x y)
 
@@ -599,9 +586,11 @@ namespace CubicalTensor
   dot : {shape : List Nat} -> {a : Type}
     -> Num a => AllAlgebra (FlatStorage shape) a
     => Tensor shape a -> Tensor shape a -> Tensor [] a
-  dot (ToCubicalTensor xs) (ToCubicalTensor ys)
-    = pure $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA xs ys
-  
+  dot (ToCubicalTensor v) (ToCubicalTensor w)
+    = pure $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA v w
+    -- = let tt = dotA (FromCubicalTensor v) (FromCubicalTensor w)
+    --   in ToCubicalTensor ?tuuu
+
   public export
   Array : (shape : List Nat) -> (dtype : Type) -> Type
   Array [] dtype = dtype
