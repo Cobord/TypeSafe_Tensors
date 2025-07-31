@@ -36,7 +36,9 @@ modules = Data.Container.Definition,
           Algebra,
           Misc,
           Data.ElabUtilTest,
-          Examples.Tensors
+          Examples.Tensors,
+          Tests.TensorAccess,
+          Tests.EinsumTests
 
 -- main file (i.e. file to load at REPL)
 -- main =

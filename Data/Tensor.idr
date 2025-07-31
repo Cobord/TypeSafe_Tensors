@@ -20,9 +20,16 @@ import Data.Functor.Naperian
 
 {-----------------------------------------------------------
 {-----------------------------------------------------------
-This file defines the main 'applicative tensor' type
-Together with functionality for useful working with them,
-convenience functions, interfaces,...
+This file defines applicative tensors and functions 
+for working with them.
+
+TensorA -> the main applicative tensor type
+ArrayA -> machinery for working with them as nested Idris types
+IndexT -> indexing machinery
+
+It also incluedes most common interfaces, such as
+Eq, Show, Functor, Applicative, Foldable, Num,...
+
 -----------------------------------------------------------}
 -----------------------------------------------------------}
 
@@ -51,7 +58,13 @@ MatrixA (# row) (# col) dtype = TensorA [row, col] dtype
 
 {----------------------------
 ArrayA
-Convenience datatype and functions for constructing a TensorA
+Convenience datatype and functions for constructing a TensorA.
+For instance, it enables us to create a literal `TensorA [2, 3] Double`
+by writing 
+[ [1, 2, 3]
+, [4, 5, 6]]
+and without using the inductive definition via TS and TZ
+
 ----------------------------}
 
 public export
@@ -88,6 +101,14 @@ toArrayA : {shape : ApplContList conts} ->
   TensorA shape dtype -> ArrayA shape dtype
 toArrayA (TZ val) = val
 toArrayA {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor _ toConcrete)} {afr} } (TS xs) = toConcrete $ toArrayA {concr=afr} <$> xs
+
+public export
+fromArrayAMap : {oldConts, newConts : List ApplC} ->
+  {oldShape : ApplContList oldConts} -> {newShape : ApplContList newConts} ->
+  (ca : AllConcrete oldShape a) => (cb : AllConcrete newShape b) =>
+  (f : ArrayA oldShape a -> ArrayA newShape b) ->
+  TensorA oldShape a -> TensorA newShape b
+fromArrayAMap f = fromArrayA . f . toArrayA
 
 
 {----------------------------
@@ -466,6 +487,28 @@ namespace CubicalTensor
     -- FromCubicalTensor : TensorA (NatsToApplConts shape) a
     FromCubicalTensor : TensorA (FlatStorage shape) a
 
+  public export
+  FromCubicalTensorMap : (Tensor oldShape a -> Tensor newShape b) ->
+    TensorA (FlatStorage oldShape) a -> TensorA (FlatStorage newShape) b
+  FromCubicalTensorMap f = FromCubicalTensor . f . ToCubicalTensor
+
+  public export
+  ToCubicalTensorMap :
+    (TensorA (FlatStorage oldShape) a -> TensorA (FlatStorage newShape) b) ->
+    Tensor oldShape a -> Tensor newShape b
+  ToCubicalTensorMap f = ToCubicalTensor . f . FromCubicalTensor
+
+  public export
+  ToCubicalTensorRel : {shape : List Nat} ->
+    (TensorA (FlatStorage shape) a -> TensorA (FlatStorage shape) b -> c) ->
+    Tensor shape a -> Tensor shape b -> c
+  ToCubicalTensorRel f t t' = f (FromCubicalTensor t) (FromCubicalTensor t')
+
+  public export
+  FromCubicalTensorRel : {shape : List Nat} ->
+    (Tensor shape a -> Tensor shape b -> c) ->
+    TensorA (FlatStorage shape) a -> TensorA (FlatStorage shape) b -> c
+  FromCubicalTensorRel f t t' = f (ToCubicalTensor t) (ToCubicalTensor t')
 
   public export
   data TensorStorage : (shape : ApplContList conts) ->
@@ -501,7 +544,7 @@ namespace CubicalTensor
     {shape : List Nat} ->
     AllEq (FlatStorage shape) a =>
     Eq (Tensor shape a) where
-        (ToCubicalTensor t) == (ToCubicalTensor t') = tensorEq t t'
+        (==) = ToCubicalTensorRel (==)
 
     -- TODO this needs to be fixed to work with new stride based indexing
     public export
@@ -527,11 +570,11 @@ namespace CubicalTensor
 
     public export
     {shape : List Nat} -> Abs a => Abs (Tensor shape a) where
-      abs (ToCubicalTensor t) = ToCubicalTensor $ abs t
+      abs = ToCubicalTensorMap abs
 
     public export
     Functor (Tensor shape) where
-      map f (ToCubicalTensor t) = ToCubicalTensor $ map f t
+      map f = ToCubicalTensorMap (map f)
 
 
     public export
@@ -631,9 +674,7 @@ namespace CubicalTensor
     {shape : List Nat} ->
     {auto prf : prod oldShape = prod shape} ->
     Tensor shape a
-  reshape t = ToCubicalTensor $ reshapeTensorA
-    (cubicalTensorToFlat %>> dLensProductReshape %>> flatToCubicalTensor) $
-    FromCubicalTensor t
+  reshape t = ToCubicalTensorMap (reshapeTensorA (cubicalTensorToFlat %>> dLensProductReshape %>> flatToCubicalTensor)) t
 
 namespace IndexTensor
   -- public export
@@ -654,6 +695,7 @@ namespace IndexTensor
     
   ||| Machinery for indexing into a TensorA
   ||| It depends on shape, but also on the tensor t itself
+  ||| Provides a compile-time guarantee that we won't be out of bounds
   ||| This dependency is not needed for cubical tensors
   ||| TODO remove this dependence for cubical tensors
   public export
@@ -680,7 +722,7 @@ namespace IndexTensor
     strides [] = []
     strides (s :: ss) = prod ss :: strides ss
 
-    ||| It will be important to prove later that if all elements of shape are non-zero, then the head of the strides is also non-zero
+    ||| If all elements of shape are non-zero, then the head of the strides is also non-zero
     public export
     stridesProofHeadNonZero : {shape : List Nat} ->
       {auto prf : All IsSucc shape} ->
@@ -724,7 +766,7 @@ namespace IndexTensor
             strideHeadNonZero = stridesProofHeadNonZero {shape=(s :: ss)} 
             hereCount = shiftMul (head (strides (s :: ss))) i
         in addFinsBounded hereCount restCountWeakened
-    
+
     public export infixr 9 @@ -- for cubical tensors
 
 

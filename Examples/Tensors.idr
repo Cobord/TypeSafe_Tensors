@@ -113,7 +113,7 @@ exList : TensorA [List] Double
 exList = fromArrayA [1,2,3,4,5]
 
 exList2 : TensorA [List] Double
-exList2 = fromArrayA [1,2,3]
+exList2 = fromArrayA [100,-200,1000]
 
 {- 
 In addition to storing standard n-element vectors, TensorA
@@ -127,6 +127,11 @@ Here's a tree-vector with leaves as elements.
 -}
 ex1 : TensorA [BTreeLeaf] Double
 ex1 = fromArrayA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+
+
+public export
+exTraverse : TensorA [List] Double
+exTraverse = fromArrayAMap preorderLeaf ex1
 
 
 {- 
@@ -192,3 +197,6 @@ failing
   -}
   indexTreeExampleFail : Double
   indexTreeExampleFail = ex1 @@ [GoRight (GoRight Done)]
+
+
+-- TODO reshape example for non-cubical tensors

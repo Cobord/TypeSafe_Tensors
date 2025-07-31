@@ -24,8 +24,9 @@ record (=&>) (c1, c2 : Cont) where
 export infixr 1 =&>
 export infix 1 <&!
 
+||| TODO is this the extension of a container?
 val : Cont -> Type -> Cont
-val (shp !> pos) r = (!>) shp (\s => pos s -> r)
+val (shp !> pos) r = (s : shp) !> (pos s -> r)
 
 -- Chart -> DLens morphism 
 -- Tangent bundle to Contanget bundle, effectively

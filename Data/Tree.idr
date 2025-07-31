@@ -1,7 +1,6 @@
 module Data.Tree
 
 ||| Finite binary trees with labels on leaves and nodes
-||| Inductive definition
 public export
 data BTree : (leafType : Type) -> (nodeType : Type) -> Type where
     Leaf : (leaf : leafType)
@@ -169,3 +168,78 @@ namespace TreeRotation
   commute (x :: xs) (Leaf leaf) = Leaf leaf
   commute (False :: xs) (Node node l r) = Node node (commute xs l) r
   commute (True :: xs) (Node node l r) = Node node l (commute xs r)
+
+
+
+
+namespace Traversals
+  {- 
+       4
+      / \
+     2   5
+    /\
+   1  3
+  
+   -}
+  t : BTree Int Int
+  t = Node 4 (Node 2 (Leaf 1) (Leaf 3)) (Leaf 5)
+
+  public export
+  inorder : BTree a b -> List (Either a b)
+  inorder (Leaf leaf) = [Left leaf]
+  inorder (Node node leftTree rightTree) =
+    inorder leftTree ++ [Right node] ++ inorder rightTree
+
+  testInorder :
+    Traversals.inorder Traversals.t = [Left 1, Right 2, Left 3, Right 4, Left 5]
+  testInorder = Refl
+
+  public export
+  preorder : BTree a b -> List (Either a b)
+  preorder (Leaf leaf) = [Left leaf]
+  preorder (Node node leftTree rightTree) =
+    [Right node] ++ preorder leftTree ++ preorder rightTree
+
+  testPreorder : Traversals.preorder Traversals.t
+    = [Right 4, Right 2, Left 1, Left 3, Left 5]
+  testPreorder = Refl
+
+  public export
+  postorder : BTree a b -> List (Either a b)
+  postorder (Leaf leaf) = [Left leaf]
+  postorder (Node node leftTree rightTree)
+    = postorder leftTree ++ postorder rightTree ++ [Right node]
+
+  testPostorder : Traversals.postorder Traversals.t
+    = [Left 1, Left 3, Right 2, Left 5, Right 4]
+  testPostorder = Refl
+
+  public export
+  fromEitherUnit : List (Either a ()) -> List a
+  fromEitherUnit [] = []
+  fromEitherUnit ((Left a) :: xs) = a :: fromEitherUnit xs
+  fromEitherUnit ((Right ()) :: xs) = fromEitherUnit xs
+
+  public export
+  fromUnitEither : List (Either () a) -> List a
+  fromUnitEither [] = []
+  fromUnitEither ((Right a) :: xs) = a :: fromUnitEither xs
+  fromUnitEither ((Left ()) :: xs) = fromUnitEither xs
+
+  ||| For leaf-only trees, inorder=preorder=postorder
+  public export
+  traverseBTreeLeaf : BTreeLeaf a -> List a
+  traverseBTreeLeaf bt = fromEitherUnit (inorder bt)
+
+
+  public export
+  inorderNode : BTreeNode a -> List a
+  inorderNode bt = fromUnitEither (inorder bt)
+
+  public export
+  preorderNode : BTreeNode a -> List a
+  preorderNode bt = fromUnitEither (preorder bt)
+
+  public export
+  postorderNode : BTreeNode a -> List a
+  postorderNode bt = fromUnitEither (postorder bt)

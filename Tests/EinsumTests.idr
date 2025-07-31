@@ -1,4 +1,4 @@
-module Data.Tensor.EinsumTests
+module Tests.EinsumTests
 
 import Data.Either
 import Decidable.Equality

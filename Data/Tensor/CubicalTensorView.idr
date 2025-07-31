@@ -87,55 +87,6 @@ strides : (shape : Vect n Nat) -> Vect n Nat
 strides [] = []
 strides (s :: ss) = prod ss :: strides ss
 
-example1 : strides [2,3,4,5] = [60, 20, 5, 1]
-example1 = Refl
-
-example2 : strides [3,4,5] = [20, 5, 1]
-example2 = Refl
-
-example3 : strides [4, 5] = [5, 1]
-example3 = Refl
-
-||| It will be important to prove later that if all elements of shape are non-zero, then the head of the strides is also non-zero
-public export
-stridesProofHeadNonZero : {shape : Vect (S n) Nat} ->
-  {auto prf : All IsSucc shape} ->
-  IsSucc (head (strides shape))
-stridesProofHeadNonZero {shape = (_ :: ss)} {prf = (_ :: ps)}
-  = allSuccThenProdSucc ss
-
-||| Datatype defining the type of the index given a shape
-||| This is 0-based indexing
-public export
-data IndexT : (shape : Vect n Nat) -> Type where
-  Nil  : IndexT []
-  (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
-
-||| Given a shape and an index, compute the index in the flattened tensor
-indexCount : {shape : Vect n Nat} -> {auto allNonZero : All IsSucc shape} ->
-  IndexT shape -> Fin (prod shape)
-indexCount {shape = []} _ = FZ
-indexCount {shape = (s :: ss)} {allNonZero = (_ :: ps)} (i :: is)
-  = let restCount = indexCount is
-        restCountWeakened = weakenMultN s restCount
-        
-        strideHeadNonZero = stridesProofHeadNonZero {shape=(s :: ss)}
-        hereCount = shiftMul (head (strides (s :: ss))) i
-    in addFinsBounded hereCount restCountWeakened
-
-indexCountExample1 : indexCount {shape = [3, 4, 5]} [0, 3, 4] = 19 -- : Fin 60
-indexCountExample1 = Refl
-
-indexCountExample2 : indexCount {shape = [3, 4, 5]} [0, 2, 1] = 11 -- : Fin 60
-indexCountExample2 = Refl
-
-indexCountExample3 : indexCount {shape = [3, 4, 5]} [1, 2, 3] = 33 -- : Fin 60
-indexCountExample3 = Refl
-
-indexCountExample4 : indexCount {shape = [3, 4]} [0, 1] = 1 -- : Fin 12
-indexCountExample4 = Refl
-
-
 
 
 {-
