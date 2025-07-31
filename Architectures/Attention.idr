@@ -6,7 +6,7 @@ import Data.Container.Definition
 import Data.Container.Instances
 import Data.Container.TreeUtils
 
-import Data.Tensor.Tensor
+import Data.Tensor
 import Data.Tensor.Utils
 import Data.Tree
 import Para.Para
@@ -60,6 +60,7 @@ parameters {a : Type} {auto _ : Num a}
 
 
   ||| Data structure for holding parameters of self-attention
+  public export
   record SelfAttentionParams
     (features : Cont)
     {auto prf : Applicative (Ext features)}

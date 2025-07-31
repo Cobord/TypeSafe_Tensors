@@ -69,7 +69,6 @@ emptyShapeCubicalTensor {shape = []} = ()
 emptyShapeCubicalTensor {shape = (_ :: _)}
   = () <| (\_ => emptyShapeCubicalTensor)
 
-
 public export
 natsToFinProd : (shape : List Nat) -> Type
 natsToFinProd shape = Fin (prod shape)
@@ -104,14 +103,6 @@ flatToCubicalTensor {shape = (s :: ss)}
 --   = constUnit <%! (\(() <| ind), (fs, rst) =>
 --     (fs ** let (_ <%! bw) = cubicalTensorProdNat
 --            in bw (ind fs) rst))
-
-
-||| TODO should go through a flat representation?
-public export
-reshapeMap : {oldShape, newShape : List Nat} ->
-  {auto prf : prod oldShape = prod newShape} ->
-  (natsToFinProd oldShape -> natsToFinProd newShape)
-reshapeMap {oldShape} {newShape} x = ?reshapeMap_rhs
 
 public export
 dLensProductReshape : {oldShape, newShape : List Nat} ->

@@ -69,6 +69,7 @@ liftA2ConstCont (() <| va) (() <| vb) = () <| (\x => (va x, vb x))
 ||| The extension of any container with a unit shape
 ||| is an applicative functor
 ||| Examples: Scalar, Pair, Vect n, Stream
+||| Notably, lists are also applicative
 public export
 Applicative (Ext (Const2 () l)) where
   pure a = () <| (\_ => a)
@@ -76,11 +77,17 @@ Applicative (Ext (Const2 () l)) where
 
 ||| The extension of any container with a unit shape
 ||| is an Naperian functor
+||| Notably, lists are not applicative
 public export
 {l : Type} -> Naperian (Ext (Const2 () l)) where
   Log = l
   lookup = indexCont
   tabulate t = () <| t
+
+
+
+||| Derivative of a container
+Deriv : Cont -> Cont
 
 
 public export infixr 0 ><

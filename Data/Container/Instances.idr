@@ -39,7 +39,7 @@ namespace MainContainerExamples
   
   public export
   List : Cont
-  List = (n : Nat) !> (Fin n)
+  List = (n : Nat) !> Fin n
   
   ||| Container of n things 
   public export
@@ -60,7 +60,6 @@ namespace MainContainerExamples
   public export
   BTreeLeaf : Cont
   BTreeLeaf = (b : BTreeShape) !> FinBTreeLeaf b
-
 
 namespace ExtensionsOfMainContainerExamples
   ||| Isomorphic to the Identity
@@ -109,6 +108,7 @@ namespace ExtensionsOfMainContainerExamples
   BTreeLeaf' : Type -> Type
   BTreeLeaf' = Ext BTreeLeaf
 
+
 -- public export
 -- Functor (Vect' n) where
 --   map f a = map {f=(Ext (Vect n))} f a
@@ -154,9 +154,9 @@ namespace ConversionFunctions
   
   
   fromTreeHelper : FinBTreeNode LeafS -> a
-  fromTreeHelper Root impossible
-  fromTreeHelper (GoL x) impossible
-  fromTreeHelper (GoR x) impossible
+  fromTreeHelper Done impossible
+  fromTreeHelper (GoLeft x) impossible
+  fromTreeHelper (GoRight x) impossible
   
   public export
   fromBTreeNode : BTreeNode a -> BTreeNode' a
@@ -166,17 +166,17 @@ namespace ConversionFunctions
           (rts <| rtc) = fromBTreeNode rightTree
       in (NodeS lts rts <| \pos =>
             case pos of
-              Root => node
-              GoL posL => ltc posL
-              GoR posR => rtc posR)
+              Done => node
+              GoLeft posL => ltc posL
+              GoRight posR => rtc posR)
 
   public export
   toBTreeNode : BTreeNode' a -> BTreeNode a
   toBTreeNode (LeafS <| indexCont) = Leaf ()
   toBTreeNode ((NodeS lt rt) <| indexCont) = 
-    Node (indexCont Root)
-         (toBTreeNode (lt <| indexCont . GoL))
-         (toBTreeNode (rt <| indexCont . GoR))
+    Node (indexCont Done)
+         (toBTreeNode (lt <| indexCont . GoLeft))
+         (toBTreeNode (rt <| indexCont . GoRight))
   
   public export
   fromBTreeLeaf : BTreeLeaf a -> BTreeLeaf' a
@@ -186,15 +186,15 @@ namespace ConversionFunctions
         (shR <| fnR) = fromBTreeLeaf rt
     in (NodeS shL shR <| \pos =>
           case pos of
-            GoLLeaf posL => fnL posL
-            GoRLeaf posR => fnR posR)
+            GoLeft posL => fnL posL
+            GoRight posR => fnR posR)
 
   public export
   toBTreeLeaf : BTreeLeaf' a -> BTreeLeaf a
-  toBTreeLeaf (LeafS <| content) = Leaf (content AtLeaf)
+  toBTreeLeaf (LeafS <| content) = Leaf (content Done)
   toBTreeLeaf ((NodeS l r) <| content) =
-    Node' (toBTreeLeaf (l <| \posL => content (GoLLeaf posL)))
-          (toBTreeLeaf (r <| \posR => content (GoRLeaf posR)))
+    Node' (toBTreeLeaf (l <| \posL => content (GoLeft posL)))
+          (toBTreeLeaf (r <| \posR => content (GoRight posR)))
 
 
 public export
@@ -267,14 +267,38 @@ namespace VectInstances
 
   -- TODO Naperian instance? Or is that covered by the one in Definiton.idr?
 
+namespace ListInstances
+  ||| This arises out of the Prelude.Types List applicative 
+  ||| Effectively it behaves like the outer product
+  public export 
+  [outerProd] Applicative List' where
+    pure = fromList . pure
+    fs <*> vs = fromList $ toList fs <*> toList vs
+
+  public export
+  listZip : List a -> List b -> List (a, b)
+  listZip [] [] = []
+  listZip [] (y :: ys) = []
+  listZip (x :: xs) [] = []
+  listZip (x :: xs) (y :: ys) = (x, y) :: listZip xs ys
+
+  ||| This another List applicative, behaving like the usual zip one
+  ||| It appears that List doesn't have the concret Zippable instance written
+  ||| Only one in Data.Zippable that follows from Applicative, which isn't the one we want
+  public export
+  Applicative List' where
+    pure = fromList . pure
+    fs <*> vs = fromList $ uncurry ($) <$> listZip (toList fs) (toList vs)
+
+
 
 namespace BTreeLeafInstances
 
   showBTreeLeaf' : Show a => BTreeLeaf' a -> String
-  showBTreeLeaf' (LeafS <| content) = "Leaf (" ++ show {ty=a} (content AtLeaf) ++ ")"
+  showBTreeLeaf' (LeafS <| content) = "Leaf (" ++ show {ty=a} (content Done) ++ ")"
   showBTreeLeaf' ((NodeS l r) <| content) =
-    let leftSubtree : BTreeLeaf' a = (l <| \posL => content (GoLLeaf posL))
-        rightSubtree : BTreeLeaf' a = (r <| \posR => content (GoRLeaf posR))
+    let leftSubtree : BTreeLeaf' a = (l <| \posL => content (GoLeft posL))
+        rightSubtree : BTreeLeaf' a = (r <| \posR => content (GoRight posR))
     in "Node (" ++ showBTreeLeaf' leftSubtree ++ ") (" ++ showBTreeLeaf' rightSubtree ++ ")"
 
   partial -- not partial but not sure how to convince Idris totality checker
@@ -284,7 +308,7 @@ namespace BTreeLeafInstances
 
   public export
   Eq a => Eq (BTreeLeaf' a) where
-    (LeafS <| v) == (LeafS <| v') = v AtLeaf == v' AtLeaf
+    (LeafS <| v) == (LeafS <| v') = v Done == v' Done
     ((NodeS l r) <| v) == ((NodeS l' r') <| v') =
       (l == l') && (r == r') && ?vnm -- Assuming Eq BTreeShape is defined elsewhere
     _ == _ = False
@@ -295,20 +319,20 @@ namespace BTreeLeafInstances
   liftA2BBTreeLeaf' (LeafS <| v) (NodeS l' r' <| v') =
     NodeS l' r' <| \pos =>
       case pos of
-        GoLLeaf posL' => (v AtLeaf, v' (GoLLeaf posL'))
-        GoRLeaf posR' => (v AtLeaf, v' (GoRLeaf posR'))
+        GoLeft posL' => (v Done, v' (GoLeft posL'))
+        GoRight posR' => (v Done, v' (GoRight posR'))
   liftA2BBTreeLeaf' (NodeS l r <| v) (LeafS <| v') =
     NodeS l r <| \pos =>
       case pos of
-        GoLLeaf posL => (v (GoLLeaf posL), v' AtLeaf)
-        GoRLeaf posR => (v (GoRLeaf posR), v' AtLeaf)
+        GoLeft posL => (v (GoLeft posL), v' Done)
+        GoRight posR => (v (GoRight posR), v' Done)
   liftA2BBTreeLeaf' (NodeS l r <| v) (NodeS l' r' <| v') =
-    let (ls <| fl) = liftA2BBTreeLeaf' (l <| v . GoLLeaf) (l' <| v' . GoLLeaf)
-        (rs <| fr) = liftA2BBTreeLeaf' (r <| v . GoRLeaf) (r' <| v' . GoRLeaf)
+    let (ls <| fl) = liftA2BBTreeLeaf' (l <| v . GoLeft) (l' <| v' . GoLeft)
+        (rs <| fr) = liftA2BBTreeLeaf' (r <| v . GoRight) (r' <| v' . GoRight)
     in (NodeS ls rs <| \pos =>
          case pos of
-           GoLLeaf posL => fl posL
-           GoRLeaf posR => fr posR)
+           GoLeft posL => fl posL
+           GoRight posR => fr posR)
 
   public export
   Applicative BTreeLeaf' where
@@ -319,10 +343,10 @@ namespace BTreeLeafInstances
   ||| Just summing up elements of the tree given by the Num a structure
   public export
   Num a => Algebra BTreeLeaf' a where
-    reduce (LeafS <| v) = v AtLeaf
+    reduce (LeafS <| v) = v Done
     reduce ((NodeS l r) <| v) =
-      let leftSubtree = l <| \posL => v (GoLLeaf posL)
-          rightSubtree = r <| \posR => v (GoRLeaf posR)
+      let leftSubtree = l <| \posL => v (GoLeft posL)
+          rightSubtree = r <| \posR => v (GoRight posR)
       in reduce {f=BTreeLeaf'} leftSubtree +
          reduce {f=BTreeLeaf'} rightSubtree
 
@@ -331,22 +355,22 @@ namespace BTreeNodeInstances
   -- TODO missing Eq instance for trees
 
   impossibleCase : FinBTreeNode LeafS -> (a, b)
-  impossibleCase Root impossible
-  impossibleCase (GoL x) impossible
-  impossibleCase (GoR x) impossible
+  impossibleCase Done impossible
+  impossibleCase (GoLeft x) impossible
+  impossibleCase (GoRight x) impossible
 
   ||| Combine two BTreeNode' structures, pairing values at corresponding nodes.
   ||| The resulting shape is the intersection of the input shapes.
   public export
   liftA2BTreeNode' : BTreeNode' a -> BTreeNode' b -> BTreeNode' (a, b)
   liftA2BTreeNode' ((NodeS l1 r1) <| f1) ((NodeS l2 r2) <| f2) =
-    let (ls <| fl) = liftA2BTreeNode' (l1 <| f1 . GoL) (l2 <| f2 . GoL)
-        (rs <| fr) = liftA2BTreeNode' (r1 <| f1 . GoR) (r2 <| f2 . GoR)
+    let (ls <| fl) = liftA2BTreeNode' (l1 <| f1 . GoLeft) (l2 <| f2 . GoLeft)
+        (rs <| fr) = liftA2BTreeNode' (r1 <| f1 . GoRight) (r2 <| f2 . GoRight)
 
         resultFunc : FinBTreeNode (NodeS ls rs) -> (a, b)
-        resultFunc Root = (f1 Root, f2 Root)
-        resultFunc (GoL posL) = fl posL
-        resultFunc (GoR posR) = fr posR
+        resultFunc Done = (f1 Done, f2 Done)
+        resultFunc (GoLeft posL) = fl posL
+        resultFunc (GoRight posR) = fr posR
     in (NodeS ls rs <| resultFunc)
   liftA2BTreeNode' _ _ = LeafS <| impossibleCase
 
@@ -358,7 +382,7 @@ namespace BTreeNodeInstances
   public export
   Num a => Algebra BTreeNode' a where
     reduce (LeafS <| v) = fromInteger 0
-    reduce ((NodeS l r) <| v) = v Root +
-        reduce {f=BTreeNode'} (l <| v . GoL) +
-        reduce {f=BTreeNode'} (r <| v . GoR)
+    reduce ((NodeS l r) <| v) = v Done +
+        reduce {f=BTreeNode'} (l <| v . GoLeft) +
+        reduce {f=BTreeNode'} (r <| v . GoRight)
   

@@ -49,17 +49,10 @@ MatrixA : (row, col : ApplC) -> (dtype : Type) -> Type
 MatrixA (# row) (# col) dtype = TensorA [row, col] dtype
 
 
------------------
--- ArrayA
------------------
-
---   public export
---   data AllShow : (shape : ApplContList conts) -> (dtype : Type) -> Type where
---     NilShow : Show dtype => AllShow [] dtype
---     ConsShow : {c : Cont} -> {cs : ApplContList conts} ->
---       Applicative (Ext c) =>
---       Show (c `fullOf` (TensorA cs dtype)) =>
---       AllShow (c :: cs) dtype
+{----------------------------
+ArrayA
+Convenience datatype and functions for constructing a TensorA
+----------------------------}
 
 public export
 data AllConcrete : (shape : ApplContList conts) -> (dtype : Type) -> Type where
@@ -70,8 +63,6 @@ data AllConcrete : (shape : ApplContList conts) -> (dtype : Type) -> Type where
     (afr : AllConcrete cs dtype) =>
     AllConcrete (c :: cs) dtype
 
-
-||| Convenience function for constructing a TensorA
 ||| The input is a nested list of containers with a FromConcrete instance
 ||| Meaning that they're matched to a concrete inductively defined Idris type
 public export
@@ -99,10 +90,10 @@ toArrayA (TZ val) = val
 toArrayA {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor _ toConcrete)} {afr} } (TS xs) = toConcrete $ toArrayA {concr=afr} <$> xs
 
 
------------------
--- Composition product
--- TensorA defined above can be thought of as a composition (in the composition of containers) of applicative containers defining its shape
------------------
+{----------------------------
+Composition product
+TensorA defined above can be thought of as a composition (in the composition of containers) of applicative containers defining its shape
+----------------------------}
 
 public export
 fromTensorA : {conts : List ApplC} -> {shape : ApplContList conts} ->
@@ -182,11 +173,7 @@ namespace FunctorTensorA
 
 
 namespace ApplicativeTensorA
-  ||| Datatype for witnessing that all the containers in a shape are applicative
-  -- public export -- Not used below since Applicative is baked in to TensorA
-  -- data AllApplicative : (shape : Vect n Cont) -> Type where
-  --   Nil : AllApplicative []
-  --   Cons : Applicative (Ext c) => AllApplicative cs -> AllApplicative (c :: cs)
+  -- Unlike with other interfaces, Applicative is baked in to the tensor
 
   ||| Unit of the monoidal functor
   public export
@@ -268,7 +255,6 @@ namespace AlgebraTensorA
 
 
 namespace FoldableTensorA
-
   public export
   data AllFoldable : (shape : ApplContList conts) -> Type where
       NilFoldable : AllFoldable []
@@ -480,6 +466,20 @@ namespace CubicalTensor
     -- FromCubicalTensor : TensorA (NatsToApplConts shape) a
     FromCubicalTensor : TensorA (FlatStorage shape) a
 
+
+  public export
+  data TensorStorage : (shape : ApplContList conts) ->
+    (dtype : Type) ->
+    Type where
+      ScalarStorage : dtype -> TensorStorage [] dtype
+
+--       FlatStorage : {shape : List Nat} ->
+--         TensorA (FlatStorage shape) dtype -> TensorStorage (FlatStorage shape) dtype
+-- 
+    
+    -- FlatStorage : {shape : List Nat} -> TensorA (FlatStorage shape) a -> TensorStorage (NatsToApplConts shape) a
+    -- NatsToApplContsStorage : {shape : List Nat} -> TensorA (NatsToApplConts shape) a -> TensorStorage (NatsToApplConts shape) a
+
   -- public export
   -- data TensorView : (shape : List Nat) -> (a : Type) -> Type where
   --     FlatTensor : {shape : List Nat} -> TensorA (FlatStorage shape) a -> Tensor shape a
@@ -503,6 +503,7 @@ namespace CubicalTensor
     Eq (Tensor shape a) where
         (ToCubicalTensor t) == (ToCubicalTensor t') = tensorEq t t'
 
+    -- TODO this needs to be fixed to work with new stride based indexing
     public export
     {shape : List Nat} ->
     AllShow (FlatStorage shape) a =>
@@ -696,12 +697,16 @@ namespace IndexTensor
       (::) : Fin m -> IndexT ms -> IndexT (m :: ms)
 
     ||| Maybe Index of a cubical tensor given a shape
+    ||| Allows us to perform general slicing
     ||| This is 0-based indexing
     public export
     data MIndexT : (shape : List Nat) -> Type where
       MNil  : MIndexT []
       (:::) : Maybe (Fin m) -> MIndexT ms -> MIndexT (m :: ms)
 
+    ||| Computes the shape of the tensor after the slicing
+    ||| TODO this is not correct
+    public export
     mIndexToShape : {shape : List Nat} -> MIndexT shape -> List Nat
     mIndexToShape {shape = []} MNil = []
     mIndexToShape {shape = (s :: ss)} (Nothing ::: is) = s :: mIndexToShape is
@@ -719,32 +724,34 @@ namespace IndexTensor
             strideHeadNonZero = stridesProofHeadNonZero {shape=(s :: ss)} 
             hereCount = shiftMul (head (strides (s :: ss))) i
         in addFinsBounded hereCount restCountWeakened
+    
+    public export infixr 9 @@ -- for cubical tensors
 
-  -- ideally we'd remove the allNonZero consraint in the future, but it shouldn't impact things too much for now
-  public export
-  indexTensor : {shape : List Nat} -> {auto allNonZero : All IsSucc shape} ->
-    (t : Tensor shape a) ->
-    (ind : IndexT shape) ->
-    a
-  indexTensor (ToCubicalTensor (TS v)) ind
-    = let (TZ a) = index (indexCount ind) (toVect v)
-      in a
 
+    -- ideally we'd remove the allNonZero consraint in the future, but it shouldn't impact things too much for now
+    public export
+    indexTensor : {shape : List Nat} -> {auto allNonZero : All IsSucc shape} ->
+      (t : Tensor shape a) ->
+      (ind : IndexT shape) ->
+      a
+    indexTensor (ToCubicalTensor (TS v)) ind
+      = let (TZ a) = index (indexCount ind) (toVect v)
+        in a
+
+    public export
+    (@@) : {shape : List Nat} -> {auto allNonZero : All IsSucc shape} ->
+      (t : Tensor shape a) ->
+      (ind : IndexT shape) ->
+      a
+    (@@) = indexTensor
 
   -- Why can't I use @ here?
   public export infixr 9 @@ -- for non-cubical tensors
-  public export infixr 9 @@@ -- for cubical tensors
 
   public export
   (@@) : (t : TensorA shape a) -> IndexTA shape t -> a
   (@@) = indexTensorA
 
-  public export
-  (@@@) : {shape : List Nat} -> {auto allNonZero : All IsSucc shape} ->
-    (t : Tensor shape a) ->
-    (ind : IndexT shape) ->
-    a
-  (@@@) = indexTensor
 
 
 namespace SliceTensor

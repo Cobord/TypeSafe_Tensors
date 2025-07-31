@@ -9,6 +9,7 @@ Need to compute stride-based functionality for:
  * Slice
  * Take
  * Transpose
+ * Show
 
 Need to fix automatic flattening for TensorA for contraction operations
  -}
@@ -31,7 +32,6 @@ t2 : Tensor [2, 3] Double
 t2 = reshape t1
 
 failing
-  
   ||| Which will fail if we supply an array with the wrong shape
   t1Fail : Tensor [3, 4] Double
   t1Fail = fromArray [ [0, 1, 2, 3, 999]
@@ -42,7 +42,7 @@ failing
   
   ||| Or if the reshape is not possible
   t2Fail : Tensor [7, 2] Double
-  t2Fail = reshape $ t1
+  t2Fail = reshape t1
 
 
 ||| We can perform safe elementwise addition
@@ -69,12 +69,12 @@ failing
 
 ||| We can safely index into tensors
 indexExample : Double
-indexExample = t0 @@@ [1, 2]
+indexExample = t0 @@ [1, 2]
 
 failing
    ||| We cannot index outside of the tensor's shape
    indexExampleFail : Double
-   indexExampleFail = t1 @@@ [7, 2]
+   indexExampleFail = t1 @@ [7, 2]
 
 -- ||| Safe transposition
 -- t1Transposed : Tensor [4, 3] Double
@@ -106,6 +106,14 @@ t0Again = fromArrayA $ [ [0, 1, 2, 3]
 t1again : TensorA [Vect 6] Double
 t1again = FromCubicalTensor t1
 
+
+||| In addition to storing vectors with a known number of elements n
+||| TensorA can store lists of arbitrary length
+exList : TensorA [List] Double
+exList = fromArrayA [1,2,3,4,5]
+
+exList2 : TensorA [List] Double
+exList2 = fromArrayA [1,2,3]
 
 {- 
 In addition to storing standard n-element vectors, TensorA
@@ -170,7 +178,7 @@ We can index into any of these structures
 (-42)  46 
 -}
 indexTreeExample : Double
-indexTreeExample = ex1 @@ [GoRLeaf AtLeaf]
+indexTreeExample = ex1 @@ [GoRight Done]
 
 
 failing
@@ -183,4 +191,4 @@ failing
   (-42)  46    X   <---- indexing here throws an error
   -}
   indexTreeExampleFail : Double
-  indexTreeExampleFail = ex1 @@ [GoRLeaf (GoRLeaf AtLeaf)]
+  indexTreeExampleFail = ex1 @@ [GoRight (GoRight Done)]

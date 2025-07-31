@@ -33,7 +33,6 @@ t2 : Tensor [2, 3] Double
 t2 = reshape t1
 
 failing
-  
   ||| Which will fail if we supply an array with the wrong shape
   t1Fail : Tensor [3, 4] Double
   t1Fail = fromArray [ [0, 1, 2, 3, 999]
