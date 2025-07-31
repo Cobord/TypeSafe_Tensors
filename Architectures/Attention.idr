@@ -158,7 +158,7 @@ SATreeForwardPass = Run SelfAttentionTree
 
 
 tree1 : TensorA [BTreeLeaf, Vect 2] Double
-tree1 = fromArrayA $ fromBTreeLeaf $ 
+tree1 = fromConcrete $ fromBTreeLeaf $ 
   Node' (Leaf (fromVect [4, 5])) (Leaf (fromVect [-12, 25]))
 
 ||| Example output for tree self-attention

@@ -205,13 +205,12 @@ interface FromConcrete (cont : Cont) where
   fromConcrete : concreteType a -> Ext cont a
   toConcrete : Ext cont a -> concreteType a
 
-
-public export
-fromConcreteMap : {cont1, cont2 : Cont} ->
-  (fc1 : FromConcrete cont1) => (fc2 : FromConcrete cont2) =>
-  (concreteType @{fc1} a -> concreteType @{fc2} b) ->
-  cont1 `fullOf` a -> cont2 `fullOf` b
-fromConcreteMap f = fromConcrete @{fc2} . f . toConcrete @{fc1}
+-- public export
+-- fromConcreteMap : {cont1, cont2 : Cont} ->
+--   (fc1 : FromConcrete cont1) => (fc2 : FromConcrete cont2) =>
+--   (concreteType @{fc1} a -> concreteType @{fc2} b) ->
+--   cont1 `fullOf` a -> cont2 `fullOf` b
+-- fromConcreteMap f = fromConcrete @{fc2} . f . toConcrete @{fc1}
 
 
 Functor Basics.id where
@@ -251,11 +250,6 @@ FromConcrete BTreeLeaf where
   concreteFunctor = %search
   fromConcrete = fromBTreeLeaf
   toConcrete = toBTreeLeaf
-
-postOrderCont : BTreeLeaf `fullOf` a -> List `fullOf` a
-postOrderCont = fromConcreteMap postorderLeaf
-
-
 
 
 namespace VectInstances

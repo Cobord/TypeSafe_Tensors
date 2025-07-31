@@ -96,7 +96,7 @@ failing
 
 ||| TensorA can do everything that Tensor can
 t0Again : TensorA [Vect 3, Vect 4] Double
-t0Again = fromArrayA $ [ [0, 1, 2, 3]
+t0Again = fromConcrete $ [ [0, 1, 2, 3]
                        , [4, 5, 6, 7]
                        , [8, 9, 10, 11]]
 
@@ -110,10 +110,10 @@ t1again = FromCubicalTensor t1
 ||| For instance, we can use List, which allows us to store
 ||| an arbitrary number of elements
 exList : TensorA [List] Double
-exList = fromArrayA [1,2,3,4,5,6,7,8]
+exList = fromConcrete [1,2,3,4,5,6,7,8]
 
 exList2 : TensorA [List] Double
-exList2 = fromArrayA [100,-200,1000]
+exList2 = fromConcrete [100,-200,1000]
 
 {- 
 We can use BTreeLeaf, allowing us to store a tree-shaped 'vector'
@@ -125,7 +125,7 @@ which has elements on its leaves
 (-42)  46 
 -}
 exTree1 : TensorA [BTreeLeaf] Double
-exTree1 = fromArrayA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+exTree1 = fromConcrete $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
 
 
@@ -136,7 +136,7 @@ Here's another tree of the same shape, with a different number of elements
      10   100 
 -}
 exTree2 : TensorA [BTreeLeaf] Double
-exTree2 = fromArrayA $ Node' (Leaf 10) (Leaf 100)
+exTree2 = fromConcrete $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take the dot product of these two trees
 ||| The fact that they don't have the same number of elements does not matter
@@ -153,15 +153,15 @@ Here's a tree-vector with nodes as elements
 *  * *   * 
 -}
 ex3 : TensorA [BTreeNode] Double
-ex3 = fromArrayA $ Node 200 (Node 10 Leaf' Leaf') (Node 3000 Leaf' Leaf')
+ex3 = fromConcrete $ Node 200 (Node 10 Leaf' Leaf') (Node 3000 Leaf' Leaf')
 
 ||| And here's a tree with whose nodes are vectors of size 2
 ex4 : TensorA [BTreeLeaf, Vect 2] Double
-ex4 = fromArrayA $ Node' (Leaf [4,1]) (Leaf [17, 4])
+ex4 = fromConcrete $ Node' (Leaf [4,1]) (Leaf [17, 4])
 
 ||| This can get very complex, but still fully type-checked
 ex5 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
-ex5 = fromArrayA $
+ex5 = fromConcrete $
   Node (Node'
           (Leaf [1,2,3])
           (Leaf [4,5,6]))
@@ -195,7 +195,7 @@ failing
 
 ||| We can also reshape and traverse non-cubical tensors
 traverseTree : TensorA [List] Double
-traverseTree = fromArrayAMap postorderNode ex3
+traverseTree = fromConcreteMap postorderNode ex3
 
 
 -- exReshape = 

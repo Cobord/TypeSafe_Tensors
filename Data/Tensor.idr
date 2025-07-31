@@ -24,7 +24,7 @@ This file defines applicative tensors and functions
 for working with them.
 
 TensorA -> the main applicative tensor type
-ArrayA -> machinery for working with them as nested Idris types
+ConcreteT -> machinery for working with them as nested Idris types
 IndexT -> indexing machinery
 
 It also incluedes most common interfaces, such as
@@ -57,7 +57,7 @@ MatrixA (# row) (# col) dtype = TensorA [row, col] dtype
 
 
 {----------------------------
-ArrayA
+ConcreteT
 Convenience datatype and functions for constructing a TensorA.
 For instance, it enables us to create a literal `TensorA [2, 3] Double`
 by writing 
@@ -77,60 +77,68 @@ data AllConcrete : (shape : ApplContList conts) -> (dtype : Type) -> Type where
     AllConcrete (c :: cs) dtype
 
 ||| The input is a nested list of containers with a FromConcrete instance
-||| Meaning that they're matched to a concrete inductively defined Idris type
+||| Meaning they're matched to a concrete (usually inductively defined) Idris type
 public export
-ArrayA : (shape : ApplContList conts) ->
+ConcreteT : (shape : ApplContList conts) ->
   (dtype : Type) ->
   (concr : AllConcrete shape dtype) =>
   Type
-ArrayA [] dtype = dtype
-ArrayA (c :: cs) {concr = ConsConcrete {fr}} dtype
-  = concreteType @{fr} (ArrayA cs dtype)
+ConcreteT [] dtype = dtype
+ConcreteT (c :: cs) {concr = ConsConcrete {fr}} dtype
+  = concreteType @{fr} (ConcreteT cs dtype)
 
 
 public export
-fromArrayA : {shape : ApplContList conts} ->
+fromConcrete : {shape : ApplContList conts} ->
   (concr : AllConcrete shape dtype) =>
-  ArrayA shape dtype -> TensorA shape dtype
-fromArrayA {shape = []} x = TZ x
-fromArrayA {shape = (_ :: _)} {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor fromConcrete _)}} xs = TS $ fromConcrete $ fromArrayA <$> xs
+  ConcreteT shape dtype -> TensorA shape dtype
+fromConcrete {shape = []} x = TZ x
+fromConcrete {shape = (_ :: _)} {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor fromConcreteFn _)}} xs = TS $ fromConcreteFn $ fromConcrete <$> xs
 
 public export
-toArrayA : {shape : ApplContList conts} ->
+toConcrete : {shape : ApplContList conts} ->
   (concr : AllConcrete shape dtype) =>
-  TensorA shape dtype -> ArrayA shape dtype
-toArrayA (TZ val) = val
-toArrayA {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor _ toConcrete)} {afr} } (TS xs) = toConcrete $ toArrayA {concr=afr} <$> xs
+  TensorA shape dtype -> ConcreteT shape dtype
+toConcrete (TZ val) = val
+toConcrete {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor _ toConcreteFn)} {afr} } (TS xs) = toConcreteFn $ toConcrete {concr=afr} <$> xs
 
 public export
-fromArrayAMap : {oldConts, newConts : List ApplC} ->
+fromConcreteMap : {oldConts, newConts : List ApplC} ->
   {oldShape : ApplContList oldConts} -> {newShape : ApplContList newConts} ->
   (ca : AllConcrete oldShape a) => (cb : AllConcrete newShape b) =>
-  (f : ArrayA oldShape a -> ArrayA newShape b) ->
+  (f : ConcreteT oldShape a -> ConcreteT newShape b) ->
   TensorA oldShape a -> TensorA newShape b
-fromArrayAMap f = fromArrayA . f . toArrayA
+fromConcreteMap f = fromConcrete . f . toConcrete
 
 
 {----------------------------
-Composition product
-TensorA defined above can be thought of as a composition (in the composition of containers) of applicative containers defining its shape
+TensorA is defined as a composition of the extensions of containers making its shape
+Below we show this is equivalent to an extension of the *composition of containers* making the shape
 ----------------------------}
+
+-- Ext (c2 . c1) = Ext c2 . Ext c1
+
+public export
+toExtComposition : {conts : List ApplC} -> {shape : ApplContList conts} ->
+  TensorA shape a -> ComposeExtensions conts a
+toExtComposition {shape = []} (TZ val) = fromIdentity val
+toExtComposition {shape = (c :: cs)} (TS xs) = toExtComposition {shape=cs} <$> xs
 
 public export
 toCompProduct : {conts : List ApplC} -> {shape : ApplContList conts} ->
   TensorA shape a -> Ext (ComposeContainers conts) a
-toCompProduct {shape = []} (TZ val) = () <| \_ => val
-toCompProduct {shape = (c :: cs)} (TS ex)
-  = let (cs' <| index') = toCompProduct {shape=cs} <$> ex
-    in (cs' <| shapeExt . index') <| uncurry (\x => indexCont (index' x))
+toCompProduct = toContainerComp . toExtComposition
+
+public export
+fromExtComposition : {conts : List ApplC} -> {shape : ApplContList conts} ->
+  ComposeExtensions conts a -> TensorA shape a
+fromExtComposition {shape = []} ce = TZ $ toIdentity ce
+fromExtComposition {shape = (c :: cs)} ce = TS $ fromExtComposition <$> ce
 
 public export
 fromCompProduct : {conts : List ApplC} -> {shape : ApplContList conts} ->
   (ComposeContainers conts) `fullOf` a -> TensorA shape a
-fromCompProduct {shape = []} (() <| indexCont) = TZ (indexCont ())
-fromCompProduct {shape = (c :: cs)} ((cshTerm <| cposTerm) <| indexCont)
-  = TS $ cshTerm <| \d => fromCompProduct $ cposTerm d <| curry indexCont d
-
+fromCompProduct = fromExtComposition . fromContainerComp
 
 ||| General, dependent-lens based applicative tensor reshaping
 ||| Also should capture views, traversals, and other that don't touch content 
@@ -646,7 +654,7 @@ namespace CubicalTensor
   --   -> TensorA (FlatStorage shape) a
   -- fromArrayHelper {shape=[]} a = TS $ () <| (\_ => TZ a)
   -- fromArrayHelper {shape=(s :: ss)} t =
-  --   let tt = fromArrayA 
+  --   let tt = fromConcrete 
   --   in TS $ () <| ?vnn
 
   public export
@@ -662,11 +670,11 @@ namespace CubicalTensor
 
   public export
   fromArray : {shape : List Nat} -> Array shape a -> Tensor shape a
-  fromArray = ToCubicalTensor . fromArrayA . fromArrayHelper
+  fromArray = ToCubicalTensor . fromConcrete . fromArrayHelper
 
   public export
   toArray : {shape : List Nat} -> Tensor shape a -> Array shape a
-  toArray = toArrayHelper . toArrayA . FromCubicalTensor
+  toArray = toArrayHelper . toConcrete . FromCubicalTensor
 
   public export
   reshape : {oldShape : List Nat} ->

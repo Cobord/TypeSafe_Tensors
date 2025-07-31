@@ -1,6 +1,7 @@
 module Data.Container.Applicative
 
 import Data.Fin
+import Data.DPair
 
 import Data.Container.Definition
 import Data.Container.Instances
@@ -11,6 +12,7 @@ import Misc
 
 ||| Applicative Container
 ||| Consists of a container and a proof that its extension is an applicative functor
+||| Defined using Idris' auto as we'd like to avoid directly providing this
 public export
 record ApplC where
   constructor (#)
@@ -35,6 +37,31 @@ NatsToVect shape = NatToVect (prod shape)
 public export
 ComposeContainers : List ApplC -> Cont
 ComposeContainers cs = foldr (>@<) CUnit (GetC <$> cs)
+
+public export
+ComposeExtensions : List ApplC -> Type -> Type
+ComposeExtensions [] a = Ext CUnit a
+ComposeExtensions ((# c) :: cs) a = Ext c (ComposeExtensions cs a)
+
+public export
+toContainerComp : {conts : List ApplC} ->
+  ComposeExtensions conts a -> Ext (ComposeContainers conts) a
+toContainerComp {conts = []} ce = ce
+toContainerComp {conts = ((# c) :: cs)} (shp <| idx) = 
+  let rst = (toContainerComp {conts=cs}) . idx
+  in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
+
+public export
+fromContainerComp : {conts : List ApplC} ->
+  Ext (ComposeContainers conts) a -> ComposeExtensions conts a
+fromContainerComp {conts = []} ce = ce
+fromContainerComp {conts = ((# c) :: cs)} ((csh <| cpos) <| idx)
+  = csh <| \d => fromContainerComp (cpos d <| curry idx d)
+
+
+{conts : List ApplC} -> Applicative (Ext (ComposeContainers conts)) where
+  pure = ?hhh
+  (<*>) = ?vbbb
 
 
 ||| Data type for ergonomic construction of lists of applicative containers
