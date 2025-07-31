@@ -16,7 +16,8 @@ data AllNaperian : (shape : ApplContList conts) -> Type where
     (napC : Naperian (Ext c)) => AllNaperian cs -> AllNaperian (c :: cs)
 
 namespace IndexTNaperian
-  ||| Datatype for indexing into TensorAs made out of containers whose extensions are Naperian
+  ||| Datatype for indexing into TensorA 
+  ||| It made out of containers whose extensions are Naperian
   ||| Meaning we don't need the tensor *term* to be able to index into it, just the type
   public export
   data IndexTNaperian : (shape : ApplContList conts) -> AllNaperian shape -> Type where
@@ -47,10 +48,13 @@ public export
 transposeMatrixA : {i, j : Cont} ->
   Applicative (Ext i) =>
   Applicative (Ext j) =>
+  (allConcrete : AllConcrete [j, i] a) =>
   (allNaperian : AllNaperian [i, j]) =>
   TensorA [i, j] a -> TensorA [j, i] a
-transposeMatrixA {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))}
-  = fromArrayA . Naperian.transpose . toArrayA
+transposeMatrixA {allConcrete = ConsConcrete {fr} {afr}} {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))} t
+  = let tr = Naperian.transpose
+        t' = toCompProduct t 
+    in ?hh -- fromArrayA . Naperian.transpose . toArrayA
 
 
 public export

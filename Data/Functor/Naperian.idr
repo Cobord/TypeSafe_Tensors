@@ -20,7 +20,7 @@ This is about non-ragged shapes.
 public export
 interface Applicative f => Naperian f where
     Log : Type -- perhaps a better name is Shape
-    lookup : f a -> Log -> a -- this and the line below
+    lookup : f a -> Log -> a -- This and the line below
     tabulate : (Log -> a) -> f a -- are an isomorphism
 
 public export
@@ -46,6 +46,12 @@ public export
     Log = Fin n
     lookup = flip index
     tabulate = vectTabulate
+
+public export
+Naperian f => Naperian g => Naperian (g . f) using Applicative.Compose where
+  Log = (Log {f=f}, Log {f=g})
+  lookup gfa (pf, pg) = lookup (lookup gfa pg) pf
+  tabulate f = tabulate <$> tabulate (flip (curry f))
 
 
 vectPositionsEx : Vect 3 (Fin 3)

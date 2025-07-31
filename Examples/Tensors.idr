@@ -39,11 +39,9 @@ failing
                      , [8, 9, 10, 11]]
 
 failing
-  
   ||| Or if the reshape is not possible
   t2Fail : Tensor [7, 2] Double
   t2Fail = reshape t1
-
 
 ||| We can perform safe elementwise addition
 t0Sum : Tensor [3, 4] Double
@@ -72,7 +70,7 @@ indexExample : Double
 indexExample = t0 @@ [1, 2]
 
 failing
-   ||| We cannot index outside of the tensor's shape
+   ||| And fail if we index outside of the tensor's shape
    indexExampleFail : Double
    indexExampleFail = t1 @@ [7, 2]
 
@@ -93,7 +91,7 @@ failing
 
 ----------------------------------------
 -- Generalised tensor examples
--- These include tree shaped tensors, and other non-cubical tensors
+-- These include list, tree shaped tensors, and other non-cubical tensors
 ----------------------------------------
 
 ||| TensorA can do everything that Tensor can
@@ -107,59 +105,55 @@ t1again : TensorA [Vect 6] Double
 t1again = FromCubicalTensor t1
 
 
-||| In addition to storing vectors with a known number of elements n
-||| TensorA can store lists of arbitrary length
+||| Above, the container Vect was being made explicit because
+||| there are other containers we can use
+||| For instance, we can use List, which allows us to store
+||| an arbitrary number of elements
 exList : TensorA [List] Double
-exList = fromArrayA [1,2,3,4,5]
+exList = fromArrayA [1,2,3,4,5,6,7,8]
 
 exList2 : TensorA [List] Double
 exList2 = fromArrayA [100,-200,1000]
 
 {- 
-In addition to storing standard n-element vectors, TensorA
-can store tree-shaped tensors. 
-Here's a tree-vector with leaves as elements.
+We can use BTreeLeaf, allowing us to store a tree-shaped 'vector'
+which has elements on its leaves
         *
       /   \
      *     2 
     / \
 (-42)  46 
 -}
-ex1 : TensorA [BTreeLeaf] Double
-ex1 = fromArrayA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+exTree1 : TensorA [BTreeLeaf] Double
+exTree1 = fromArrayA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
-
-public export
-exTraverse : TensorA [List] Double
-exTraverse = fromArrayAMap preorderLeaf ex1
 
 
 {- 
-The number of elements need not be fixed at compile time.
 Here's another tree of the same shape, with a different number of elements
         *
       /   \
      10   100 
 -}
-ex2 : TensorA [BTreeLeaf] Double
-ex2 = fromArrayA $ Node' (Leaf 10) (Leaf 100)
+exTree2 : TensorA [BTreeLeaf] Double
+exTree2 = fromArrayA $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take the dot product of these two trees
 ||| The fact that they don't have the same number of elements does not matter
 ||| What matters is that the container defining them 'BTreeLeaf' is the same
 dotProduct2 : TensorA [] Double
-dotProduct2 = dotA ex1 ex2
+dotProduct2 = dotA exTree1 exTree2
 
 {- 
 Here's a tree-vector with nodes as elements
-   127
+   200
   /   \
- *    14     
-      / \
-     *   * 
+ 10   3000
+ /\   / \
+*  * *   * 
 -}
 ex3 : TensorA [BTreeNode] Double
-ex3 = fromArrayA $ Node 127 Leaf' (Node 14 Leaf' Leaf')
+ex3 = fromArrayA $ Node 200 (Node 10 Leaf' Leaf') (Node 3000 Leaf' Leaf')
 
 ||| And here's a tree with whose nodes are vectors of size 2
 ex4 : TensorA [BTreeLeaf, Vect 2] Double
@@ -183,7 +177,7 @@ We can index into any of these structures
 (-42)  46 
 -}
 indexTreeExample : Double
-indexTreeExample = ex1 @@ [GoRight Done]
+indexTreeExample = exTree1 @@ [GoRight Done]
 
 
 failing
@@ -199,4 +193,10 @@ failing
   indexTreeExampleFail = ex1 @@ [GoRight (GoRight Done)]
 
 
+||| We can also reshape and traverse non-cubical tensors
+traverseTree : TensorA [List] Double
+traverseTree = fromArrayAMap postorderNode ex3
+
+
+-- exReshape = 
 -- TODO reshape example for non-cubical tensors

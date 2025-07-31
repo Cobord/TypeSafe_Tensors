@@ -117,19 +117,19 @@ TensorA defined above can be thought of as a composition (in the composition of 
 ----------------------------}
 
 public export
-fromTensorA : {conts : List ApplC} -> {shape : ApplContList conts} ->
+toCompProduct : {conts : List ApplC} -> {shape : ApplContList conts} ->
   TensorA shape a -> Ext (ComposeContainers conts) a
-fromTensorA {shape = []} (TZ val) = () <| \_ => val
-fromTensorA {shape = (c :: cs)} (TS ex)
-  = let (cs' <| index') = fromTensorA {shape=cs} <$> ex
+toCompProduct {shape = []} (TZ val) = () <| \_ => val
+toCompProduct {shape = (c :: cs)} (TS ex)
+  = let (cs' <| index') = toCompProduct {shape=cs} <$> ex
     in (cs' <| shapeExt . index') <| uncurry (\x => indexCont (index' x))
 
 public export
-toTensorA : {conts : List ApplC} -> {shape : ApplContList conts} ->
+fromCompProduct : {conts : List ApplC} -> {shape : ApplContList conts} ->
   (ComposeContainers conts) `fullOf` a -> TensorA shape a
-toTensorA {shape = []} (() <| indexCont) = TZ (indexCont ())
-toTensorA {shape = (c :: cs)} ((cshTerm <| cposTerm) <| indexCont)
-  = TS $ cshTerm <| \d => toTensorA $ cposTerm d <| curry indexCont d
+fromCompProduct {shape = []} (() <| indexCont) = TZ (indexCont ())
+fromCompProduct {shape = (c :: cs)} ((cshTerm <| cposTerm) <| indexCont)
+  = TS $ cshTerm <| \d => fromCompProduct $ cposTerm d <| curry indexCont d
 
 
 ||| General, dependent-lens based applicative tensor reshaping
@@ -139,7 +139,7 @@ reshapeTensorA : {contsOld, contsNew : List ApplC} ->
   {oldShape : ApplContList contsOld} -> {newShape : ApplContList contsNew} ->
   (ComposeContainers contsOld =%> ComposeContainers contsNew) ->
   TensorA oldShape a -> TensorA newShape a
-reshapeTensorA dLens = toTensorA . (contMapExt dLens) . fromTensorA
+reshapeTensorA dLens = fromCompProduct . (contMapExt dLens) . toCompProduct
     
 
 namespace EqTensorA
