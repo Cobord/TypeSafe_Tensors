@@ -43,6 +43,21 @@ ComposeExtensions : List ApplC -> Type -> Type
 ComposeExtensions [] a = Ext CUnit a
 ComposeExtensions ((# c) :: cs) a = Ext c (ComposeExtensions cs a)
 
+mapComposeExtensions : {conts : List ApplC} ->
+  (f : a -> b) -> ComposeExtensions conts a -> ComposeExtensions conts b
+mapComposeExtensions {conts = []} f e = f <$> e
+mapComposeExtensions {conts = ((# c) :: cs)} f e = mapComposeExtensions f <$> e
+
+public export
+[functorComposeExtensions] {conts : List ApplC} ->
+Functor (ComposeExtensions conts) where
+  map = mapComposeExtensions
+
+-- Tensors should eventually more and more use the container backend
+-- {conts : List ApplC} -> Applicative (ComposeExtensions conts) where
+--   pure = ?vnnn
+--   (<*>) = ?vbbb
+
 public export
 toContainerComp : {conts : List ApplC} ->
   ComposeExtensions conts a -> Ext (ComposeContainers conts) a
@@ -58,10 +73,21 @@ fromContainerComp {conts = []} ce = ce
 fromContainerComp {conts = ((# c) :: cs)} ((csh <| cpos) <| idx)
   = csh <| \d => fromContainerComp (cpos d <| curry idx d)
 
+public export
+compReplicate : {conts : List ApplC} ->
+  a -> Ext (ComposeContainers conts) a
+compReplicate {conts = []} x = fromIdentity x
+compReplicate {conts = (c :: cs)} x
+  = ?ff <| ?bb
 
-{conts : List ApplC} -> Applicative (Ext (ComposeContainers conts)) where
-  pure = ?hhh
-  (<*>) = ?vbbb
+-- compReplicate {conts = []} a = fromIdentity a
+-- compReplicate {conts = (c :: cs)} a
+--   = let (sh <| ind) = compReplicate {conts=cs} a
+--     in (?ff <| ?vmm) <| ?bb
+--compReplicate {conts = []} a = fromIdentity a
+--compReplicate {conts = ((# c) :: cs)} a
+--  = pure {f=Ext c} $ compReplicate {conts=cs} a
+
 
 
 ||| Data type for ergonomic construction of lists of applicative containers

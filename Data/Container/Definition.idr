@@ -59,6 +59,10 @@ Functor (Ext c) where
   map {c=shp !> pos} f (s <| v) = s <| f . v
 
 public export
+Functor (Ext c) => Functor (Ext d) => Functor ((Ext d) . (Ext c)) where
+  map f e = (map f) <$> e
+
+public export
 EmptyExt : Ext (Const2 () l) ()
 EmptyExt = () <| \_ => ()
 
