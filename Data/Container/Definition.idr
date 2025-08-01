@@ -30,6 +30,11 @@ public export
 Const2 : Type -> Type -> Cont
 Const2 x y = (_ : x) !> y
 
+||| Naperian container
+public export
+Nap : Type -> Cont
+Nap x = Const2 () x
+
 public export
 Const : Type -> Cont
 Const x = Const2 x x
@@ -63,11 +68,11 @@ Functor (Ext c) => Functor (Ext d) => Functor ((Ext d) . (Ext c)) where
   map f e = (map f) <$> e
 
 public export
-EmptyExt : Ext (Const2 () l) ()
+EmptyExt : Ext (Nap l) ()
 EmptyExt = () <| \_ => ()
 
 public export
-liftA2ConstCont : Ext (Const2 () l) a -> Ext (Const2 () l) b -> Ext (Const2 () l) (a, b)
+liftA2ConstCont : Ext (Nap l) a -> Ext (Nap l) b -> Ext (Nap l) (a, b)
 liftA2ConstCont (() <| va) (() <| vb) = () <| (\x => (va x, vb x))
 
 ||| The extension of any container with a unit shape
@@ -75,7 +80,7 @@ liftA2ConstCont (() <| va) (() <| vb) = () <| (\x => (va x, vb x))
 ||| Examples: Scalar, Pair, Vect n, Stream
 ||| Notably, lists are also applicative
 public export
-Applicative (Ext (Const2 () l)) where
+Applicative (Ext (Nap l)) where
   pure a = () <| (\_ => a)
   fs <*> xs = uncurry ($) <$> liftA2ConstCont fs xs 
 
@@ -83,7 +88,7 @@ Applicative (Ext (Const2 () l)) where
 ||| is an Naperian functor
 ||| Notably, lists are not applicative
 public export
-{l : Type} -> Naperian (Ext (Const2 () l)) where
+{l : Type} -> Naperian (Ext (Nap l)) where
   Log = l
   lookup = indexCont
   tabulate t = () <| t

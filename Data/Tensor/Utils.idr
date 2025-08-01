@@ -60,12 +60,6 @@ max : {shape : List Nat} -> Ord a =>
   Tensor shape a -> Maybe a
 max = maxA . FromCubicalTensor
 
--- Probably there's a faster way to do this
-public export
-{n : Nat} -> Random a => Random (Vect n a) where
-  randomIO = sequence $ replicate n randomIO
-  randomRIO (lo, hi) = sequence $ zipWith (\l, h => randomRIO (l, h)) lo hi
-
 public export
 {shape : List Nat} -> Random a => Random (Tensor shape a) where
   randomIO = map (fromArray . toArrayHelper) randomIO

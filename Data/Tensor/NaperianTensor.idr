@@ -8,19 +8,19 @@ import Data.Container.Instances
 import Data.Tensor
 import Data.Functor.Naperian
 
+%hide Builtin.infixr.(#)
 
-public export
-data AllNaperian : (shape : ApplContList conts) -> Type where
-  Nil : AllNaperian []
-  (::) : {cs : ApplContList conts} -> Applicative (Ext c) =>
-    (napC : Naperian (Ext c)) => AllNaperian cs -> AllNaperian (c :: cs)
-
-
-{shape : ApplContList conts} -> (allNaperian : AllNaperian shape) =>
-  Naperian (Ext (ComposeContainers conts)) where
-    Log = ?aiii
-    lookup = ?aooo
-    tabulate = ?aoooo
+namespace NaperianConstraint
+   
+  -- This particular interface, for some reason, makes the compile time incredibly long
+  -- The second constructor is the culiprit, removing it solves the problem
+  -- I tried performign the elaboration myself as much as possible, but it's not clear why it is slow
+  public export
+  data AllNaperian : (shape : ApplContList conts) -> Type where
+    Nil : AllNaperian []
+    (::) : {0 c : Cont} -> {cs : ApplContList csConts} -> Applicative (Ext c) =>
+       (napC : Naperian (Ext c)) => AllNaperian {conts=csConts} cs -> AllNaperian {conts=((# c):: csConts)} (c :: cs)
+  
 
 namespace IndexTNaperian
   ||| Datatype for indexing into TensorA 
@@ -61,10 +61,8 @@ transposeMatrixA : {i, j : Cont} ->
   Applicative (Ext j) =>
   (allNaperian : AllNaperian [i, j]) =>
   TensorA [i, j] a -> TensorA [j, i] a
-transposeMatrixA {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))} t
-  = let tr = Naperian.transpose
-        t' = toCompProduct t 
-    in ?hh -- fromConcrete . Naperian.transpose . toConcrete
+transposeMatrixA {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))}
+  = fromExtComposition . Naperian.transpose . toExtComposition
 
 
 public export

@@ -24,10 +24,10 @@ This file defines applicative tensors and functions
 for working with them.
 
 TensorA -> the main applicative tensor type
-ConcreteT -> machinery for working with them as nested Idris types
-IndexT -> indexing machinery
+ConcreteT -> machinery for working with TensorA as nested Idris types
+IndexT -> machinery for indexing into TensorA
 
-It also incluedes most common interfaces, such as
+This file also incluedes most common interfaces, such as
 Eq, Show, Functor, Applicative, Foldable, Num,...
 
 -----------------------------------------------------------}
@@ -37,7 +37,10 @@ Eq, Show, Functor, Applicative, Foldable, Num,...
 ||| Tensors whose shape is a list of applicative containers
 public export
 data TensorA : (shape : ApplContList conts) -> (dtype : Type) -> Type where
+    ||| A any scalar value can be turned into a tensor
     TZ : (val : dtype) -> TensorA [] dtype
+    ||| A container c full of a tensor of shape cs is what 
+    ||| defines a tensor of shape (c :: cs)
     TS : Applicative (c `fullOf`) => {cs : ApplContList conts} ->
       c `fullOf` (TensorA cs dtype) -> TensorA (c :: cs) dtype
 
@@ -54,6 +57,75 @@ VectorA (# length) dtype = TensorA [length] dtype
 public export
 MatrixA : (row, col : ApplC) -> (dtype : Type) -> Type
 MatrixA (# row) (# col) dtype = TensorA [row, col] dtype
+
+{----------------------------
+It will be immensely useful to leverage the following fact about TensorA:
+`Tensor shape a` is isomorphic to the extension of the container that arises as the composition of all the containers in shape.
+For instance, `Tensor [c, d] a` is isomorphic to Ext (c . d) a
+
+The maps defining this isomorphism are `toCompProduct` and `fromCompProduct`.
+
+This allows us to define the reshape map using a dependent lens
+----------------------------}
+
+||| This states a frames a tensor as a 
+||| composition of extensions of containers making its shape
+public export
+toExtComposition : {conts : List ApplC} -> {shape : ApplContList conts} ->
+  TensorA shape a -> ComposeExtensions conts a
+toExtComposition {shape = []} (TZ val) = fromIdentity val
+toExtComposition {shape = (c :: cs)} (TS xs) = toExtComposition {shape=cs} <$> xs
+
+public export
+toCompProduct : {conts : List ApplC} -> {shape : ApplContList conts} ->
+  TensorA shape a -> Ext (ComposeContainers conts) a
+toCompProduct = toContainerComp . toExtComposition
+
+public export
+fromExtComposition : {conts : List ApplC} -> {shape : ApplContList conts} ->
+  ComposeExtensions conts a -> TensorA shape a
+fromExtComposition {shape = []} ce = TZ $ toIdentity ce
+fromExtComposition {shape = (c :: cs)} ce = TS $ fromExtComposition <$> ce
+
+public export
+fromCompProduct : {conts : List ApplC} -> {shape : ApplContList conts} ->
+  (ComposeContainers conts) `fullOf` a -> TensorA shape a
+fromCompProduct = fromExtComposition . fromContainerComp
+
+||| General, dependent-lens based applicative tensor reshaping
+||| Should capture views, traversals, and other ops that don't touch content 
+public export
+reshapeTensorA : {contsOld, contsNew : List ApplC} ->
+  {oldShape : ApplContList contsOld} -> {newShape : ApplContList contsNew} ->
+  (ComposeContainers contsOld =%> ComposeContainers contsNew) ->
+  TensorA oldShape a -> TensorA newShape a
+reshapeTensorA dLens = fromCompProduct . (contMapExt dLens) . toCompProduct
+
+
+{----------------------------
+ArrayA
+Convenience datatype and functions for constructing from its extensions
+
+----------------------------}
+
+
+public export
+ArrayA : {conts : List ApplC} ->
+  (shape : ApplContList conts) -> (dtype : Type) -> Type
+ArrayA shape dtype = ComposeExtensions conts dtype
+
+public export
+fromArrayA : {conts : List ApplC} ->
+  {shape : ApplContList conts} ->
+  ArrayA shape dtype -> TensorA shape dtype
+fromArrayA = fromExtComposition
+
+public export
+toArrayA : {conts : List ApplC} ->
+  {shape : ApplContList conts} ->
+  TensorA shape dtype -> ArrayA shape dtype
+toArrayA = toExtComposition
+    
 
 
 {----------------------------
@@ -84,7 +156,7 @@ ConcreteT : (shape : ApplContList conts) ->
   (concr : AllConcrete shape dtype) =>
   Type
 ConcreteT [] dtype = dtype
-ConcreteT (c :: cs) {concr = ConsConcrete {fr}} dtype
+ConcreteT (_ :: cs) {concr = ConsConcrete {fr}} dtype
   = concreteType @{fr} (ConcreteT cs dtype)
 
 
@@ -110,45 +182,6 @@ fromConcreteMap : {oldConts, newConts : List ApplC} ->
   TensorA oldShape a -> TensorA newShape b
 fromConcreteMap f = fromConcrete . f . toConcrete
 
-
-{----------------------------
-TensorA is defined as a composition of the extensions of containers making its shape
-Below we show this is equivalent to an extension of the *composition of containers* making the shape
-----------------------------}
-
--- Ext (c2 . c1) = Ext c2 . Ext c1
-
-public export
-toExtComposition : {conts : List ApplC} -> {shape : ApplContList conts} ->
-  TensorA shape a -> ComposeExtensions conts a
-toExtComposition {shape = []} (TZ val) = fromIdentity val
-toExtComposition {shape = (c :: cs)} (TS xs) = toExtComposition {shape=cs} <$> xs
-
-public export
-toCompProduct : {conts : List ApplC} -> {shape : ApplContList conts} ->
-  TensorA shape a -> Ext (ComposeContainers conts) a
-toCompProduct = toContainerComp . toExtComposition
-
-public export
-fromExtComposition : {conts : List ApplC} -> {shape : ApplContList conts} ->
-  ComposeExtensions conts a -> TensorA shape a
-fromExtComposition {shape = []} ce = TZ $ toIdentity ce
-fromExtComposition {shape = (c :: cs)} ce = TS $ fromExtComposition <$> ce
-
-public export
-fromCompProduct : {conts : List ApplC} -> {shape : ApplContList conts} ->
-  (ComposeContainers conts) `fullOf` a -> TensorA shape a
-fromCompProduct = fromExtComposition . fromContainerComp
-
-||| General, dependent-lens based applicative tensor reshaping
-||| Also should capture views, traversals, and other that don't touch content 
-public export
-reshapeTensorA : {contsOld, contsNew : List ApplC} ->
-  {oldShape : ApplContList contsOld} -> {newShape : ApplContList contsNew} ->
-  (ComposeContainers contsOld =%> ComposeContainers contsNew) ->
-  TensorA oldShape a -> TensorA newShape a
-reshapeTensorA dLens = fromCompProduct . (contMapExt dLens) . toCompProduct
-    
 
 namespace EqTensorA
   public export
@@ -621,6 +654,8 @@ namespace CubicalTensor
     Foldable (Tensor shape) where
       foldr f z (ToCubicalTensor t) = tensorFoldrA f z t
 
+
+
     -- TODO implement Traversable for TensorA, and then port it here
     -- public export
     -- tensorTraverseA : {shape : List Nat} -> Applicative f =>
@@ -683,6 +718,7 @@ namespace CubicalTensor
     {auto prf : prod oldShape = prod shape} ->
     Tensor shape a
   reshape t = ToCubicalTensorMap (reshapeTensorA (cubicalTensorToFlat %>> dLensProductReshape %>> flatToCubicalTensor)) t
+
 
 namespace IndexTensor
   -- public export

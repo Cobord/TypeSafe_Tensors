@@ -43,21 +43,44 @@ ComposeExtensions : List ApplC -> Type -> Type
 ComposeExtensions [] a = Ext CUnit a
 ComposeExtensions ((# c) :: cs) a = Ext c (ComposeExtensions cs a)
 
-mapComposeExtensions : {conts : List ApplC} ->
-  (f : a -> b) -> ComposeExtensions conts a -> ComposeExtensions conts b
-mapComposeExtensions {conts = []} f e = f <$> e
-mapComposeExtensions {conts = ((# c) :: cs)} f e = mapComposeExtensions f <$> e
+-- public export
+-- mapComposeExtensions : {conts : List ApplC} ->
+--   (f : a -> b) -> ComposeExtensions conts a -> ComposeExtensions conts b
+-- mapComposeExtensions {conts = []} f e = f <$> e
+-- mapComposeExtensions {conts = ((# c) :: cs)} f e = mapComposeExtensions f <$> e
+-- 
+-- public export
+-- [FCE] {conts : List ApplC} -> Functor (ComposeExtensions conts) where
+--   map f ce = ?vnn -- mapComposeExtensions
+-- 
+-- testTT : {c : ApplC} -> (f : String -> Int) -> ComposeExtensions [c] String -> ComposeExtensions [c] Int
+-- testTT f = map @{FCE {conts=[c]}} f
+-- 
+-- public export
+-- compExtReplicate : {conts : List ApplC} ->
+--   a -> ComposeExtensions conts a
+-- compExtReplicate {conts = []} a = fromIdentity a
+-- compExtReplicate {conts = ((#) _ {applPrf} :: _)} a
+--   = compExtReplicate <$> pure a
+-- 
+-- public export
+-- compExtLiftA2 : {conts : List ApplC} ->
+--   ComposeExtensions conts a ->
+--   ComposeExtensions conts b ->
+--   ComposeExtensions conts (a, b)
+-- compExtLiftA2 {conts = []} ca cb = fromIdentity (toIdentity ca, toIdentity cb)
+-- compExtLiftA2 {conts = ((#) c {applPrf} :: cs)} ca cb
+--   = uncurry compExtLiftA2 <$> liftA2 ca cb
 
-public export
-[functorComposeExtensions] {conts : List ApplC} ->
-Functor (ComposeExtensions conts) where
-  map = mapComposeExtensions
 
 -- Tensors should eventually more and more use the container backend
--- {conts : List ApplC} -> Applicative (ComposeExtensions conts) where
---   pure = ?vnnn
---   (<*>) = ?vbbb
+-- public export
+-- Applicative (ComposeExtensions conts) using FCE where
+--   pure = compExtReplicate
+--   fs <*> xs = uncurry ($) <$> compExtLiftA2 fs xs
 
+||| This states a list version of 
+||| Ext c2 . Ext c1 = Ext (c2 . c1)
 public export
 toContainerComp : {conts : List ApplC} ->
   ComposeExtensions conts a -> Ext (ComposeContainers conts) a
@@ -73,12 +96,12 @@ fromContainerComp {conts = []} ce = ce
 fromContainerComp {conts = ((# c) :: cs)} ((csh <| cpos) <| idx)
   = csh <| \d => fromContainerComp (cpos d <| curry idx d)
 
-public export
-compReplicate : {conts : List ApplC} ->
-  a -> Ext (ComposeContainers conts) a
-compReplicate {conts = []} x = fromIdentity x
-compReplicate {conts = (c :: cs)} x
-  = ?ff <| ?bb
+-- public export
+-- compReplicate : {conts : List ApplC} ->
+--   a -> Ext (ComposeContainers conts) a
+-- compReplicate {conts = []} x = fromIdentity x
+-- compReplicate {conts = (c :: cs)} x
+--   = ?ff <| ?bb
 
 -- compReplicate {conts = []} a = fromIdentity a
 -- compReplicate {conts = (c :: cs)} a

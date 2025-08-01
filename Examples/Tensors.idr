@@ -97,17 +97,17 @@ failing
 ||| TensorA can do everything that Tensor can
 t0Again : TensorA [Vect 3, Vect 4] Double
 t0Again = fromConcrete $ [ [0, 1, 2, 3]
-                       , [4, 5, 6, 7]
-                       , [8, 9, 10, 11]]
+                         , [4, 5, 6, 7]
+                         , [8, 9, 10, 11]]
 
 ||| Including converting from Tensor
 t1again : TensorA [Vect 6] Double
 t1again = FromCubicalTensor t1
 
 
-||| Above, the container Vect was being made explicit because
-||| there are other containers we can use
-||| For instance, we can use List, which allows us to store
+||| Above, the container Vect is made explicit in the type
+||| There are other containers we can use in its place
+||| We can use list, which allows us to store
 ||| an arbitrary number of elements
 exList : TensorA [List] Double
 exList = fromConcrete [1,2,3,4,5,6,7,8]
@@ -116,8 +116,8 @@ exList2 : TensorA [List] Double
 exList2 = fromConcrete [100,-200,1000]
 
 {- 
-We can use BTreeLeaf, allowing us to store a tree-shaped 'vector'
-which has elements on its leaves
+We can also use BTreeLeaf, allowing us to store a tree with data on its leaves
+
         *
       /   \
      *     2 
@@ -130,7 +130,7 @@ exTree1 = fromConcrete $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
 
 {- 
-Here's another tree of the same shape, with a different number of elements
+Here's another tree, with a different number of elements
         *
       /   \
      10   100 
@@ -152,16 +152,16 @@ Here's a tree-vector with nodes as elements
  /\   / \
 *  * *   * 
 -}
-ex3 : TensorA [BTreeNode] Double
-ex3 = fromConcrete $ Node 200 (Node 10 Leaf' Leaf') (Node 3000 Leaf' Leaf')
+exTree3 : TensorA [BTreeNode] Double
+exTree3 = fromConcrete $ Node 200 (Node 10 Leaf' Leaf') (Node 3000 Leaf' Leaf')
 
 ||| And here's a tree with whose nodes are vectors of size 2
-ex4 : TensorA [BTreeLeaf, Vect 2] Double
-ex4 = fromConcrete $ Node' (Leaf [4,1]) (Leaf [17, 4])
+exTree4 : TensorA [BTreeLeaf, Vect 2] Double
+exTree4 = fromConcrete $ Node' (Leaf [4,1]) (Leaf [17, 4])
 
-||| This can get very complex, but still fully type-checked
-ex5 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
-ex5 = fromConcrete $
+||| This can get very complex, but is still fully type-checked
+exTree5 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
+exTree5 = fromConcrete $
   Node (Node'
           (Leaf [1,2,3])
           (Leaf [4,5,6]))
@@ -193,10 +193,14 @@ failing
   indexTreeExampleFail = ex1 @@ [GoRight (GoRight Done)]
 
 
-||| We can also reshape and traverse non-cubical tensors
+||| We can also perform reshapes, views and traversals of  non-cubical tensors
 traverseTree : TensorA [List] Double
-traverseTree = fromConcreteMap postorderNode ex3
+traverseTree = fromConcreteMap postorderNode exTree3
 
+-- ttt : TensorA [Vect 2, Vect 3] Double
+-- 
+-- 
+-- tv : TensorA [Vect 3, Vect 2] Double
+-- tv = transposeMatrixA tt
 
--- exReshape = 
 -- TODO reshape example for non-cubical tensors
