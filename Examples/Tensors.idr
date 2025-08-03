@@ -2,17 +2,9 @@ module Examples.Tensors
 
 import Data.Tensor
 import Data.Tensor.Utils
+import Data.Container.Test
+import Misc
 -- import Data.Tensor.NaperianTensor
-
-{-
-Need to compute stride-based functionality for:
- * Slice
- * Take
- * Transpose
- * Show
-
-Need to fix automatic flattening for TensorA for contraction operations
- -}
 
 ----------------------------------------
 -- Examples of standard, cubical tensors
@@ -23,6 +15,7 @@ t0 : Tensor [3, 4] Double
 t0 = fromArray [ [0, 1, 2, 3]
                , [4, 5, 6, 7]
                , [8, 9, 10, 11]]
+
 
 ||| Or using analogous functions to np.arange and np.reshape
 t1 : Tensor [6] Double
@@ -64,7 +57,6 @@ failing
   dotProductFail : Tensor [] Double
   dotProductFail = dot t1 (range {n=7})
 
-
 ||| We can safely index into tensors
 indexExample : Double
 indexExample = t0 @@ [1, 2]
@@ -79,14 +71,14 @@ failing
 -- t1Transposed = transposeMatrix t1
 
 
--- ||| Safe slicing, takeTensor [10, 2] t1 would not compile
--- takeExample : Tensor [2, 1] Double
--- takeExample = takeTensor [2, 1] t1
+||| Safe slicing
+takeExample : Tensor [2, 1] Double
+takeExample = takeTensor [2, 1] t0
 
 failing
+  ||| Which fails when we try to take more than exists
   takeExampleFail : Tensor [10, 2] Double
-  takeExampleFail = takeTensor [10, 2] t1
-
+  takeExampleFail = takeTensor [10, 2] t0
 
 
 ----------------------------------------
@@ -96,14 +88,11 @@ failing
 
 ||| TensorA can do everything that Tensor can
 t0Again : TensorA [Vect 3, Vect 4] Double
-t0Again = fromConcrete $ [ [0, 1, 2, 3]
-                         , [4, 5, 6, 7]
-                         , [8, 9, 10, 11]]
+t0Again = FromCubicalTensor t0
 
-||| Including converting from Tensor
+||| Including building concrete Tensors
 t1again : TensorA [Vect 6] Double
-t1again = FromCubicalTensor t1
-
+t1again = fromConcrete [1,2,3,4,5,6]
 
 ||| Above, the container Vect is made explicit in the type
 ||| There are other containers we can use in its place
@@ -144,24 +133,13 @@ exTree2 = fromConcrete $ Node' (Leaf 10) (Leaf 100)
 dotProduct2 : TensorA [] Double
 dotProduct2 = dotA exTree1 exTree2
 
-{- 
-Here's a tree-vector with nodes as elements
-   200
-  /   \
- 10   3000
- /\   / \
-*  * *   * 
--}
-exTree3 : TensorA [BTreeNode] Double
-exTree3 = fromConcrete $ Node 200 (Node 10 Leaf' Leaf') (Node 3000 Leaf' Leaf')
-
-||| And here's a tree with whose nodes are vectors of size 2
-exTree4 : TensorA [BTreeLeaf, Vect 2] Double
-exTree4 = fromConcrete $ Node' (Leaf [4,1]) (Leaf [17, 4])
+||| Here's a tree with whose nodes are vectors of size 2
+exTree3 : TensorA [BTreeNode, Vect 2] Double
+exTree3 = fromConcrete $ Node ([4,1]) (Node ([17, 4]) Leaf' Leaf') Leaf'
 
 ||| This can get very complex, but is still fully type-checked
-exTree5 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
-exTree5 = fromConcrete $
+exTree4 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
+exTree4 = fromConcrete $
   Node (Node'
           (Leaf [1,2,3])
           (Leaf [4,5,6]))
@@ -177,7 +155,7 @@ We can index into any of these structures
 (-42)  46 
 -}
 indexTreeExample : Double
-indexTreeExample = exTree1 @@ [GoRight Done]
+indexTreeExample = exTree1 @@ [GoLeft (GoLeft Done)]
 
 
 failing
@@ -193,9 +171,29 @@ failing
   indexTreeExampleFail = ex1 @@ [GoRight (GoRight Done)]
 
 
+{- 
+We can also perform reshapes, views, and traversals of non-cubical tensors.
+Here's a tree-vector with nodes as elements
+        3
+      /   \
+     2     4
+    / \   / \
+   1   * *   * 
+  / \
+ *   *
+-}
+exTree5 : TensorA [BTreeNode] Double
+exTree5 = fromConcrete $ Node 3 (Node 2 (Node 1 Leaf' Leaf') Leaf') (Node 4 Leaf' Leaf')
+
+exTree6 : TensorA [BTreeNode] Double
+exTree6 = fromConcrete $ Node 2 (Node 1 Leaf' Leaf') Leaf'
+
 ||| We can also perform reshapes, views and traversals of  non-cubical tensors
 traverseTree : TensorA [List] Double
-traverseTree = fromConcreteMap postorderNode exTree3
+traverseTree = fromConcreteMap inorderNode exTree5
+
+traverseTree2 : TensorA [List] Double
+traverseTree2 = reshapeTensorA bTreeNodePreorder exTree5
 
 -- ttt : TensorA [Vect 2, Vect 3] Double
 -- 

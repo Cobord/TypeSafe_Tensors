@@ -151,8 +151,7 @@ namespace ConversionFunctions
   toVect (_ <| indexCont) = vectTabulate indexCont
   
   
-  
-  
+  public export
   fromTreeHelper : FinBTreeNode LeafS -> a
   fromTreeHelper Done impossible
   fromTreeHelper (GoLeft x) impossible
@@ -280,7 +279,7 @@ namespace ListInstances
   ||| This arises out of the Prelude.Types List applicative 
   ||| Effectively it behaves like the outer product
   public export 
-  [outerProd] Applicative List' where
+  [cartProd] Applicative List' where
     pure = fromList . pure
     fs <*> vs = fromList $ toList fs <*> toList vs
 
@@ -299,12 +298,27 @@ namespace ListInstances
     pure = fromList . pure
     fs <*> vs = fromList $ uncurry ($) <$> listZip (toList fs) (toList vs)
 
+  public export
+  showListHelper : Show a => List' a -> String
+  showListHelper (0 <| _) = ""
+  showListHelper (1 <| indexCont) = show $ indexCont FZ
+  showListHelper ((S k) <| indexCont)
+    = let (s, rest) = removeBeginning indexCont
+      in show s ++ ", " ++ showListHelper (k <| rest)
+
+  ||| Not partial but not sure how to convince Idris totality checker
+  partial 
+  public export
+  Show a => Show (List' a) where
+    show x = "[" ++ showListHelper x ++ "]"
+
 
 
 namespace BTreeLeafInstances
 
+  public export
   showBTreeLeaf' : Show a => BTreeLeaf' a -> String
-  showBTreeLeaf' (LeafS <| content) = "Leaf (" ++ show {ty=a} (content Done) ++ ")"
+  showBTreeLeaf' (LeafS <| content) = "Leaf (" ++ show (content Done) ++ ")"
   showBTreeLeaf' ((NodeS l r) <| content) =
     let leftSubtree : BTreeLeaf' a = (l <| \posL => content (GoLeft posL))
         rightSubtree : BTreeLeaf' a = (r <| \posR => content (GoRight posR))

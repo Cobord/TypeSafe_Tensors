@@ -1,4 +1,4 @@
-module Data.Tensor.NaperianTensor
+module Data.Tensor.Naperian
 
 import Data.Fin
 import Data.Vect
@@ -11,7 +11,6 @@ import Data.Functor.Naperian
 %hide Builtin.infixr.(#)
 
 namespace NaperianConstraint
-   
   -- This particular interface, for some reason, makes the compile time incredibly long
   -- The second constructor is the culiprit, removing it solves the problem
   -- I tried performign the elaboration myself as much as possible, but it's not clear why it is slow
@@ -71,3 +70,12 @@ transposeMatrix : {i, j : Nat} ->
 transposeMatrix t
   = let tt = transposeMatrixA 
     in ToCubicalTensor $ ?hooo $ FromCubicalTensor t -- ToCubicalTensor . transposeMatrixA . FromCubicalTensor
+
+  -- public export
+  -- data IndexTData : Type where
+  --   NonCubical : (shape : ApplContList conts) -> IndexTData
+  --   Cubical : (shape : Vect n Nat) -> IndexTData -- assuming every Naperian functor has shape=Fin d for some d, this describes Naperian TensorAs
+
+  -- vnn : IndexTData -> Type -> Type
+  -- vnn (NonCubical shape) = TensorA shape
+  -- vnn (Cubical shape) = \_ => Unit

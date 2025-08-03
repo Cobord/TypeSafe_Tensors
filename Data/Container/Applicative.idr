@@ -17,6 +17,7 @@ public export
 record ApplC where
   constructor (#)
   GetC : Cont
+  ||| Question: can we state this without referencing the extension?
   {auto applPrf : Applicative (Ext GetC)}
 
 public export prefix 0 #
@@ -29,19 +30,21 @@ public export
 NatToVect : (n : Nat) -> ApplC
 NatToVect n = # (Vect n)
 
-public export
-NatsToVect : (shape : List Nat) -> ApplC
-NatsToVect shape = NatToVect (prod shape)
-
 ||| Specialised to composition product of containers
+||| We pattern match on three cases to simplify resulting expressions
 public export
 ComposeContainers : List ApplC -> Cont
-ComposeContainers cs = foldr (>@<) CUnit (GetC <$> cs)
+ComposeContainers [] = CUnit
+ComposeContainers [c] = GetC c
+ComposeContainers (c :: d :: cs) = GetC c >@< ComposeContainers (d :: cs)
+-- ComposeContainers cs = foldr (>@<) CUnit (GetC <$> cs)
 
 public export
 ComposeExtensions : List ApplC -> Type -> Type
 ComposeExtensions [] a = Ext CUnit a
-ComposeExtensions ((# c) :: cs) a = Ext c (ComposeExtensions cs a)
+ComposeExtensions [c] a = Ext (GetC c) a
+ComposeExtensions (c :: d :: cs) a
+  = Ext (GetC c) (ComposeExtensions (d :: cs) a)
 
 -- public export
 -- mapComposeExtensions : {conts : List ApplC} ->
@@ -85,15 +88,17 @@ public export
 toContainerComp : {conts : List ApplC} ->
   ComposeExtensions conts a -> Ext (ComposeContainers conts) a
 toContainerComp {conts = []} ce = ce
-toContainerComp {conts = ((# c) :: cs)} (shp <| idx) = 
-  let rst = (toContainerComp {conts=cs}) . idx
+toContainerComp {conts = [c]} ce = ce
+toContainerComp {conts = (c :: d :: cs)} (shp <| idx) = 
+  let rst = (toContainerComp {conts=(d :: cs)}) . idx
   in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
 
 public export
 fromContainerComp : {conts : List ApplC} ->
   Ext (ComposeContainers conts) a -> ComposeExtensions conts a
 fromContainerComp {conts = []} ce = ce
-fromContainerComp {conts = ((# c) :: cs)} ((csh <| cpos) <| idx)
+fromContainerComp {conts = [c]} ce = ce
+fromContainerComp {conts = (c :: d :: cs)} ((csh <| cpos) <| idx)
   = csh <| \d => fromContainerComp (cpos d <| curry idx d)
 
 -- public export
@@ -130,74 +135,16 @@ NatsToApplConts : (shape : List Nat) -> ApplContList (NatToVect <$> shape)
 NatsToApplConts [] = []
 NatsToApplConts (s :: ss) = Vect s :: NatsToApplConts ss
 
-public export
-FlatStorage : (shape : List Nat) -> ApplContList [NatsToVect shape]
-FlatStorage shape = [Vect (prod shape)]
 
-
-||| Given a list of natural numbers, when we convert this to composition product of containers, this will have a unit shape
-||| We don't do rewrites to prove this (as it's not definitionally equal to unit shape, but only isomorphic)
-||| Hence, just like with EmptyExt we provide convenience functions to create this unit shape easily
-public export
-emptyShapeCubicalTensor : {shape : List Nat} ->
-  (ComposeContainers (NatToVect <$> shape)) .shp
-emptyShapeCubicalTensor {shape = []} = ()
-emptyShapeCubicalTensor {shape = (_ :: _)}
-  = () <| (\_ => emptyShapeCubicalTensor)
-
-public export
-natsToFinProd : (shape : List Nat) -> Type
-natsToFinProd shape = Fin (prod shape)
-
-public export
-CubicalTensorCont : (shape : List Nat) -> Cont
-CubicalTensorCont shape = (_ : Unit) !> (natsToFinProd shape)
-
-public export
-cubicalTensorToFlat : {shape : List Nat} ->
-  ComposeContainers [NatsToVect shape] =%> 
-  CubicalTensorCont shape
-cubicalTensorToFlat {shape = []} = constUnit <%! (\(() <| _), _ => (FZ ** ()))
-cubicalTensorToFlat {shape = (s :: ss)}
-  = constUnit <%! (\(() <| _), ieva => (ieva ** ()))
-  
-
-public export
-flatToCubicalTensor : {shape : List Nat} ->
-  CubicalTensorCont shape =%> 
-  ComposeContainers [NatsToVect shape]
-flatToCubicalTensor {shape = []} = (\_ => EmptyExt) <%! (\_, _ => FZ)
-flatToCubicalTensor {shape = (s :: ss)}
-  = (\_ => EmptyExt) <%! (\(), (cp ** ()) => cp)
-
+-- ||| Given a list of natural numbers, when we convert this to composition product of containers, this will have a unit shape
+-- ||| We don't do rewrites to prove this (as it's not definitionally equal to unit shape, but only isomorphic)
+-- ||| Hence, just like with EmptyExt we provide convenience functions to create this unit shape easily
 -- public export
--- cubicalTensorProdNat : {shape : List Nat} ->
---   ComposeContainers (NatToVect <$> shape) =%> 
---   CubicalTensorCont shape
--- cubicalTensorProdNat {shape = []} = constUnit <%! const2Unit
--- cubicalTensorProdNat {shape = (_ :: _)}
---   = constUnit <%! (\(() <| ind), (fs, rst) =>
---     (fs ** let (_ <%! bw) = cubicalTensorProdNat
---            in bw (ind fs) rst))
-
-public export
-dLensProductReshape : {oldShape, newShape : List Nat} ->
-  {auto prf : prod oldShape = prod newShape} ->
-  CubicalTensorCont oldShape =%> CubicalTensorCont newShape
-dLensProductReshape {prf}
-  = constUnit <%! (\_ => rewrite prf in id)
-
-
--- public export
--- prodNatToCubicalTensor : {shape : List Nat} ->
---   CubicalTensorCont shape =%> 
---   ComposeContainers (NatToVect <$> shape)
--- prodNatToCubicalTensor {shape = []} = constUnit <%! const2Unit
--- prodNatToCubicalTensor {shape = (s :: ss)}
---   = let (fwss <%! bwss) = prodNatToCubicalTensor {shape=ss}
---     in (\_ => () <| \_ => fwss ()) <%! (\(), (cp ** rst) => (cp, bwss () rst))
-
-
+-- emptyShapeCubicalTensor : {shape : List Nat} ->
+--   (ComposeContainers (NatToVect <$> shape)) .shp
+-- emptyShapeCubicalTensor {shape = []} = ()
+-- emptyShapeCubicalTensor {shape = (_ :: _)}
+--   = () <| (\_ => emptyShapeCubicalTensor)
 
 -- shapeOfCubicalTensorIsUnit : {shape : List Nat} ->
 --   (ComposeContainers (NatToVect <$> shape)) .shp = ()

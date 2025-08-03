@@ -46,9 +46,10 @@ flattenA = toList
 ||| Flatten a cubical tensor into a vector
 ||| Number of elements is known at compile time
 ||| Can even be zero, if any of shape elements is zero
-flatten : {shape : List Nat} ->
-  Tensor shape a -> Vect (prod shape) a
-flatten (ToCubicalTensor (TS ex)) = (\(TZ a) => a) <$> toVect ex
+-- TODO Fix for strided
+-- flatten : {shape : List Nat} ->
+--   Tensor shape a -> Vect (prod shape) a
+-- flatten (ToCubicalTensor (TS ex)) = extract <$> toVect ex
 
 ||| Maximum value in a tensor
 maxA : {shape : ApplContList conts} -> Foldable (TensorA shape) => Ord a =>
@@ -56,22 +57,24 @@ maxA : {shape : ApplContList conts} -> Foldable (TensorA shape) => Ord a =>
 maxA = maxInList . flattenA
 
 ||| Maximum value in a cubical tensor
+-- TODO Fix for strided
 max : {shape : List Nat} -> Ord a =>
   Tensor shape a -> Maybe a
-max = maxA . FromCubicalTensor
+-- max = maxA . FromCubicalTensor
 
-public export
-{shape : List Nat} -> Random a => Random (Tensor shape a) where
-  randomIO = map (fromArray . toArrayHelper) randomIO
-  
-  randomRIO (lo, hi) = do
-    let loFlat = flatten lo
-    let hiFlat = flatten hi
-    randomVect <- randomRIO (loFlat, hiFlat)
-    pure $ fromArray (toArrayHelper randomVect)
-
-random : Random a => (shape : List Nat) -> IO (Tensor shape a)
-random shape = randomIO
+-- TODO Fix for strided
+-- public export
+-- {shape : List Nat} -> Random a => Random (Tensor shape a) where
+--   randomIO = map (fromArray . toArrayHelper) randomIO
+--   
+--   randomRIO (lo, hi) = do
+--     let loFlat = flatten lo
+--     let hiFlat = flatten hi
+--     randomVect <- randomRIO (loFlat, hiFlat)
+--     pure $ fromArray (toArrayHelper randomVect)
+-- 
+-- random : Random a => (shape : List Nat) -> IO (Tensor shape a)
+-- random shape = randomIO
 
 -- public export
 -- eye : Num a => TensorA [n, n] a

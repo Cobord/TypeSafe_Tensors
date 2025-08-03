@@ -1,5 +1,7 @@
 module Data.Container.Morphism
 
+import Data.DPair
+
 import Data.Container.Definition
 
 ||| Dependent lenses
@@ -13,6 +15,14 @@ record (=%>) (c1, c2 : Cont) where
 export infixr 1 =%>
 export infix 1 <%!
 
+export prefix 0 !%
+
+public export 
+(!%) : {c1, c2 : Cont} ->
+  ((x : c1.shp) -> (y : c2.shp ** (c2.pos y -> c1.pos x))) ->
+  c1 =%> c2
+(!%) f = (\x => fst (f x)) <%! (\x => snd (f x))
+
 ||| Dependent charts
 ||| Forward-forward container morphisms
 public export
@@ -23,6 +33,14 @@ record (=&>) (c1, c2 : Cont) where
 
 export infixr 1 =&>
 export infix 1 <&!
+
+export prefix 0 !&
+
+public export
+(!&) : {c1, c2 : Cont} ->
+  ((x : c1.shp) -> (y : c2.shp ** (c1.pos x -> c2.pos y))) ->
+  c1 =&> c2
+(!&) f = (\x => fst (f x)) <&! (\x => snd (f x))
 
 ||| TODO is this the extension of a container?
 val : Cont -> Type -> Cont
