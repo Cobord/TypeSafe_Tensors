@@ -5,7 +5,7 @@ This is framework for pure functional tensor processing, implemented in Idris 2.
 * **implements non-cubical tensors**: tensors of trees and streams are supported, instead of just arrays
 * **is made with ergonomics in mind**: it aims to provide the standard numpy/Pytorch interface to the user in a purely functional language with first-class types
 
-The working hypothesis and goal of this framework is to **achieve performance not at the expense of compositionality, but because of it**, and is described [below](#Goal-and-technical-details).
+The working hypothesis and goal of this framework is to **achieve performance not at the expense of compositionality, but because of it**, described [below](#Goal-and-technical-details).
 
 This framework is in active development and with many rough edges, but at the moment it is expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) as described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
 
@@ -205,7 +205,9 @@ To run examples in the REPL run `pack repl Examples/Tensors.idr`. To use this pa
 
 ## Goal and technical details
 
-The hypothesis of this framework is that **performance can be achieved not at the expense of compositionality, but because of it**. The goal of this framework is to prove this hypothesis by implementing a functional example of performant and compositional tensor processing framework. This means that special care is taken
+I've had a long-standing working hypothesis about software engineering that can be captured in a succint phrase: **performance ought to be achieved not at the expense of compositionality, but because of it**. 
+
+The goal of this framework is to evaluate this hypothesis by implementing a working compositional and performant tensor processing framework. This means that special care is taken
 1) to develop typed tensor interface and abstractions that enable abundant static analysis, and 
 2) to defer the sacrifice of those typed abstractions for performance optimisations until the point when it becomes clear that such a sacrifice is necessary.
 
@@ -219,7 +221,7 @@ The technical components of this library hinge of three interdependent component
 ## Planned features
 * Type-safe einsum
 * Type-safe broadcasting and stacking for both cubical and applicative tensors
-* In-place operations/views, including as_strided variants for non-cubical tensors
+* In-place operations/views, strided representation of tensors, including reasearch on feasibility of such strided variants for non-cubical tensors
 * Better error reporting
 * Comprehensive optimisation via a FFI to a low-level kernel
 
