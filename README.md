@@ -1,4 +1,7 @@
+
 # Type-safe Tensors & Network architectures
+
+[![CI](https://github.com/bgavran/TypeSafe_Tensors/actions/workflows/blank.yml/badge.svg)](https://github.com/bgavran/TypeSafe_Tensors/actions/workflows/blank.yml)
 
 This is framework for pure functional tensor processing, implemented in Idris 2. It
 * Is **type-safe**: tensor indexing and contractions fail at compile time if types do not match
@@ -206,7 +209,6 @@ To run examples in the REPL run `pack repl Examples/Tensors.idr`. To use this pa
 ## Goal and technical details
 
 I've had a long-standing working hypothesis about software engineering that can be captured in a succint phrase: **performance ought to be achieved not at the expense of compositionality, but because of it**. 
-
 The goal of this framework is to evaluate this hypothesis by implementing a working compositional and performant tensor processing framework. This means that special care is taken
 1) to develop typed tensor interface and abstractions that enable abundant static analysis, and 
 2) to defer the sacrifice of those typed abstractions for performance optimisations until the point when it becomes clear that such a sacrifice is necessary.
