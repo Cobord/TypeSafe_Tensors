@@ -1,6 +1,7 @@
 module Misc
 
 import Data.Vect
+import System.Random
 import Data.Fin.Arith
 import Data.List.Quantifiers
 import Decidable.Equality
@@ -16,6 +17,7 @@ public export
 liftA2 : Applicative f => f a -> f b -> f (a, b)
 liftA2 fa fb = ((,) <$> fa) <*> fb
 
+||| Tensorial strength
 public export
 strength : Applicative f => a -> f b -> f (a, b)
 strength a fb = liftA2 (pure a) fb
@@ -24,7 +26,12 @@ strength a fb = liftA2 (pure a) fb
 public export
 addBeginning : x -> (Fin l -> x) -> (Fin (S l) -> x)
 addBeginning x _ FZ = x
-addBeginning _ c (FS k') = c k'
+addBeginning _ f (FS k') = f k'
+
+public export
+removeBeginning : (Fin (S l) -> x) -> (x, (Fin l -> x))
+removeBeginning f = (f FZ, f . FS)
+
 
 ||| Analogus to take in Data.Vect, but for Fin
 public export 
@@ -47,6 +54,13 @@ public export
   xs + ys = uncurry (+) <$> liftA2 xs ys
   xs * ys = uncurry (*) <$> liftA2 xs ys
   fromInteger = pure . fromInteger
+
+-- Probably there's a faster way to do this
+public export
+{n : Nat} -> Random a => Random (Vect n a) where
+  randomIO = sequence $ replicate n randomIO
+  randomRIO (lo, hi) = sequence $ zipWith (\l, h => randomRIO (l, h)) lo hi
+
 
 namespace Vect
   public export
@@ -248,6 +262,32 @@ namespace FinArithmetic
   shiftMulTest : shiftMul {n=3} 5 1 = 5
   shiftMulTest = Refl
 
+  ||| Analogous to strengthen from Data.Fin
+  ||| Attempts to strengthen the bound on Fin (m + n) to Fin m
+  ||| If it doesn't succeed, then returns the remainder in Fin n
+  public export
+  strengthenN : {m, n : Nat} -> Fin (m + n) -> Either (Fin m) (Fin n)
+  strengthenN {m = 0} x = Right x
+  strengthenN {m = (S k)} FZ = Left FZ
+  strengthenN {m = (S k)} (FS x) with (strengthenN x)
+    _ | (Left p) = Left $ FS p
+    _ | (Right q) = Right q
+  -- strengthenN {m = 0} x = Nothing
+  -- strengthenN {m = (S k)} FZ = Just FZ
+  -- strengthenN {m = (S k)} (FS x) with (strengthenN x)
+  --   _ | Nothing = Nothing
+  --   _ | (Just p) = Just $ FS p
+    --= let t = strengthenN x
+    --  in ?strengthenN_rhs_3
+
+  -- strengthenN {n = 0} x = Just x
+  -- strengthenN {m = 0} {n = (S k)} FZ = Nothing
+  -- strengthenN {m = (S j)} {n = (S k)} FZ = Just FZ
+  -- strengthenN {m} {n = (S k)} (FS x)
+  --   = let t = strengthenN x
+  --         v = Fin.FS
+  --     in ?what -- strengthenN x
+
 
 --         restCount = indexCount is -- fpn = 13 : Fin (20)
 -- iCTest1 : indexCount {shape = [3, 4, 5]} [1, 2, 3] = 33
@@ -394,8 +434,23 @@ outer xs ys = let t = liftA2 xs ys
   
  -}
 
+|||| filter' works without `with`?
+filter' : (a -> Bool) -> Vect n a -> (p ** Vect p a)
+filter' p [] = (0 ** [])
+filter' p (x :: xs) = case filter' p xs of 
+  (_ ** xs') => if p x then (_ ** x :: xs') else (_ ** xs')
 
+||| filter'' implemented with `with`
+filter'' : (a -> Bool) -> Vect n a -> (p ** Vect p a)
+filter'' p [] = (0 ** [])
+filter'' p (x :: xs) with (filter' p xs)
+  _ | (_ ** xs') = if p x then (_ ** x :: xs') else (_ ** xs')
 
 
 -- g : String
 -- g = assert_total "asdf"
+
+{-
+Prelude.absurd : Uninhabited t => t -> a
+
+ -}

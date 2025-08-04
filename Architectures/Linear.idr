@@ -8,7 +8,7 @@ import Data.Tensor
 import Data.Tensor.Utils
 import Para.Para
 import Architectures.Softmax
-import Algebra
+import Data.Algebra
 import Misc
 
 

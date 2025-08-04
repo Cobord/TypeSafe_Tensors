@@ -7,7 +7,7 @@ import Data.Container.Definition
 import Data.Container.Instances
 import Data.Tensor
 -- import ApplicativeLinAlg
-import Algebra
+import Data.Algebra
 import Data.Tree
 import Misc
 

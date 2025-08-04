@@ -6,12 +6,13 @@ import Data.Container.Definition
 import Data.Container.Instances
 import Data.Container.TreeUtils
 
+import Data.Functor.Naperian
 import Data.Tensor
 import Data.Tensor.Utils
 import Data.Tree
 import Para.Para
 import Architectures.Softmax
-import Algebra
+import Data.Algebra
 import Misc
 
 parameters {a : Type} {auto _ : Num a}
@@ -106,6 +107,20 @@ parameters {a : Type} {auto _ : Num a}
   SelfAttention' softmax' = MkPara
     (const (SelfAttentionParams (Vect featureSize)))
     (\inp => ToCubicalTensor . (SAImpl {features=Vect featureSize} (FromCubicalTensor . softmax' . ToCubicalTensor) (FromCubicalTensor inp)))
+
+  totalPosEnc : {inputSize : Nat} ->
+    (Fin inputSize -> Tensor [featureSize] a) ->
+    Tensor [inputSize, featureSize] a
+  totalPosEnc f = let t = tabulate {f=Vect inputSize} f
+                  in ToCubicalTensor $ ?totalPosEnc_rhs
+  
+  selfAttentionWithPosEnc : {inputSize, featureSize : Nat} ->
+    (softmax' : Tensor [inputSize] a -> Tensor [inputSize] a) ->
+    Para (Tensor [inputSize, featureSize] a)
+         (Tensor [inputSize, featureSize] a)
+  selfAttentionWithPosEnc softmax' = MkPara
+    (const (SelfAttentionParams (Vect featureSize)))
+    (\i, p => Run (SelfAttention' softmax') ?myInput p)
   
 
 -- Self Attention for matrices
@@ -158,8 +173,8 @@ SATreeForwardPass = Run SelfAttentionTree
 
 
 tree1 : TensorA [BTreeLeaf, Vect 2] Double
-tree1 = fromConcrete $ fromBTreeLeaf $ 
-  Node' (Leaf (fromVect [4, 5])) (Leaf (fromVect [-12, 25]))
+tree1 = fromConcrete $ 
+  Node' (Leaf ([4, 5])) (Leaf ([-12, 25]))
 
 ||| Example output for tree self-attention
 SAOutputTree : TensorA [BTreeLeaf, Vect 2] Double

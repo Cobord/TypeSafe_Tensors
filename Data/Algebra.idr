@@ -1,4 +1,4 @@
-module Algebra
+module Data.Algebra
 
 import Data.Vect
 

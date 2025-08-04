@@ -737,7 +737,6 @@ namespace CubicalTensor
   public export
   reshape : {oldShape, newShape : List Nat} ->
     Tensor oldShape a ->
-    {shape : List Nat} ->
     {auto prf : prod oldShape = prod newShape} ->
     Tensor newShape a
   reshape t = ToCubicalTensorMap (reshapeTensorA ?vnfh) t
@@ -773,6 +772,19 @@ namespace IndexTensor
   (@@) : (t : TensorA shape a) -> IndexTA shape t -> a
   (@@) = indexTensorA
 
+  -- Lens-like syntax for a Tensor getter
+  public export infixr 9 ^. -- Why can't I use @ here?
+  public export
+  (^.) : (t : TensorA shape a) -> IndexTA shape t -> a
+  (^.) = indexTensorA
+
+
+  -- Lens-like syntax for a Tensor setter
+  public export infixr 9 .~
+  public export
+  (.~) : (t : TensorA shape a) -> IndexTA shape t -> a -> TensorA shape a
+  (.~) t ind val = ?wh
+
 
   namespace CubicalIndex
     -- ideally we'd remove the allNonZero consraint in the future, but it shouldn't impact things too much for now
@@ -790,6 +802,14 @@ namespace IndexTensor
       (ind : IndexTA (NatsToApplConts shape) (FromCubicalTensor t)) ->
       a
     (@@) = indexTensor
+
+    public export infixr 9 ^. -- Why can't I use @ here?
+    public export
+    (^.) : {shape : List Nat} ->
+      (t : Tensor shape a) ->
+      (ind : IndexTA (NatsToApplConts shape) (FromCubicalTensor t)) ->
+      a
+    (^.) = indexTensor
 
 
 

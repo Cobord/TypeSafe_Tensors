@@ -17,28 +17,27 @@ depends = contrib, hashmap, elab-util
 
 -- modules to install
 modules = Data.Container.Definition,
-          Data.Container.Morphism,
           Data.Container.Instances,
           Data.Container.Applicative,
           Data.Container.TreeUtils,
+          Data.Container.Morphism.Definition,
+          Data.Container.Morphism.Instances,
           Data.Tensor,
           Data.Tensor.Naperian,
-          Data.Tensor.Utils,
-          Data.Functor.Naperian,
-          Data.Tree,
           Data.Tensor.Einsum.EinsumExpr,
           Data.Tensor.Einsum.EinsumElab,
           Data.Tensor.Einsum.EinsumElabUtils,
+          Data.Tensor.Utils,
+          Data.Functor.Naperian,
+          Data.Tree,
+          Data.Algebra,
           Architectures.Activations,
           Architectures.Attention,
           Architectures.Softmax,
           Architectures.Linear,
-          Algebra,
           Misc,
-          Data.ElabUtilTest,
           Examples.Tensors,
           Tests.TensorAccess,
-          Tests.EinsumTests
 
 -- main file (i.e. file to load at REPL)
 -- main =

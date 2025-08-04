@@ -11,6 +11,7 @@ It is expressive enough to [implement generalised cross-attention](https://githu
 It is aiming to achieve performance not at the expense of compositionality, but rather because of it, meaning special care is taken to develop typed tensor abstractions that can later be made performant. It's in active development and with many rough edges.
 
 * [Examples](#Examples)
+* [Installation instructions](#Installation-instructions)
 * [Technical details](#Technical-details)
 * [Planned features](#Planned-features)
 
@@ -99,7 +100,7 @@ failing
 
 ||| TensorA can do everything that Tensor can
 t0Again : TensorA [Vect 3, Vect 4] Double
-t0Again = fromArrayA $ [ [0, 1, 2, 3]
+t0Again = fromConcrete $ [ [0, 1, 2, 3]
                        , [4, 5, 6, 7]
                        , [8, 9, 10, 11]]
 
@@ -119,7 +120,7 @@ Here's a tree-vector with leaves as elements.
 (-42)  46 
 -}
 ex1 : TensorA [BTreeLeaf] Double
-ex1 = fromArrayA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+ex1 = fromConcrete $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
 
 {- 
@@ -130,7 +131,7 @@ Here's another tree of the same shape, with a different number of elements
      10   100 
 -}
 ex2 : TensorA [BTreeLeaf] Double
-ex2 = fromArrayA $ Node' (Leaf 10) (Leaf 100)
+ex2 = fromConcrete $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take the dot product of these two trees
 ||| The fact that they don't have the same number of elements does not matter
@@ -147,15 +148,15 @@ Here's a tree-vector with nodes as elements
      *   * 
 -}
 ex3 : TensorA [BTreeNode] Double
-ex3 = fromArrayA $ Node 127 Leaf' (Node 14 Leaf' Leaf')
+ex3 = fromConcrete $ Node 127 Leaf' (Node 14 Leaf' Leaf')
 
 ||| And here's a tree with whose nodes are vectors of size 2
 ex4 : TensorA [BTreeLeaf, Vect 2] Double
-ex4 = fromArrayA $ Node' (Leaf [4,1]) (Leaf [17, 4])
+ex4 = fromConcrete $ Node' (Leaf [4,1]) (Leaf [17, 4])
 
 ||| This can get very complex, but still fully type-checked
 ex5 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
-ex5 = fromArrayA $
+ex5 = fromConcrete $
   Node (Node'
           (Leaf [1,2,3])
           (Leaf [4,5,6]))
@@ -187,6 +188,16 @@ failing
   indexTreeExampleFail = ex1 @@ [GoRLeaf (GoRLeaf AtLeaf)]
 ```
 
+# Installation instructions
+
+It's recommended to install this using the Idris 2 package manager [pack](https://github.com/stefan-hoeck/idris2-pack).
+
+1. Clone repository, and `cd` into it
+2. Run `pack install-deps typesafe-tensors.ipkg`
+3. Run `pack install-app idris2-lsp`
+4. That's it! Run examples in the REPL with `pack repl Examples/Tensors.idr`
+
+
 # Technical details
 
 The core components of this libary are containers, applicative functors and dependent lenses
@@ -194,10 +205,10 @@ The core components of this libary are containers, applicative functors and depe
 * Applicative functors allow us to perform generalised linear algebra
 * Dependent lenses allow us to talk about morphisms of containers, and define tensor reshaping operations
 
-
 # Planned features
 * Type-safe einsum
 * Type-safe broadcasting and stacking for both cubical and applicative tensors
 * In-place operations/views, including as_strided variants for non-cubical tensors
 * FFI to a low-level kernel for tensor operations
 * No investigation has been done regarding optimisation yet
+* Better error reporting

@@ -1,4 +1,4 @@
-module Data.Container.Morphism
+module Data.Container.Morphism.Definition
 
 import Data.DPair
 

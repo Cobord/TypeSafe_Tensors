@@ -8,7 +8,7 @@ import Data.Container.Definition
 import Data.Functor.Naperian
 import Misc
 import Data.Tree
-import Algebra
+import Data.Algebra
 import public Data.Container.TreeUtils -- rexport all the stuff inside
 
 
@@ -250,7 +250,6 @@ FromConcrete BTreeLeaf where
   fromConcrete = fromBTreeLeaf
   toConcrete = toBTreeLeaf
 
-
 namespace VectInstances
   public export
   {n : Nat} -> Eq x => Eq (Ext (Vect n) x) where
@@ -276,28 +275,6 @@ namespace VectInstances
   -- TODO Naperian instance? Or is that covered by the one in Definiton.idr?
 
 namespace ListInstances
-  ||| This arises out of the Prelude.Types List applicative 
-  ||| Effectively it behaves like the outer product
-  public export 
-  [cartProd] Applicative List' where
-    pure = fromList . pure
-    fs <*> vs = fromList $ toList fs <*> toList vs
-
-  public export
-  listZip : List a -> List b -> List (a, b)
-  listZip [] [] = []
-  listZip [] (y :: ys) = []
-  listZip (x :: xs) [] = []
-  listZip (x :: xs) (y :: ys) = (x, y) :: listZip xs ys
-
-  ||| This another List applicative, behaving like the usual zip one
-  ||| It appears that List doesn't have the concret Zippable instance written
-  ||| Only one in Data.Zippable that follows from Applicative, which isn't the one we want
-  public export
-  Applicative List' where
-    pure = fromList . pure
-    fs <*> vs = fromList $ uncurry ($) <$> listZip (toList fs) (toList vs)
-
   public export
   showListHelper : Show a => List' a -> String
   showListHelper (0 <| _) = ""
@@ -312,10 +289,54 @@ namespace ListInstances
   Show a => Show (List' a) where
     show x = "[" ++ showListHelper x ++ "]"
 
+  ||| This arises out of the Prelude.Types List applicative 
+  ||| Effectively it behaves like the outer product
+  public export 
+  [cartProd] Applicative List' where
+    pure = fromList . pure
+    fs <*> vs = fromList $ toList fs <*> toList vs
+
+  public export
+  listZip : List a -> List b -> List (a, b)
+  listZip [] [] = []
+  listZip [] (y :: ys) = []
+  listZip (x :: xs) [] = []
+  listZip (x :: xs) (y :: ys) = (x, y) :: listZip xs ys
+
+  listZip' : List' a -> List' b -> List' (a, b)
+  listZip' (sh1 <| ind1) (sh2 <| ind2) = minimum sh1 sh2 <| \p => ?vm
+
+  ||| This another List applicative, behaving like the usual zip one
+  ||| It appears that List doesn't have the concret Zippable instance written
+  ||| Only one in Data.Zippable that follows from Applicative, which isn't the one we want
+  public export
+  Applicative List' where
+    pure = fromList . pure
+    fs <*> vs = fromList $ uncurry ($) <$> listZip (toList fs) (toList vs)
+
+
+
+public export
+record ApplC' where
+  constructor (##)
+  GetC' : Cont
+  pureSh : GetC' .shp
+  monSh : ( GetC' .shp , GetC' .shp ) -> GetC' .shp
+  posMap : {s1, s2 : GetC' .shp} ->
+    GetC' .pos s1 -> GetC' .pos s2 -> GetC' .pos (monSh (s1, s2) )
+
+liftA2Cont' : {c : ApplC'} ->
+  (Ext (GetC' c) a -> Ext (GetC' c) b -> Ext (GetC' c) (a, b))
+liftA2Cont' (sha <| inda) (shb <| indb)
+  = monSh c (sha, shb) <| \p => ?ii
+
+{c : ApplC'} -> Applicative (Ext (GetC' c)) where
+  pure a = (pureSh c) <| \_ => a
+  fs <*> xs = uncurry ($) <$> liftA2Cont' fs xs
+
 
 
 namespace BTreeLeafInstances
-
   public export
   showBTreeLeaf' : Show a => BTreeLeaf' a -> String
   showBTreeLeaf' (LeafS <| content) = "Leaf (" ++ show (content Done) ++ ")"

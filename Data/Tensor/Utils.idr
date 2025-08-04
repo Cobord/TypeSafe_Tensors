@@ -62,6 +62,11 @@ max : {shape : List Nat} -> Ord a =>
   Tensor shape a -> Maybe a
 -- max = maxA . FromCubicalTensor
 
+-- oneHotA : Num a => {c : Cont} -> (i : c .shp) -> TensorA [c] a
+
+-- oneHot : {n : Nat} -> (i : Fin n) -> Tensor [n] a
+-- oneHot i = ?oneHot_rhs
+
 -- TODO Fix for strided
 -- public export
 -- {shape : List Nat} -> Random a => Random (Tensor shape a) where
