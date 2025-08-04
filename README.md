@@ -1,7 +1,7 @@
 
 # Type-safe Tensors & Network architectures
 
-[![CI](https://github.com/bgavran/TypeSafe_Tensors/actions/workflows/blank.yml/badge.svg)](https://github.com/bgavran/TypeSafe_Tensors/actions/workflows/blank.yml)
+[![build](https://github.com/bgavran/TypeSafe_Tensors/actions/workflows/build.yml/badge.svg)](https://github.com/bgavran/TypeSafe_Tensors/actions/workflows/build.yml)
 
 This is framework for pure functional tensor processing, implemented in Idris 2. It
 * Is **type-safe**: tensor indexing and contractions fail at compile time if types do not match
