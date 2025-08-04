@@ -2,17 +2,17 @@
 
 This is framework for pure functional tensor processing, implemented in Idris 2. It
 * Is **type-safe**: tensor indexing and contractions fail at compile time if types do not match
-* **implements non-cubical tensors**: tensors of trees and streams instead of just arrays are supported
+* **implements non-cubical tensors**: tensors of trees and streams are supported, instead of just arrays
 * **is made with ergonomics in mind**: it aims to provide the standard numpy/Pytorch interface to the user in a purely functional language with first-class types
-
 
 It is expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) as described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
 
-It is aiming to achieve performance not at the expense of compositionality, but rather because of it. This means that special care is taken to develop abstractions with future performance optimisations in mind. This package is in active development and with many rough edges.
+
+The working hypothesis and goal of this framework is to **achieve performance not at the expense of compositionality, but because of it** (see more [below](#technical-details). This framework is in active development and with many rough edges.
 
 * [Examples](#Examples)
 * [Installation instructions](#Installation-instructions)
-* [Technical details](#Technical-details)
+* [Goal and technical details](#Technical-details)
 * [Planned features](#Planned-features)
 
 # Examples
@@ -22,30 +22,21 @@ These examples are taken from `Examples.Tensors.idr`.
 ```idris
 ||| We can construct Tensors directly
 t0 : Tensor [3, 4] Double
-t0 = fromArray [ [0, 1, 2, 3]
-               , [4, 5, 6, 7]
-               , [8, 9, 10, 11]]
+t0 = fromConcrete [ [0, 1, 2, 3]
+                  , [4, 5, 6, 7]
+                  , [8, 9, 10, 11]]
 
-||| Or using analogous functions to np.arange and np.reshape
+
+||| Or using analogous functions np.arange, for instance
 t1 : Tensor [6] Double
 t1 = range
 
-t2 : Tensor [2, 3] Double
-t2 = reshape t1
-
 failing
-  ||| Which will fail if we supply an array with the wrong shape
-  t1Fail : Tensor [3, 4] Double
-  t1Fail = fromArray [ [0, 1, 2, 3, 999]
-                     , [4, 5, 6, 7]
-                     , [8, 9, 10, 11]]
-
-failing
-  
-  ||| Or if the reshape is not possible
-  t2Fail : Tensor [7, 2] Double
-  t2Fail = reshape $ t1
-
+  ||| These operations will fail if we supply an array with the wrong shape
+  failConcrete : Tensor [3, 4] Double
+  failConcrete = fromConcrete [ [0, 1, 2, 3, 999]
+                              , [4, 5, 6, 7]
+                              , [8, 9, 10, 11]]
 
 ||| We can perform safe elementwise addition
 t0Sum : Tensor [3, 4] Double
@@ -53,7 +44,7 @@ t0Sum = t0 + t0
 
 ||| And all sorts of numeric operations
 numericOps : Tensor [3, 4] Double
-numericOps = abs ((t0 * negate t0) <&> (+7))
+numericOps = abs (- (t0 * t0) <&> (+7))
 
 dotProduct : Tensor [] Double
 dotProduct = dot t1 t1
@@ -61,102 +52,95 @@ dotProduct = dot t1 t1
 failing
   ||| Failing if we add tensors of different shapes
   tSumFail : Tensor [3, 4] Double
-  tSumFail = t1 + t2
+  tSumFail = t0 + t1
 
 failing
   ||| Or if types mismatch in contractions
   dotProductFail : Tensor [] Double
   dotProductFail = dot t1 (range {n=7})
 
-
 ||| We can safely index into tensors
 indexExample : Double
-indexExample = t0 @@@ [1, 2]
+indexExample = t0 @@ [1, 2]
 
 failing
-   ||| We cannot index outside of the tensor's shape
+   ||| And fail if we index outside of the tensor's shape
    indexExampleFail : Double
-   indexExampleFail = t1 @@@ [7, 2]
+   indexExampleFail = t1 @@ [7, 2]
 
--- ||| Safe transposition
--- t1Transposed : Tensor [4, 3] Double
--- t1Transposed = transposeMatrix t1
+||| Safe transposition
+t1Transposed : Tensor [4, 3] Double
+t1Transposed = transposeMatrix t1
 
-
--- ||| Safe slicing, takeTensor [10, 2] t1 would not compile
--- takeExample : Tensor [2, 1] Double
--- takeExample = takeTensor [2, 1] t1
+||| Safe slicing
+takeExample : Tensor [2, 1] Double
+takeExample = takeTensor [2, 1] t0
 
 failing
+  ||| Which fails when we try to take more than exists
   takeExampleFail : Tensor [10, 2] Double
-  takeExampleFail = takeTensor [10, 2] t1
-
+  takeExampleFail = takeTensor [10, 2] t0
 
 
 ----------------------------------------
 -- Generalised tensor examples
--- These include tree shaped tensors, and other non-cubical tensors
+-- These include list, tree shaped tensors, and other non-cubical tensors
 ----------------------------------------
 
 ||| TensorA can do everything that Tensor can
 t0Again : TensorA [Vect 3, Vect 4] Double
-t0Again = fromConcrete $ [ [0, 1, 2, 3]
-                       , [4, 5, 6, 7]
-                       , [8, 9, 10, 11]]
+t0Again = FromCubicalTensor t0
 
-||| Including converting from Tensor
+||| Including building concrete Tensors
 t1again : TensorA [Vect 6] Double
-t1again = FromCubicalTensor t1
+t1again = fromConcreteA [1,2,3,4,5,6]
 
+||| Above, the container Vect is made explicit in the type
+||| There are other containers we can use in its place
+||| We can use List which allows us to store an arbitrary number of elements
+exList : TensorA [List] Double
+exList = fromConcreteA [1,2,3,4,5,6,7,8]
+
+||| Same type as above, different number of elements
+exList2 : TensorA [List] Double
+exList2 = fromConcreteA [100,-200,1000]
 
 {- 
-In addition to storing standard n-element vectors, TensorA
-can store tree-shaped tensors. 
-Here's a tree-vector with leaves as elements.
+We can also use BTreeLeaf, allowing us to store a tree with data on its leaves
+
         *
       /   \
      *     2 
     / \
 (-42)  46 
 -}
-ex1 : TensorA [BTreeLeaf] Double
-ex1 = fromConcrete $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+exTree1 : TensorA [BTreeLeaf] Double
+exTree1 = fromConcreteA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+
 
 
 {- 
-The number of elements need not be fixed at compile time.
-Here's another tree of the same shape, with a different number of elements
+Here's another tree, with a different number of elements
         *
       /   \
      10   100 
 -}
-ex2 : TensorA [BTreeLeaf] Double
-ex2 = fromConcrete $ Node' (Leaf 10) (Leaf 100)
+exTree2 : TensorA [BTreeLeaf] Double
+exTree2 = fromConcreteA $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take the dot product of these two trees
-||| The fact that they don't have the same number of elements does not matter
+||| The fact that they don't have the same number of elements is irrelevant
 ||| What matters is that the container defining them 'BTreeLeaf' is the same
 dotProduct2 : TensorA [] Double
-dotProduct2 = dotA ex1 ex2
+dotProduct2 = dotA exTree1 exTree2
 
-{- 
-Here's a tree-vector with nodes as elements
-   127
-  /   \
- *    14     
-      / \
-     *   * 
--}
-ex3 : TensorA [BTreeNode] Double
-ex3 = fromConcrete $ Node 127 Leaf' (Node 14 Leaf' Leaf')
+||| Here's a tree with whose nodes are vectors of size 2
+exTree3 : TensorA [BTreeNode, Vect 2] Double
+exTree3 = fromConcreteA $ Node [4,1] (Node [17, 4] Leaf' Leaf') Leaf'
 
-||| And here's a tree with whose nodes are vectors of size 2
-ex4 : TensorA [BTreeLeaf, Vect 2] Double
-ex4 = fromConcrete $ Node' (Leaf [4,1]) (Leaf [17, 4])
-
-||| This can get very complex, but still fully type-checked
-ex5 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
-ex5 = fromConcrete $
+||| This can get very complex, but is still fully type-checked
+exTree4 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
+exTree4 = fromConcreteA $
   Node (Node'
           (Leaf [1,2,3])
           (Leaf [4,5,6]))
@@ -172,7 +156,7 @@ We can index into any of these structures
 (-42)  46 
 -}
 indexTreeExample : Double
-indexTreeExample = ex1 @@ [GoRLeaf AtLeaf]
+indexTreeExample = exTree1 @@ [GoLeft (GoLeft Done)]
 
 
 failing
@@ -185,12 +169,31 @@ failing
   (-42)  46    X   <---- indexing here throws an error
   -}
   indexTreeExampleFail : Double
-  indexTreeExampleFail = ex1 @@ [GoRLeaf (GoRLeaf AtLeaf)]
+  indexTreeExampleFail = ex1 @@ [GoRight (GoRight Done)]
+
+
+{- 
+We can also perform reshapes, views, and traversals of non-cubical tensors.
+Here's a tree-vector with nodes as elements
+        3
+      /   \
+     2     4
+    / \   / \
+   1   * *   * 
+  / \
+ *   *
+-}
+exTree5 : TensorA [BTreeNode] Double
+exTree5 = fromConcreteA $ Node 3 (Node 2 (Node 1 Leaf' Leaf') Leaf') (Node 4 Leaf' Leaf')
+
+||| And here is the in-order traversal of that tree
+traverseTree : TensorA [List] Double
+traverseTree = reshapeTensorA inorderBTreeNode exTree5
 ```
 
 # Installation instructions
 
-It's recommended to install this using the Idris 2 package manager [pack](https://github.com/stefan-hoeck/idris2-pack).
+It's recommended to install this package (and generally, Idris 2) using the Idris 2 package manager [pack](https://github.com/stefan-hoeck/idris2-pack). Below it is assumed you've got both installed.
 
 1. Clone repository, and `cd` into it
 2. Run `pack install-deps typesafe-tensors.ipkg`
@@ -198,15 +201,23 @@ It's recommended to install this using the Idris 2 package manager [pack](https:
 
 That's it!
 
-To run examples in the REPL run `pack repl Examples/Tensors.idr` and to use this package in your code include `import Data.Tensor` at the top of your source file.
+To run examples in the REPL run `pack repl Examples/Tensors.idr`. To use this package in your code follow the instructions in [pack documentation](https://github.com/stefan-hoeck/idris2-pack/tree/main/example1) to use this library, and then include `import Data.Tensor` at the top of your source file.
 
 
-# Technical details
+# Goal and technical details
 
-The core components of this libary are containers, applicative functors and dependent lenses
-* Containers allow us to talk about shapely types, and allow us to define a generalised indexing operation for vectors, trees, and other non-cubical shapes
-* Applicative functors allow us to perform generalised linear algebra
-* Dependent lenses allow us to talk about morphisms of containers, and define tensor reshaping operations
+The hypothesis of this framework is that **performance can be achieved not at the expense of compositionality, but because of it**. The goal of this framework is to prove this hypothesis by implementing a functional example of performant tensor processing framework.
+
+This means that special care is taken
+1) to develop typed tensor interface and abstractions that enable abundant static analysis, and 
+2) to defer the sacrifice of those typed abstractions for performance optimisations until the point when it becomes clear that such a sacrifice is necessary.
+
+This static analysis is aimed to inform performance optimisations down the line, especially when in context of non-cubical tensors. These are at the moment only scarcely explored, without any known CUDA packages or optimisation algorithms existing.
+
+The technical components of this library hinge of three interdependent components:
+* **Containers**: they allow us to check that indexing a generalised Tensor is well-typed at compile-time. Doing this with cubical containers is easy since they expose the size information at the type level (i.e. `Tensor [2,3,4] Double`), but once we move on to the world of applicative functors this is no longer the case. Checking that an index into a `Tensor [BTreeNode] Double` is well-typed is only possible if the underlying functor additionally comes equipped with the data of a "shape", i.e. if the functor is a polynomial one, i.e. if the functor is the extension of a container.
+* **Applicative functors**: they allow us to perform generalised linear algebra operations as described in the [Applicative Programming with Naperian Functors](https://www.cs.ox.ac.uk/people/jeremy.gibbons/publications/aplicative.pdf) paper.
+* **Dependent lenses**: they allow us to define morphisms of containers, and therefore generalised tensor reshaping operations that do not operate on the content of the data, only the shape. These include views, reshapes, and traversals, and many other culprits that appear in libraries like numpy.
 
 # Planned features
 * Type-safe einsum

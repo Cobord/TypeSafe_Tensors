@@ -17,20 +17,21 @@ t0 = fromConcrete [ [0, 1, 2, 3]
 t1 : Tensor [6] Double
 t1 = range
 
+-- Need to fix reshape
 t2 : Tensor [2, 3] Double
 t2 = reshape t1
 
 failing
   ||| Which will fail if we supply an array with the wrong shape
-  t1Fail : Tensor [3, 4] Double
-  t1Fail = fromConcrete [ [0, 1, 2, 3, 999]
-                        , [4, 5, 6, 7]
-                        , [8, 9, 10, 11]]
+  failConcrete : Tensor [3, 4] Double
+  failConcrete = fromConcrete [ [0, 1, 2, 3, 999]
+                              , [4, 5, 6, 7]
+                              , [8, 9, 10, 11]]
 
 failing
   ||| Or if the reshape is not possible
-  t2Fail : Tensor [7, 2] Double
-  t2Fail = reshape t1
+  failReshape : Tensor [7, 2] Double
+  failReshape = reshape t1
 
 ||| We can perform safe elementwise addition
 t0Sum : Tensor [3, 4] Double
@@ -96,6 +97,7 @@ t1again = fromConcreteA [1,2,3,4,5,6]
 exList : TensorA [List] Double
 exList = fromConcreteA [1,2,3,4,5,6,7,8]
 
+||| Same type as above, different number of elements
 exList2 : TensorA [List] Double
 exList2 = fromConcreteA [100,-200,1000]
 
@@ -123,7 +125,7 @@ exTree2 : TensorA [BTreeLeaf] Double
 exTree2 = fromConcreteA $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take the dot product of these two trees
-||| The fact that they don't have the same number of elements does not matter
+||| The fact that they don't have the same number of elements is irrelevant
 ||| What matters is that the container defining them 'BTreeLeaf' is the same
 dotProduct2 : TensorA [] Double
 dotProduct2 = dotA exTree1 exTree2
