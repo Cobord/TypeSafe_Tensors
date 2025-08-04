@@ -5,17 +5,16 @@ This is framework for pure functional tensor processing, implemented in Idris 2.
 * **implements non-cubical tensors**: tensors of trees and streams are supported, instead of just arrays
 * **is made with ergonomics in mind**: it aims to provide the standard numpy/Pytorch interface to the user in a purely functional language with first-class types
 
-It is expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) as described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
+The working hypothesis and goal of this framework is to **achieve performance not at the expense of compositionality, but because of it**, and is described [below](#Goal-and-technical-details).
 
-
-The working hypothesis and goal of this framework is to **achieve performance not at the expense of compositionality, but because of it** (see more [below](#technical-details). This framework is in active development and with many rough edges.
+This framework is in active development and with many rough edges, but at the moment it is expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) as described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
 
 * [Examples](#Examples)
 * [Installation instructions](#Installation-instructions)
-* [Goal and technical details](#Technical-details)
+* [Goal and technical details](#Goal-and-technical-details)
 * [Planned features](#Planned-features)
 
-# Examples
+## Examples
 
 These examples are taken from `Examples.Tensors.idr`.
 
@@ -191,7 +190,7 @@ traverseTree : TensorA [List] Double
 traverseTree = reshapeTensorA inorderBTreeNode exTree5
 ```
 
-# Installation instructions
+## Installation instructions
 
 It's recommended to install this package (and generally, Idris 2) using the Idris 2 package manager [pack](https://github.com/stefan-hoeck/idris2-pack). Below it is assumed you've got both installed.
 
@@ -204,11 +203,9 @@ That's it!
 To run examples in the REPL run `pack repl Examples/Tensors.idr`. To use this package in your code follow the instructions in [pack documentation](https://github.com/stefan-hoeck/idris2-pack/tree/main/example1) to use this library, and then include `import Data.Tensor` at the top of your source file.
 
 
-# Goal and technical details
+## Goal and technical details
 
-The hypothesis of this framework is that **performance can be achieved not at the expense of compositionality, but because of it**. The goal of this framework is to prove this hypothesis by implementing a functional example of performant tensor processing framework.
-
-This means that special care is taken
+The hypothesis of this framework is that **performance can be achieved not at the expense of compositionality, but because of it**. The goal of this framework is to prove this hypothesis by implementing a functional example of performant and compositional tensor processing framework. This means that special care is taken
 1) to develop typed tensor interface and abstractions that enable abundant static analysis, and 
 2) to defer the sacrifice of those typed abstractions for performance optimisations until the point when it becomes clear that such a sacrifice is necessary.
 
@@ -219,9 +216,14 @@ The technical components of this library hinge of three interdependent component
 * **Applicative functors**: they allow us to perform generalised linear algebra operations as described in the [Applicative Programming with Naperian Functors](https://www.cs.ox.ac.uk/people/jeremy.gibbons/publications/aplicative.pdf) paper.
 * **Dependent lenses**: they allow us to define morphisms of containers, and therefore generalised tensor reshaping operations that do not operate on the content of the data, only the shape. These include views, reshapes, and traversals, and many other culprits that appear in libraries like numpy.
 
-# Planned features
+## Planned features
 * Type-safe einsum
 * Type-safe broadcasting and stacking for both cubical and applicative tensors
 * In-place operations/views, including as_strided variants for non-cubical tensors
 * Better error reporting
 * Comprehensive optimisation via a FFI to a low-level kernel
+
+
+## Contact
+
+Contributions and collaboration on this is welcome, feel free to submit pull requests/issues or get in touch directly.
