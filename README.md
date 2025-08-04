@@ -8,7 +8,7 @@ This is framework for pure functional tensor processing, implemented in Idris 2.
 
 It is expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) as described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
 
-It is aiming to achieve performance not at the expense of compositionality, but rather because of it, meaning special care is taken to develop typed tensor abstractions that can later be made performant. It's in active development and with many rough edges.
+It is aiming to achieve performance not at the expense of compositionality, but rather because of it. This means that special care is taken to develop abstractions with future performance optimisations in mind. This package is in active development and with many rough edges.
 
 * [Examples](#Examples)
 * [Installation instructions](#Installation-instructions)
@@ -194,8 +194,11 @@ It's recommended to install this using the Idris 2 package manager [pack](https:
 
 1. Clone repository, and `cd` into it
 2. Run `pack install-deps typesafe-tensors.ipkg`
-3. Run `pack install-app idris2-lsp`
-4. That's it! Run examples in the REPL with `pack repl Examples/Tensors.idr`
+3. (Optional) If you want Idris 2 support in your IDE run `pack install-app idris2-lsp`
+
+That's it!
+
+To run examples in the REPL run `pack repl Examples/Tensors.idr` and to use this package in your code include `import Data.Tensor` at the top of your source file.
 
 
 # Technical details
@@ -209,6 +212,5 @@ The core components of this libary are containers, applicative functors and depe
 * Type-safe einsum
 * Type-safe broadcasting and stacking for both cubical and applicative tensors
 * In-place operations/views, including as_strided variants for non-cubical tensors
-* FFI to a low-level kernel for tensor operations
-* No investigation has been done regarding optimisation yet
 * Better error reporting
+* Comprehensive optimisation via a FFI to a low-level kernel

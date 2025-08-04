@@ -4,8 +4,7 @@ import Data.Vect
 
 import Data.Container.Definition
 import Data.Container.Instances
-import Data.Tensor.Tensor
-
+import Data.Tensor
 import Misc
 
 

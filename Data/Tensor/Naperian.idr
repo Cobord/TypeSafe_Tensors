@@ -13,7 +13,7 @@ import Data.Functor.Naperian
 namespace NaperianConstraint
   -- This particular interface, for some reason, makes the compile time incredibly long
   -- The second constructor is the culiprit, removing it solves the problem
-  -- I tried performign the elaboration myself as much as possible, but it's not clear why it is slow
+  -- I tried performing the elaboration myself as much as possible in the type, but it's not clear why it is slow
   public export
   data AllNaperian : (shape : ApplContList conts) -> Type where
     Nil : AllNaperian []
@@ -67,9 +67,7 @@ transposeMatrixA {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))}
 public export
 transposeMatrix : {i, j : Nat} ->
   Tensor [i, j] a -> Tensor [j, i] a
-transposeMatrix t
-  = let tt = transposeMatrixA 
-    in ToCubicalTensor $ ?hooo $ FromCubicalTensor t -- ToCubicalTensor . transposeMatrixA . FromCubicalTensor
+transposeMatrix = ToCubicalTensor . transposeMatrixA . FromCubicalTensor
 
   -- public export
   -- data IndexTData : Type where

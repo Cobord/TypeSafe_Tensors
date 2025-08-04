@@ -150,10 +150,10 @@ SAMatrixForwardPass = Run SelfAttentionMat
 
 
 inputMatrix : Tensor [4, 2] Double
-inputMatrix = fromArray [ [1, 3]
-                         , [2, 8]
-                         , [0, 0]
-                         , [1, 3]]
+inputMatrix = fromConcrete [ [1, 3]
+                           , [2, 8]
+                           , [0, 0]
+                           , [1, 3]]
 
 ||| Parameters for self-attention
 ||| Here just a matrix of ones
@@ -173,8 +173,8 @@ SATreeForwardPass = Run SelfAttentionTree
 
 
 tree1 : TensorA [BTreeLeaf, Vect 2] Double
-tree1 = fromConcrete $ 
-  Node' (Leaf ([4, 5])) (Leaf ([-12, 25]))
+tree1 = fromConcreteA $ 
+  Node' (Leaf [4, 5]) (Leaf [-12, 25])
 
 ||| Example output for tree self-attention
 SAOutputTree : TensorA [BTreeLeaf, Vect 2] Double

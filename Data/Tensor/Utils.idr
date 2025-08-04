@@ -5,8 +5,8 @@ import Data.Nat -- Add import for Cast
 import System.Random
 
 
-import Data.Tensor
-import Data.Container.Morphism
+import Data.Tensor.Tensor
+import Data.Container.Morphism.Definition
 import Data.Functor.Naperian -- needed for range
 import Misc
 
@@ -28,7 +28,7 @@ ones = tensorReplicate (fromInteger 1)
 
 public export
 range : {n : Nat} -> Cast Nat a => Tensor [n] a
-range {n} = fromArray $ cast . finToNat <$> positions {f=Vect n}
+range {n} = fromConcrete $ cast . finToNat <$> positions {f=Vect n}
 
 ||| Number of elements in a cubical tensor
 size : {shape : List Nat} -> (0 _ : Tensor shape a) -> Nat

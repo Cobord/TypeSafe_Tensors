@@ -1,10 +1,6 @@
 module Examples.Tensors
 
 import Data.Tensor
-import Data.Tensor.Utils
-import Data.Container.Test
-import Misc
--- import Data.Tensor.NaperianTensor
 
 ----------------------------------------
 -- Examples of standard, cubical tensors
@@ -12,9 +8,9 @@ import Misc
 
 ||| We can construct Tensors directly
 t0 : Tensor [3, 4] Double
-t0 = fromArray [ [0, 1, 2, 3]
-               , [4, 5, 6, 7]
-               , [8, 9, 10, 11]]
+t0 = fromConcrete [ [0, 1, 2, 3]
+                  , [4, 5, 6, 7]
+                  , [8, 9, 10, 11]]
 
 
 ||| Or using analogous functions to np.arange and np.reshape
@@ -27,9 +23,9 @@ t2 = reshape t1
 failing
   ||| Which will fail if we supply an array with the wrong shape
   t1Fail : Tensor [3, 4] Double
-  t1Fail = fromArray [ [0, 1, 2, 3, 999]
-                     , [4, 5, 6, 7]
-                     , [8, 9, 10, 11]]
+  t1Fail = fromConcrete [ [0, 1, 2, 3, 999]
+                        , [4, 5, 6, 7]
+                        , [8, 9, 10, 11]]
 
 failing
   ||| Or if the reshape is not possible
@@ -42,7 +38,7 @@ t0Sum = t0 + t0
 
 ||| And all sorts of numeric operations
 numericOps : Tensor [3, 4] Double
-numericOps = abs ((t0 * negate t0) <&> (+7))
+numericOps = abs (- (t0 * t0) <&> (+7))
 
 dotProduct : Tensor [] Double
 dotProduct = dot t1 t1
@@ -67,9 +63,9 @@ failing
    indexExampleFail = t1 @@ [7, 2]
 
 -- ||| Safe transposition
+-- For some reason this started being incredibly slow to typecheck, commenting out for the time being
 -- t1Transposed : Tensor [4, 3] Double
 -- t1Transposed = transposeMatrix t1
-
 
 ||| Safe slicing
 takeExample : Tensor [2, 1] Double
@@ -92,17 +88,16 @@ t0Again = FromCubicalTensor t0
 
 ||| Including building concrete Tensors
 t1again : TensorA [Vect 6] Double
-t1again = fromConcrete [1,2,3,4,5,6]
+t1again = fromConcreteA [1,2,3,4,5,6]
 
 ||| Above, the container Vect is made explicit in the type
 ||| There are other containers we can use in its place
-||| We can use list, which allows us to store
-||| an arbitrary number of elements
+||| We can use List which allows us to store an arbitrary number of elements
 exList : TensorA [List] Double
-exList = fromConcrete [1,2,3,4,5,6,7,8]
+exList = fromConcreteA [1,2,3,4,5,6,7,8]
 
 exList2 : TensorA [List] Double
-exList2 = fromConcrete [100,-200,1000]
+exList2 = fromConcreteA [100,-200,1000]
 
 {- 
 We can also use BTreeLeaf, allowing us to store a tree with data on its leaves
@@ -114,7 +109,7 @@ We can also use BTreeLeaf, allowing us to store a tree with data on its leaves
 (-42)  46 
 -}
 exTree1 : TensorA [BTreeLeaf] Double
-exTree1 = fromConcrete $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+exTree1 = fromConcreteA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
 
 
@@ -125,7 +120,7 @@ Here's another tree, with a different number of elements
      10   100 
 -}
 exTree2 : TensorA [BTreeLeaf] Double
-exTree2 = fromConcrete $ Node' (Leaf 10) (Leaf 100)
+exTree2 = fromConcreteA $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take the dot product of these two trees
 ||| The fact that they don't have the same number of elements does not matter
@@ -135,11 +130,11 @@ dotProduct2 = dotA exTree1 exTree2
 
 ||| Here's a tree with whose nodes are vectors of size 2
 exTree3 : TensorA [BTreeNode, Vect 2] Double
-exTree3 = fromConcrete $ Node ([4,1]) (Node ([17, 4]) Leaf' Leaf') Leaf'
+exTree3 = fromConcreteA $ Node [4,1] (Node [17, 4] Leaf' Leaf') Leaf'
 
 ||| This can get very complex, but is still fully type-checked
 exTree4 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
-exTree4 = fromConcrete $
+exTree4 = fromConcreteA $
   Node (Node'
           (Leaf [1,2,3])
           (Leaf [4,5,6]))
@@ -183,22 +178,8 @@ Here's a tree-vector with nodes as elements
  *   *
 -}
 exTree5 : TensorA [BTreeNode] Double
-exTree5 = fromConcrete $ Node 3 (Node 2 (Node 1 Leaf' Leaf') Leaf') (Node 4 Leaf' Leaf')
+exTree5 = fromConcreteA $ Node 3 (Node 2 (Node 1 Leaf' Leaf') Leaf') (Node 4 Leaf' Leaf')
 
-exTree6 : TensorA [BTreeNode] Double
-exTree6 = fromConcrete $ Node 2 (Node 1 Leaf' Leaf') Leaf'
-
-||| We can also perform reshapes, views and traversals of  non-cubical tensors
+||| And here is the in-order traversal of that tree
 traverseTree : TensorA [List] Double
-traverseTree = fromConcreteMap inorderNode exTree5
-
-traverseTree2 : TensorA [List] Double
-traverseTree2 = reshapeTensorA bTreeNodePreorder exTree5
-
--- ttt : TensorA [Vect 2, Vect 3] Double
--- 
--- 
--- tv : TensorA [Vect 3, Vect 2] Double
--- tv = transposeMatrixA tt
-
--- TODO reshape example for non-cubical tensors
+traverseTree = reshapeTensorA inorderBTreeNode exTree5

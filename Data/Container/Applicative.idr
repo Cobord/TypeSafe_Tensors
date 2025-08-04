@@ -5,7 +5,7 @@ import Data.DPair
 
 import Data.Container.Definition
 import Data.Container.Instances
-import Data.Container.Morphism
+import Data.Container.Morphism.Definition
 import Misc
 
 %hide Builtin.infixr.(#)

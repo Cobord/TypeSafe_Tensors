@@ -19,18 +19,17 @@ preorderBTreeNode (NodeS lt rt) x = ?preorderBTreeNode_rhs_1
 --  _ | Right (FS g) = ?whr
 
 public export
-inorderBTreeNode : (b : BTreeShape) -> Fin (numNodes b) -> FinBTreeNode b
-inorderBTreeNode (NodeS lt rt) n with (strengthenN {m=numNodes lt} n)
-  _ | Left p = GoLeft (inorderBTreeNode lt p)
+inorderBTreeNodeBw : (b : BTreeShape) -> Fin (numNodes b) -> FinBTreeNode b
+inorderBTreeNodeBw (NodeS lt rt) n with (strengthenN {m=numNodes lt} n)
+  _ | Left p = GoLeft (inorderBTreeNodeBw lt p)
   _ | Right FZ = Done
-  _ | Right (FS g) = GoRight (inorderBTreeNode rt g)
+  _ | Right (FS g) = GoRight (inorderBTreeNodeBw rt g)
   
 
-||| Converts a container of a binary tree with data stored at leaves to 
-||| a list container
+||| Traverses a binary tree container in order, producing a list container
 public export
-bTreeNodePreorder : BTreeNode =%> List
-bTreeNodePreorder = !% \b => (numNodes b ** inorderBTreeNode b)
+inorderBTreeNode : BTreeNode =%> List
+inorderBTreeNode = !% \b => (numNodes b ** inorderBTreeNodeBw b)
 
 boolToNat : Bool -> Nat
 boolToNat False = 0

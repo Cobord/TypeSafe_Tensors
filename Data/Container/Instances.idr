@@ -201,8 +201,8 @@ interface FromConcrete (cont : Cont) where
   constructor MkConcrete
   concreteType : Type -> Type
   concreteFunctor : Functor (concreteType)
-  fromConcrete : concreteType a -> Ext cont a
-  toConcrete : Ext cont a -> concreteType a
+  fromConcreteTy : concreteType a -> Ext cont a
+  toConcreteTy : Ext cont a -> concreteType a
 
 -- public export
 -- fromConcreteMap : {cont1, cont2 : Cont} ->
@@ -219,36 +219,36 @@ public export
 FromConcrete Scalar where
   concreteType = id
   concreteFunctor = %search
-  fromConcrete = fromIdentity
-  toConcrete = toIdentity
+  fromConcreteTy = fromIdentity
+  toConcreteTy = toIdentity
 
 public export
 FromConcrete List where
   concreteType = List
   concreteFunctor = %search -- TODO how to find the result of the search and place it here directly?
-  fromConcrete = fromList
-  toConcrete = toList
+  fromConcreteTy = fromList
+  toConcreteTy = toList
 
 public export
 {n : Nat} -> FromConcrete (Vect n) where
   concreteType = Vect n
   concreteFunctor = %search
-  fromConcrete = fromVect
-  toConcrete = toVect
+  fromConcreteTy = fromVect
+  toConcreteTy = toVect
 
 public export
 FromConcrete BTreeNode where
   concreteType = BTreeNode
   concreteFunctor = %search
-  fromConcrete = fromBTreeNode
-  toConcrete = toBTreeNode
+  fromConcreteTy = fromBTreeNode
+  toConcreteTy = toBTreeNode
 
 public export
 FromConcrete BTreeLeaf where
   concreteType = BTreeLeaf
   concreteFunctor = %search
-  fromConcrete = fromBTreeLeaf
-  toConcrete = toBTreeLeaf
+  fromConcreteTy = fromBTreeLeaf
+  toConcreteTy = toBTreeLeaf
 
 namespace VectInstances
   public export
