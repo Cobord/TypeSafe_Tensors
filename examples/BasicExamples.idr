@@ -1,4 +1,4 @@
-module Examples.Tensors
+module BasicExamples
 
 import Data.Tensor
 

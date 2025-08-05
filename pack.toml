@@ -1,0 +1,15 @@
+[custom.all.typesafe-tensors]
+type = "local"
+path = ""
+ipkg = "typesafe-tensors.ipkg"
+
+[custom.all.typesafe-tensors-examples]
+type = "local"
+path = "examples"
+ipkg = "typesafe-tensors-examples.ipkg"
+
+[custom.all.elab-util]
+type   = "git"
+url    = "https://github.com/stefan-hoeck/idris2-elab-util"
+commit = "latest:main"
+ipkg   = "elab-util.ipkg"

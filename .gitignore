@@ -8,6 +8,8 @@
 *.so
 *.dylib
 *.dll
+*.ttc
+*.ttm
 
 # Executables
 *.exe

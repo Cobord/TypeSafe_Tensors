@@ -195,15 +195,25 @@ traverseTree = reshapeTensorA inorderBTreeNode exTree5
 
 ## Installation instructions
 
-It's recommended to install this package (and generally, Idris 2) using the Idris 2 package manager [pack](https://github.com/stefan-hoeck/idris2-pack). Below it is assumed you've got both installed.
+It's recommended to manage the installation of this package (and generally, Idris 2) using the Idris 2 package manager [pack](https://github.com/stefan-hoeck/idris2-pack). The instructions below assume you've got both installed.
 
+**If you want to just try it out in the REPL:**
 1. Clone repository, and `cd` into it
-2. Run `pack install-deps typesafe-tensors.ipkg`
-3. (Optional) If you want Idris 2 support in your IDE run `pack install-app idris2-lsp`
+2. Run `pack repl examples/BasicExamples.idr`
+3. That's it!
 
-That's it!
-
-To run examples in the REPL run `pack repl Examples/Tensors.idr`. To use this package in your code follow the instructions in [pack documentation](https://github.com/stefan-hoeck/idris2-pack/tree/main/example1) to use this library, and then include `import Data.Tensor` at the top of your source file.
+**To use this framework in your project**, follow [pack standard practices](https://github.com/stefan-hoeck/idris2-pack/tree/main/example1):
+1. Add the following to your `pack.toml`
+```
+[custom.all.typesafe-tensors]
+type   = "git"
+url    = "https://github.com/bgavran/TypeSafe_Tensors"
+commit = "latest:main"
+ipkg   = "typesafe-tensors.ipkg"
+```
+2. Add `typesafe-tensors` to your `depends` argument in your project's `.ipkg` file. (Just like it is done in `examples/typesafe-tensors-examples.ipkg`)
+3. Include `import Data.Tensor` at the top of your source files.
+4. That's it!
 
 
 ## Goal and technical details
@@ -215,7 +225,7 @@ The goal of this framework is to evaluate this hypothesis by implementing a work
 
 This static analysis is aimed to inform performance optimisations down the line, especially when in context of non-cubical tensors. These are at the moment only scarcely explored, without any known CUDA packages or optimisation algorithms existing.
 
-The technical components of this library hinge of three interdependent components:
+When it comes to technical details, this library hinges of three interdependent components:
 * **Containers**: they allow us to check that indexing a generalised Tensor is well-typed at compile-time. Doing this with cubical containers is easy since they expose the size information at the type level (i.e. `Tensor [2,3,4] Double`), but once we move on to the world of applicative functors this is no longer the case. Checking that an index into a `Tensor [BTreeNode] Double` is well-typed is only possible if the underlying functor additionally comes equipped with the data of a "shape", i.e. if the functor is a polynomial one, i.e. if the functor is the extension of a container.
 * **Applicative functors**: they allow us to perform generalised linear algebra operations as described in the [Applicative Programming with Naperian Functors](https://www.cs.ox.ac.uk/people/jeremy.gibbons/publications/aplicative.pdf) paper.
 * **Dependent lenses**: they allow us to define morphisms of containers, and therefore generalised tensor reshaping operations that do not operate on the content of the data, only the shape. These include views, reshapes, and traversals, and many other culprits that appear in libraries like numpy.
