@@ -16,7 +16,8 @@ authors = "Bruno Gavranovic"
 depends = typesafe-tensors
 
 -- modules to install
-modules = BasicExamples
+modules = BasicExamples,
+          Attention
 
 -- main file (i.e. file to load at REPL)
 -- main =

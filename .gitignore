@@ -10,6 +10,7 @@
 *.dll
 *.ttc
 *.ttm
+*.idrisCommit
 
 # Executables
 *.exe
