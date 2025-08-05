@@ -11,7 +11,7 @@ import Data.Functor.Naperian -- needed for range
 import Misc
 
 public export
-zerosA : Num a => {shape : ApplContList conts} -> TensorA shape a
+zerosA : Num a => {shape : List ContA} -> TensorA shape a
 zerosA = tensorReplicateA (fromInteger 0)
 
 public export
@@ -19,7 +19,7 @@ zeros : Num a => {shape : List Nat} -> Tensor shape a
 zeros = tensorReplicate (fromInteger 0)
 
 public export
-onesA : Num a => {shape : ApplContList conts} -> TensorA shape a
+onesA : Num a => {shape : List ContA} -> TensorA shape a
 onesA = tensorReplicateA (fromInteger 1)
 
 public export
@@ -39,8 +39,7 @@ size {shape} _ = prod shape
 ||| Requires that we have Foldable on all the components
 ||| In general we won't know the number of elements of a non-cubical tensor at compile time
 public export
-flattenA : {shape : ApplContList conts} -> Foldable (TensorA shape) =>
-  TensorA shape a -> List a
+flattenA : Foldable (TensorA shape) => TensorA shape a -> List a
 flattenA = toList
 
 ||| Flatten a cubical tensor into a vector
@@ -52,7 +51,7 @@ flattenA = toList
 -- flatten (ToCubicalTensor (TS ex)) = extract <$> toVect ex
 
 ||| Maximum value in a tensor
-maxA : {shape : ApplContList conts} -> Foldable (TensorA shape) => Ord a =>
+maxA : Foldable (TensorA shape) => Ord a =>
   TensorA shape a -> Maybe a
 maxA = maxInList . flattenA
 

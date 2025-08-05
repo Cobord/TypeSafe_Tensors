@@ -1,20 +1,11 @@
 module Architectures.Softmax
 
-import Data.Vect
-import Data.Vect.Elem
-
-import Data.Container.Definition
-import Data.Container.Instances
 import Data.Tensor
--- import ApplicativeLinAlg
-import Data.Algebra
-import Data.Tree
-import Misc
 
 public export
-softmax : {i : Cont} -> {a : Type} -> Fractional a => Exp a =>
+softmax : {i : ContA} -> Fractional a => Exp a =>
+  (allAlg : AllAlgebra [i] a) =>
   {default 1 temperature : a} ->
-  Applicative (Ext i) => (allAlg : AllAlgebra [i] a) =>
   TensorA [i] a -> TensorA [i] a
 softmax {temperature} t = let exps = exp <$> (t <&> (/ temperature))
                           in exps <&> (/ (reduce exps))
@@ -60,7 +51,7 @@ softmaxBTreeNode = softmax
 
 -- -- This should be done by a more general map operation over a specific axis
 -- public export
--- softmax1 : {s : Cont} -> {ss : ApplContList conts} ->
+-- softmax1 : {s : Cont} -> {ss : ContAontList conts} ->
 --   Applicative (Ext s) =>
 --   Fractional (TensorA ss a) =>
 --   Exp (TensorA ss a) => 

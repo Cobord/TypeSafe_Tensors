@@ -14,7 +14,7 @@ import Misc
 ||| Consists of a container and a proof that its extension is an applicative functor
 ||| Defined using Idris' auto as we'd like to avoid directly providing this
 public export
-record ApplC where
+record ContA where
   constructor (#)
   GetC : Cont
   ||| Question: can we state this without referencing the extension?
@@ -22,52 +22,125 @@ record ApplC where
 
 public export prefix 0 #
 
-%pair ApplC GetC applPrf
-
 ||| Every natural number n corresponds to a Vect n, which is applicative
 ||| Used in cubical tensors whose shapes are defined by lists of natural numbers
 public export
-NatToVect : (n : Nat) -> ApplC
+NatToVect : (n : Nat) -> ContA
 NatToVect n = # (Vect n)
 
 ||| Specialised to composition product of containers
 ||| We pattern match on three cases to simplify resulting expressions
 public export
-ComposeContainers : List ApplC -> Cont
+ComposeContainers : List ContA -> Cont
 ComposeContainers [] = CUnit
 ComposeContainers [c] = GetC c
 ComposeContainers (c :: d :: cs) = GetC c >@< ComposeContainers (d :: cs)
 -- ComposeContainers cs = foldr (>@<) CUnit (GetC <$> cs)
 
 public export
-ComposeExtensions : List ApplC -> Type -> Type
+ComposeExtensions : List ContA -> Type -> Type
 ComposeExtensions [] a = Ext CUnit a
 ComposeExtensions [c] a = Ext (GetC c) a
 ComposeExtensions (c :: d :: cs) a
   = Ext (GetC c) (ComposeExtensions (d :: cs) a)
 
+||| This states a list version of 
+||| Ext c2 . Ext c1 = Ext (c2 . c1)
+public export
+toContainerComp : {conts : List ContA} ->
+  ComposeExtensions conts a -> Ext (ComposeContainers conts) a
+toContainerComp {conts = []} ce = ce
+toContainerComp {conts = [c]} ce = ce
+toContainerComp {conts = (c :: d :: cs)} (shp <| idx) = 
+  let rst = (toContainerComp {conts=(d :: cs)}) . idx
+  in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
+
+public export
+fromContainerComp : {conts : List ContA} ->
+  Ext (ComposeContainers conts) a -> ComposeExtensions conts a
+fromContainerComp {conts = []} ce = ce
+fromContainerComp {conts = [c]} ce = ce
+fromContainerComp {conts = (c :: d :: cs)} ((csh <| cpos) <| idx)
+  = csh <| \d => fromContainerComp (cpos d <| curry idx d)
+
+
+
+namespace ApplicativeInstances
+  ||| Container with a single thing
+  public export
+  Scalar : ContA
+  Scalar = (#) Scalar
+  
+  ||| Product
+  public export
+  Pair : ContA
+  Pair = (#) Pair
+
+
+  -- TODO applicatives for these commented out types?
+  -- ||| Coproduct
+  -- public export
+  -- Either : ContA
+  -- Either = (#) Either
+
+  -- ||| +1  
+  -- public export
+  -- Maybe : ContA
+  -- Maybe = (#) Maybe
+  
+  public export
+  List : ContA
+  List = (#) List
+  
+  ||| Container of n things 
+  public export
+  Vect : Nat -> ContA
+  Vect n = (#) (Vect n)
+
+  ||| Container of an infinite number of things
+  public export
+  Stream : ContA
+  Stream = (#) Stream
+  
+  ||| Binary trees with data stored at nodes
+  public export
+  BTreeNode : ContA
+  BTreeNode = (#) BTreeNode
+  
+  ||| Binary trees with data stored at leaves
+  public export
+  BTreeLeaf : ContA
+  BTreeLeaf = (#) BTreeLeaf
+
+  -- public export
+  -- InternalLens : Cont -> Cont -> Cont
+  -- InternalLens c d
+  --   = (f : ((x : c.shp) -> (y : d.shp ** d.pos y -> c.pos x)))
+  --     !> (xx : c.shp ** d.pos (fst (f xx)))
+
+
 -- public export
--- mapComposeExtensions : {conts : List ApplC} ->
+-- mapComposeExtensions : {conts : List ContA} ->
 --   (f : a -> b) -> ComposeExtensions conts a -> ComposeExtensions conts b
 -- mapComposeExtensions {conts = []} f e = f <$> e
 -- mapComposeExtensions {conts = ((# c) :: cs)} f e = mapComposeExtensions f <$> e
 -- 
 -- public export
--- [FCE] {conts : List ApplC} -> Functor (ComposeExtensions conts) where
+-- [FCE] {conts : List ContA} -> Functor (ComposeExtensions conts) where
 --   map f ce = ?vnn -- mapComposeExtensions
 -- 
--- testTT : {c : ApplC} -> (f : String -> Int) -> ComposeExtensions [c] String -> ComposeExtensions [c] Int
+-- testTT : {c : ContA} -> (f : String -> Int) -> ComposeExtensions [c] String -> ComposeExtensions [c] Int
 -- testTT f = map @{FCE {conts=[c]}} f
 -- 
 -- public export
--- compExtReplicate : {conts : List ApplC} ->
+-- compExtReplicate : {conts : List ContA} ->
 --   a -> ComposeExtensions conts a
 -- compExtReplicate {conts = []} a = fromIdentity a
 -- compExtReplicate {conts = ((#) _ {applPrf} :: _)} a
 --   = compExtReplicate <$> pure a
 -- 
 -- public export
--- compExtLiftA2 : {conts : List ApplC} ->
+-- compExtLiftA2 : {conts : List ContA} ->
 --   ComposeExtensions conts a ->
 --   ComposeExtensions conts b ->
 --   ComposeExtensions conts (a, b)
@@ -82,27 +155,8 @@ ComposeExtensions (c :: d :: cs) a
 --   pure = compExtReplicate
 --   fs <*> xs = uncurry ($) <$> compExtLiftA2 fs xs
 
-||| This states a list version of 
-||| Ext c2 . Ext c1 = Ext (c2 . c1)
-public export
-toContainerComp : {conts : List ApplC} ->
-  ComposeExtensions conts a -> Ext (ComposeContainers conts) a
-toContainerComp {conts = []} ce = ce
-toContainerComp {conts = [c]} ce = ce
-toContainerComp {conts = (c :: d :: cs)} (shp <| idx) = 
-  let rst = (toContainerComp {conts=(d :: cs)}) . idx
-  in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
-
-public export
-fromContainerComp : {conts : List ApplC} ->
-  Ext (ComposeContainers conts) a -> ComposeExtensions conts a
-fromContainerComp {conts = []} ce = ce
-fromContainerComp {conts = [c]} ce = ce
-fromContainerComp {conts = (c :: d :: cs)} ((csh <| cpos) <| idx)
-  = csh <| \d => fromContainerComp (cpos d <| curry idx d)
-
 -- public export
--- compReplicate : {conts : List ApplC} ->
+-- compReplicate : {conts : List ContA} ->
 --   a -> Ext (ComposeContainers conts) a
 -- compReplicate {conts = []} x = fromIdentity x
 -- compReplicate {conts = (c :: cs)} x
@@ -116,24 +170,6 @@ fromContainerComp {conts = (c :: d :: cs)} ((csh <| cpos) <| idx)
 --compReplicate {conts = ((# c) :: cs)} a
 --  = pure {f=Ext c} $ compReplicate {conts=cs} a
 
-
-
-||| Data type for ergonomic construction of lists of applicative containers
-||| Allows us to construct a list of applicative containers using the usual list syntax, while leaving the proof of applicativity *implicit*
-||| Idris's auto search automatically takes care of that
-public export
-data ApplContList : List ApplC -> Type where
-  Nil : ApplContList []
-  (::) : (c : Cont) ->
-    Applicative (Ext c) =>
-    (cs : ApplContList cs') -> ApplContList ((# c) :: cs')
-
-||| TODO can be removed, likely just like the above stuff was possible to remove, by operating directly on conts : List ApplC
-||| Used to convert a cubical tensor's shape to an applicative container list
-public export
-NatsToApplConts : (shape : List Nat) -> ApplContList (NatToVect <$> shape)
-NatsToApplConts [] = []
-NatsToApplConts (s :: ss) = Vect s :: NatsToApplConts ss
 
 
 -- ||| Given a list of natural numbers, when we convert this to composition product of containers, this will have a unit shape
@@ -153,8 +189,8 @@ NatsToApplConts (s :: ss) = Vect s :: NatsToApplConts ss
 --   = rewrite shapeOfCubicalTensorIsUnit {shape = ss} in ?afasdf
 
 -- public export
--- ComposeContainers' : {conts : List ApplC} ->
---   ApplContList conts -> ApplC
+-- ComposeContainers' : {conts : List ContA} ->
+--   ContAontList conts -> ContA
 -- ComposeContainers' [] = # CUnit
 -- ComposeContainers' (c :: cs) =
 --   (#) (c >< prodConts (applContListToContList cs))

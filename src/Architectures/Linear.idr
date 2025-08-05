@@ -1,20 +1,10 @@
 module Architectures.Linear
 
-import Data.Vect
-
-import Data.Container.Definition
-import Data.Container.Instances
 import Data.Tensor
-import Data.Tensor.Utils
 import Para.Para
-import Architectures.Softmax
-import Data.Algebra
-import Misc
-
 
 public export
-linearImpl : {x, y : Cont} -> {a : Type} -> Num a =>
-  Applicative (Ext x) => Applicative (Ext y) => 
+linearImpl : {x, y : ContA} -> {a : Type} -> Num a =>
   AllAlgebra [x] a =>
   TensorA [y, x] a -> TensorA [y] a -> TensorA [x] a -> TensorA [y] a
 linearImpl weights bias input = matrixVectorProductA weights input + bias
@@ -31,8 +21,7 @@ linearImplTreeLeaf : {a : Type} -> Num a =>
 linearImplTreeLeaf = linearImpl
 
 public export
-linearPara : {x, y : Cont} -> {a : Type} -> Num a =>
-  Applicative (Ext x) => Applicative (Ext y) => 
+linearPara : {x, y : ContA} -> {a : Type} -> Num a =>
   AllAlgebra [x] a =>
   Para (TensorA [x] a) (TensorA [y] a)
 linearPara = MkPara

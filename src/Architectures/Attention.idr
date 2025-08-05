@@ -1,28 +1,14 @@
 module Architectures.Attention
 
-import Data.Vect
-
-import Data.Container.Definition
-import Data.Container.Instances
-import Data.Container.TreeUtils
-
-import Data.Functor.Naperian
 import Data.Tensor
-import Data.Tensor.Utils
-import Data.Tree
-import Para.Para
 import Architectures.Softmax
-import Data.Algebra
-import Misc
+import Para.Para
 
 parameters {a : Type} {auto _ : Num a}
 
   ||| Generalised form of attention
   public export
-  crossAttention : {inputStructure, crossStructure, features : Cont} ->
-    Applicative (Ext inputStructure) =>
-    Applicative (Ext crossStructure) =>
-    Applicative (Ext features) =>
+  crossAttention : {inputStructure, crossStructure, features : ContA} ->
     (allAlg : AllAlgebra [inputStructure, features] a) =>
     (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a) ->
     (q : TensorA [inputStructure, features] a) ->
@@ -37,9 +23,7 @@ parameters {a : Type} {auto _ : Num a}
 
   ||| Self-attention is cross-attention where inputStructure = crossStructure
   public export
-  selfAttention : {inputStructure, features : Cont} ->
-    Applicative (Ext inputStructure) =>
-    Applicative (Ext features) =>
+  selfAttention : {inputStructure, features : ContA} ->
     (allAlg : AllAlgebra [inputStructure, features] a) =>
     (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a) ->
     (q : TensorA [inputStructure, features] a) ->
@@ -62,18 +46,14 @@ parameters {a : Type} {auto _ : Num a}
 
   ||| Data structure for holding parameters of self-attention
   public export
-  record SelfAttentionParams
-    (features : Cont)
-    {auto prf : Applicative (Ext features)}
-    where
+  record SelfAttentionParams (features : ContA) where
     constructor MkSAParams
     queryMatParam : TensorA [features, features] a
     keyMatParam : TensorA [features, features] a
     valueMatParam : TensorA [features, features] a
 
   ||| Forward pass of self-attention
-  SAImpl : {inputStructure, features : Cont} ->
-    Applicative (Ext inputStructure) => Applicative (Ext features) =>
+  SAImpl : {inputStructure, features : ContA} ->
     (allAlg : AllAlgebra [inputStructure, features] a) =>
     (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a) ->
     (input : TensorA [inputStructure, features] a) ->
@@ -87,8 +67,7 @@ parameters {a : Type} {auto _ : Num a}
 
   ||| Self-attention as a parametric map
   public export
-  SelfAttention : {inputStructure, features : Cont} ->
-    Applicative (Ext inputStructure) => Applicative (Ext features) =>
+  SelfAttention : {inputStructure, features : ContA} ->
     (allAlg : AllAlgebra [inputStructure, features] a) =>
     (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a)
     -> Para (TensorA [inputStructure, features] a)

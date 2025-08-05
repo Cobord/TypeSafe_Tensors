@@ -15,10 +15,11 @@ namespace NaperianConstraint
   -- The second constructor is the culiprit, removing it solves the problem
   -- I tried performing the elaboration myself as much as possible in the type, but it's not clear why it is slow
   public export
-  data AllNaperian : (shape : ApplContList conts) -> Type where
+  data AllNaperian : (shape : List ContA) -> Type where
     Nil : AllNaperian []
-    (::) : {0 c : Cont} -> {cs : ApplContList csConts} -> Applicative (Ext c) =>
-       (napC : Naperian (Ext c)) => AllNaperian {conts=csConts} cs -> AllNaperian {conts=((# c):: csConts)} (c :: cs)
+    (::) : {0 c : ContA} -> {cs : List ContA} ->
+       (napC : Naperian (Ext (GetC c))) => AllNaperian cs ->
+       AllNaperian (c :: cs)
   
 
 namespace IndexTNaperian
@@ -28,26 +29,25 @@ namespace IndexTNaperian
   ||| TODO need to use this in the rest of the code
   public export
   data IndexTNaperian :
-    (shape : ApplContList conts) ->
+    (shape : List ContA) ->
     AllNaperian shape ->
     Type where
     Nil : IndexTNaperian [] []
-    (::) : Applicative (Ext c) =>
-      (napC : Naperian (Ext c)) =>
-      Log {f=Ext c} ->
-      {cs : ApplContList conts} ->
+    (::) : {c : ContA} -> {cs : List ContA} ->
+      (napC : Naperian (Ext (GetC c))) =>
+      Log {f=(Ext (GetC c))} ->
       {allNapsCs : AllNaperian cs} ->
       IndexTNaperian cs allNapsCs ->
       IndexTNaperian (c :: cs) ((::) {napC=napC} allNapsCs)
 
 public export
-tensorTabulate : {shape : ApplContList conts} -> (allNaperian : AllNaperian shape) -> (IndexTNaperian shape allNaperian -> a) -> TensorA shape a
+tensorTabulate : {shape : List ContA} -> (allNaperian : AllNaperian shape) -> (IndexTNaperian shape allNaperian -> a) -> TensorA shape a
 tensorTabulate {shape = []} [] f = TZ $ f []
 tensorTabulate {shape = (_ :: _)} ((::) applS) f
   = TS $ tabulate $ \i => tensorTabulate applS $ \is => f (i :: is)
 
 public export
-{conts : List ApplC} -> {shape : ApplContList conts} -> (allNaperian : AllNaperian shape) =>
+{shape : List ContA} -> (allNaperian : AllNaperian shape) =>
 Naperian (TensorA shape) where
   Log = IndexTNaperian shape allNaperian
   lookup {allNaperian = []} (TZ val) [] = val
@@ -55,9 +55,7 @@ Naperian (TensorA shape) where
   tabulate {allNaperian} = tensorTabulate allNaperian
 
 public export
-transposeMatrixA : {i, j : Cont} ->
-  Applicative (Ext i) =>
-  Applicative (Ext j) =>
+transposeMatrixA : {i, j : ContA} ->
   (allNaperian : AllNaperian [i, j]) =>
   TensorA [i, j] a -> TensorA [j, i] a
 transposeMatrixA {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))}
@@ -71,7 +69,7 @@ transposeMatrix = ToCubicalTensor . transposeMatrixA . FromCubicalTensor
 
   -- public export
   -- data IndexTData : Type where
-  --   NonCubical : (shape : ApplContList conts) -> IndexTData
+  --   NonCubical : (shape : ContAontList conts) -> IndexTData
   --   Cubical : (shape : Vect n Nat) -> IndexTData -- assuming every Naperian functor has shape=Fin d for some d, this describes Naperian TensorAs
 
   -- vnn : IndexTData -> Type -> Type

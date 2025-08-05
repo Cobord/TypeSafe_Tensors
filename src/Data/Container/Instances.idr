@@ -61,6 +61,15 @@ namespace MainContainerExamples
   BTreeLeaf : Cont
   BTreeLeaf = (b : BTreeShape) !> FinBTreeLeaf b
 
+  ||| Every lens gives rise to a container
+  ||| The set of shapes is the lens itself
+  ||| The set of positions is the inputs to the lens
+  public export
+  InternalLens : Cont -> Cont -> Cont
+  InternalLens c d
+    = (f : ((x : c.shp) -> (y : d.shp ** d.pos y -> c.pos x)))
+      !> (xx : c.shp ** d.pos (fst (f xx)))
+
 namespace ExtensionsOfMainContainerExamples
   ||| Isomorphic to the Identity
   public export
@@ -317,7 +326,7 @@ namespace ListInstances
 
 
 public export
-record ApplC' where
+record ContA' where
   constructor (##)
   GetC' : Cont
   pureSh : GetC' .shp
@@ -325,12 +334,12 @@ record ApplC' where
   posMap : {s1, s2 : GetC' .shp} ->
     GetC' .pos s1 -> GetC' .pos s2 -> GetC' .pos (monSh (s1, s2) )
 
-liftA2Cont' : {c : ApplC'} ->
+liftA2Cont' : {c : ContA'} ->
   (Ext (GetC' c) a -> Ext (GetC' c) b -> Ext (GetC' c) (a, b))
 liftA2Cont' (sha <| inda) (shb <| indb)
   = monSh c (sha, shb) <| \p => ?ii
 
-{c : ApplC'} -> Applicative (Ext (GetC' c)) where
+{c : ContA'} -> Applicative (Ext (GetC' c)) where
   pure a = (pureSh c) <| \_ => a
   fs <*> xs = uncurry ($) <$> liftA2Cont' fs xs
 
