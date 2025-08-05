@@ -19,7 +19,7 @@ This framework is in active development and with many rough edges, but at the mo
 
 ## Examples
 
-These examples are taken from `Examples.Tensors.idr`.
+These examples are taken from `examples/BasicExamples.idr`.
 
 ```idris
 ||| We can construct Tensors directly
