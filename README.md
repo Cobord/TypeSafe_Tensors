@@ -1,5 +1,5 @@
 
-# Type-safe Tensors & Network architectures
+# Type-safe Tensors & Network Architectures
 
 [![build](https://github.com/bgavran/TypeSafe_Tensors/actions/workflows/build.yml/badge.svg)](https://github.com/bgavran/TypeSafe_Tensors/actions/workflows/build.yml)
 
@@ -8,7 +8,9 @@ This is framework for pure functional tensor processing, implemented in Idris 2.
 * **implements non-cubical tensors**: tensors of trees and streams are supported, instead of just arrays
 * **is made with ergonomics in mind**: it aims to provide the standard numpy/Pytorch interface to the user in a purely functional language with first-class types
 
-The working hypothesis and goal of this framework is to **achieve performance not at the expense of compositionality, but because of it**, described [below](#Goal-and-technical-details). While it is in very early stages of development and not yet performant, at the moment it is expressive enough to enable early prototyping of neural network architectures; see the [implementation of generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) as described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
+At the moment its main purpose is to enable rapid prototyping of structured neural network architectures. It is currently expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) originally described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
+It is in very early stages of development, and not yet performant. Down the line its goal is to achieve performance not at the expense of compositionality, but because of it. See more in the section [below](#Goal-and-technical-details).
+
 
 * [Examples](#Examples)
 * [Installation instructions](#Installation-instructions)
@@ -216,11 +218,15 @@ ipkg   = "typesafe-tensors.ipkg"
 
 ## Goal and technical details
 
-This framework is meant to evalute the hypothesis that **performance ought to be achieved not at the expense of compositionality, but because of it** by implementing a working compositional and performant tensor processing framework. This means that special care is taken
-1) to develop typed tensor interface and abstractions that enable abundant static analysis, and 
-2) to defer the sacrifice of those typed abstractions for performance optimisations until the point when it becomes clear that such a sacrifice is necessary.
+In addition to enabling fast prototyping of structured neural networks, the goal of this framework is to eventually evaluate the following hypothesis:
 
-This static analysis is aimed to inform performance optimisations down the line, especially when in context of non-cubical tensors. These are at the moment only scarcely explored, without any known CUDA packages or optimisation algorithms existing.
+> **Performance can to be achieved not at the expense of compositionality, but because of it.**
+
+by taking special care to:
+1) develop typed tensor interface and abstractions that enable abundant static analysis, and 
+2) defer the sacrifice of those typed abstractions for performance optimisations until the point when it becomes clear that such a sacrifice is necessary.
+
+This static analysis is aimed to inform performance optimisations down the line, especially when in context of non-cubical tensors. These are at the moment only scarcely explored, without any existing CUDA packages or optimisation algorithms.
 
 When it comes to technical details, this library hinges of three interdependent components:
 * **Containers** for **well-typed indexing of non-cubical tensors**: they allow us to check that indexing a generalised Tensor is well-typed at compile-time. Doing this with cubical containers is easy since they expose the size information at the type level (i.e. `Tensor [2,3,4] Double`), but once we move on to the world of applicative functors this is no longer the case. Checking that an index into a `Tensor [BTreeNode] Double` is well-typed is only possible if the underlying functor additionally comes equipped with the data of a "shape", i.e. if the functor is a polynomial one, i.e. if the functor is the extension of a container.
