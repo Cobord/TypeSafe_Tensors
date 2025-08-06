@@ -32,6 +32,10 @@ public export
 removeBeginning : (Fin (S l) -> x) -> (x, (Fin l -> x))
 removeBeginning f = (f FZ, f . FS)
 
+public export
+updateAt : Eq a => (a -> b) -> (a, b) -> (a -> b)
+updateAt f (i, val) i' = if i == i' then val else f i'
+
 
 ||| Analogus to take in Data.Vect, but for Fin
 public export 
@@ -335,13 +339,6 @@ allSuccThenProdSucc (_ :: xs') {ps = p :: _} = multSucc p (allSuccThenProdSucc x
 -- f : (b : Bool) -> t b
 -- f False = 3
 -- f True = ?hole2
-
-Einsumpe : {s, x : Type}
-  -> (s, x) -> Type
-
-rnnCell : {s, x : Type}
-  -> (s, x) -> Einsumpe (s, x)
-
 
 
 testt : (shape : List Nat) -> Type

@@ -281,6 +281,12 @@ namespace VectInstances
   {n : Nat} -> Num a => Algebra (Ext (Vect n)) a where
     reduce v = reduce (toVect v)
 
+
+  %hint
+  public export
+  vectInterfacePos : {n : Nat} -> InterfaceOnPositions Eq (Vect n)
+  vectInterfacePos = PosInterface 
+
   -- TODO Naperian instance? Or is that covered by the one in Definiton.idr?
 
 namespace ListInstances

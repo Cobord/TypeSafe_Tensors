@@ -93,6 +93,24 @@ public export
   lookup = indexCont
   tabulate t = () <| t
 
+||| Container setter
+public export
+setExt : (e : Ext ((!>) sh ps) x) ->
+  ((s : sh) -> Eq (ps s)) =>
+  (i : ps (shapeExt e)) ->
+  x ->
+  Ext ((!>) sh ps) x
+setExt (shapeExt <| indexCont) i x
+  = shapeExt <| updateAt indexCont (i, x)
+
+||| Convenience interface to denote that a container 
+||| has a given interface on positions
+public export
+data InterfaceOnPositions : (i : Type -> Type) -> (c : Cont) -> Type where
+  PosInterface : (p : (s : c.shp) -> i (c.pos s)) =>
+    InterfaceOnPositions i c
+
+ 
 
 
 ||| Derivative of a container

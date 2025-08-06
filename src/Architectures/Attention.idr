@@ -5,7 +5,6 @@ import Architectures.Softmax
 import Para.Para
 
 parameters {a : Type} {auto _ : Num a}
-
   ||| Generalised form of attention
   public export
   crossAttention : {inputStructure, crossStructure, features : ContA} ->
@@ -53,8 +52,7 @@ parameters {a : Type} {auto _ : Num a}
     valueMatParam : TensorA [features, features] a
 
   ||| Forward pass of self-attention
-  SAImpl : {inputStructure, features : ContA} ->
-    (allAlg : AllAlgebra [inputStructure, features] a) =>
+  SAImpl : (allAlg : AllAlgebra [inputStructure, features] a) =>
     (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a) ->
     (input : TensorA [inputStructure, features] a) ->
     (params : SelfAttentionParams features) ->
@@ -63,15 +61,15 @@ parameters {a : Type} {auto _ : Num a}
     = let queries = queryMat `matrixMatrixProductA` input
           keys = keyMat `matrixMatrixProductA` input
           values = valueMat `matrixMatrixProductA` input
-    in selfAttention softmax queries keys values
+      in selfAttention softmax queries keys values
 
   ||| Self-attention as a parametric map
   public export
   SelfAttention : {inputStructure, features : ContA} ->
     (allAlg : AllAlgebra [inputStructure, features] a) =>
-    (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a)
-    -> Para (TensorA [inputStructure, features] a)
-            (TensorA [inputStructure, features] a)
+    (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a) ->
+    Para (TensorA [inputStructure, features] a)
+         (TensorA [inputStructure, features] a)
   SelfAttention softmax = MkPara
     (const (SelfAttentionParams features))
     (SAImpl softmax)
@@ -85,7 +83,7 @@ parameters {a : Type} {auto _ : Num a}
          (Tensor [inputSize, featureSize] a)
   SelfAttention' softmax' = MkPara
     (const (SelfAttentionParams (Vect featureSize)))
-    (\inp => ToCubicalTensor . (SAImpl {features=Vect featureSize} (FromCubicalTensor . softmax' . ToCubicalTensor) (FromCubicalTensor inp)))
+    (\inp => ToCubicalTensor . (SAImpl (FromCubicalTensorMap softmax') (FromCubicalTensor inp)))
 
   totalPosEnc : {inputSize : Nat} ->
     (Fin inputSize -> Tensor [featureSize] a) ->

@@ -38,12 +38,11 @@ Eq, Show, Functor, Applicative, Foldable, Num,...
 ||| Tensors whose shape is a list of applicative containers
 public export
 data TensorA : (conts : List ContA) -> (dtype : Type) -> Type where
-    ||| A any scalar value can be turned into a tensor
+    ||| A scalar value can be turned into a tensor
     TZ : (val : dtype) -> TensorA [] dtype
-    ||| A container 'c' full of 'Tensor shape cs' yields
+    ||| A container 'c' full of 'Tensor shape cs' can be turned into
     ||| a tensor of shape (c :: cs)
-    TS : {c : ContA} -> {cs : List ContA} ->
-      (GetC c) `fullOf` (TensorA cs dtype) -> TensorA (c :: cs) dtype
+    TS : (GetC c) `fullOf` (TensorA cs dtype) -> TensorA (c :: cs) dtype
 
 %name TensorA t, t'
 
@@ -435,8 +434,7 @@ namespace FoldableTensorA
   public export
   data AllFoldable : (shape : List ContA) -> Type where
       NilFoldable : AllFoldable []
-      ConsFoldable : {c : ContA} -> {cs : List ContA} ->
-        Foldable (Ext (GetC c)) =>
+      ConsFoldable : Foldable (Ext (GetC c)) =>
         AllFoldable cs ->
         AllFoldable (c :: cs)
 
@@ -497,7 +495,6 @@ namespace TensorAContractions
     (allAlgebra : AllAlgebra [g] a) =>
     TensorA [f, g] a -> TensorA [h, g] a -> TensorA [h, f] a
   matrixMatrixProductA m (TS n) = TS (matrixVectorProductA m <$> n)
-
 
 
 
@@ -609,9 +606,6 @@ namespace CubicalTensor
   FromCubicalTensorRel f t t' = f (ToCubicalTensor t) (ToCubicalTensor t')
 
     
-    -- NatsToContAonts : {shape : List Nat} -> TensorA (NatsToContAonts shape) a -> TensorStorage (NatsToContAonts shape) a
-    -- NatsToContAontsStorage : {shape : List Nat} -> TensorA (NatsToContAonts shape) a -> TensorStorage (NatsToContAonts shape) a
-
   -- public export
   -- data TensorView : (shape : List Nat) -> (a : Type) -> Type where
   --     FlatTensor : {shape : List Nat} -> TensorA (NatsToContAonts shape) a -> Tensor shape a
@@ -701,6 +695,11 @@ namespace CubicalTensor
     Foldable (Tensor shape) where
       foldr f z (ToCubicalTensor t) = tensorFoldr f z t
 
+    -- public export
+    -- {shape : List Nat} ->
+    -- Foldable (TensorA (NatToVect <$> shape)) where
+    --   foldr f z t = tensorFoldr f z t
+
 
     -- TODO implement Traversable for TensorA, and then port it here
     -- public export
@@ -736,18 +735,6 @@ namespace CubicalTensor
   Array (s :: ss) dtype = Vect s (Array ss dtype)
 
   public export
-  fromArrayHelperStrided : {shape : List Nat} ->
-    Array shape a -> Vect (prod shape) a
-  fromArrayHelperStrided {shape = []} a = [a]
-  fromArrayHelperStrided {shape = (s :: ss)} a = concat (fromArrayHelperStrided <$> a)
-
-  public export
-  toArrayHelperStrided : {shape : List Nat} -> Vect (prod shape) a -> Array shape a
-  toArrayHelperStrided {shape = []} [a] = a
-  toArrayHelperStrided {shape = (s :: ss)} xs = toArrayHelperStrided <$> (unConcat xs)
-
-
-  public export
   fromArrayHelper : {shape : List Nat}
     -> Array shape a
     -> TensorA (NatToVect <$> shape) a
@@ -769,7 +756,6 @@ namespace CubicalTensor
   public export
   toConcrete : {shape : List Nat} -> Tensor shape a -> Array shape a
   toConcrete = toArrayHelper . FromCubicalTensor
-
 
   reshapeDLens : {oldShape, newShape : List ContA} ->
     ComposeContainers oldShape =%> ComposeContainers newShape
@@ -793,11 +779,11 @@ namespace IndexTensor
   public export
   data IndexTA : (shape : List ContA) -> (t : TensorA shape dtype) -> Type where
     Nil : {val : dtype} -> IndexTA [] (TZ val)
-    (::) :  {e : ((!>) shp' pos') `fullOf` (TensorA cs dtype)} -> 
-      Applicative (Ext ((!>) shp' pos')) =>
-      (p : pos' (shapeExt e)) ->
+    (::) :  {e : ((!>) sh ps) `fullOf` (TensorA cs dtype)} -> 
+      Applicative (Ext ((!>) sh ps)) =>
+      (p : ps (shapeExt e)) ->
       IndexTA cs (indexCont e p) -> 
-      IndexTA ((# ((!>) shp' pos')) :: cs) (TS e)
+      IndexTA ((# ((!>) sh ps)) :: cs) (TS e)
 
   public export
   indexTensorA : (t : TensorA shape a) -> (index : IndexTA shape t) -> a
@@ -815,16 +801,36 @@ namespace IndexTensor
   (^.) : (t : TensorA shape a) -> IndexTA shape t -> a
   (^.) = indexTensorA
 
+  namespace AllPosEqNamespace
+    public export
+    data AllPosEq : (shape : List ContA) -> Type where
+      Nil : AllPosEq []
+      ConsPosEq : {c : ContA} -> {cs : List ContA} ->
+        (apecs : AllPosEq cs) =>
+        (pe : (s : (GetC c).shp) -> Eq ((GetC c).pos s)) =>
+        AllPosEq (c :: cs)
+
+    -- hm, why isn't this hint found in the cubical part?
+    %hint
+    public export
+    allPosEqCubical : {shape : List Nat} ->
+      AllPosEq (NatToVect <$> shape)
+    allPosEqCubical {shape = []} = []
+    allPosEqCubical {shape = (_ :: _)} = ConsPosEq {apecs=allPosEqCubical}
+      
 
   -- Lens-like syntax for a Tensor setter
   public export infixr 9 .~
   public export
-  (.~) : (t : TensorA shape a) -> IndexTA shape t -> a -> TensorA shape a
-  (.~) t ind val = ?wh
+  (.~) : (allPosEq : AllPosEq shape) =>
+    (t : TensorA shape a) -> IndexTA shape t -> a -> TensorA shape a
+  (.~) {allPosEq = []} (TZ _) [] val = TZ val
+  (.~) {allPosEq = (ConsPosEq)} (TS xs) (i :: is) val
+    = TS $ setExt xs i ((.~) (indexCont xs i) is val)
 
 
   namespace CubicalIndex
-    -- ideally we'd remove the allNonZero consraint in the future, but it shouldn't impact things too much for now
+    -- -- ideally we'd remove the allNonZero consraint in the future, but it shouldn't impact things too much for now
     public export
     indexTensor : {shape : List Nat} ->
       (t : Tensor shape a) ->
@@ -847,6 +853,18 @@ namespace IndexTensor
       (ind : IndexTA (NatToVect <$> shape) (FromCubicalTensor t)) ->
       a
     (^.) = indexTensor
+
+
+    -- todo figure out how to use the ampersand syntax here 
+    public export infixr 9 .~
+    public export
+    (.~) : {shape : List Nat} ->
+      (t : Tensor shape a) ->
+      IndexTA (NatToVect <$> shape) (FromCubicalTensor t) ->
+      a ->
+      Tensor shape a
+    (.~) t i val = ToCubicalTensor $
+      (.~) {allPosEq=allPosEqCubical} (FromCubicalTensor t) i val
 
 
 
