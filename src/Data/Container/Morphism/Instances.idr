@@ -11,7 +11,7 @@ import Misc
 
 -- Need to do some rewriting for preorder
 public export
-preorderBTreeNode : (b : BTreeShape) -> Fin (numNodes b) -> FinBTreeNode b
+preorderBTreeNode : (b : BTreeShape) -> Fin (numNodes b) -> BTreePosNode b
 preorderBTreeNode (NodeS lt rt) x = ?preorderBTreeNode_rhs_1
 --preorderBTreeNode (NodeS lt rt) n with (strengthenN {m=numNodes lt} n)
 --  _ | Left p = ?whl
@@ -19,7 +19,7 @@ preorderBTreeNode (NodeS lt rt) x = ?preorderBTreeNode_rhs_1
 --  _ | Right (FS g) = ?whr
 
 public export
-inorderBTreeNodeBw : (b : BTreeShape) -> Fin (numNodes b) -> FinBTreeNode b
+inorderBTreeNodeBw : (b : BTreeShape) -> Fin (numNodes b) -> BTreePosNode b
 inorderBTreeNodeBw (NodeS lt rt) n with (strengthenN {m=numNodes lt} n)
   _ | Left p = GoLeft (inorderBTreeNodeBw lt p)
   _ | Right FZ = Done

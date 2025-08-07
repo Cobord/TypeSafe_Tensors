@@ -44,18 +44,38 @@ namespace Range
   This one is interesting, as in the cubical case it's effectively a version of 'tabulate' from Naperian functors.
   The cubical version is implemented first, and it's possible that a more general version of rangeA can be defined for container based tensors, possibly by tabulating contents of each shape respectively
   -----}
-  ||| Only works for cubical tensors
-  public export
-  range : {n : Nat} -> Cast Nat a => Tensor [n] a
-  range {n} = fromConcrete $ cast . finToNat <$> positions {f=Vect n}
+  ||| Separate implementation for the case of one vs two arguments
+  ||| This allows the typechecker to more easily match the right implementation at call sites, as with only TwoArg implementation the following doesn't compile:
+  ||| a = Tensor [6] Double
+  ||| a = arange
+  namespace OneArg
+    ||| A range of numbers [0, stop>
+    public export
+    arange : {stop : Nat} ->
+      Cast Nat a => Tensor [stop] a
+    arange {stop} = fromConcrete $
+      (cast . finToNat) <$> positions {f=Vect (stop)}
+
+  namespace TwoArgs
+    ||| A range of numbers [start, stop>
+    public export
+    arange : {default 0 start : Nat} -> {stop : Nat} ->
+      Cast Nat a => Tensor [minus stop start] a
+    arange {start} {stop} = fromConcrete $
+      (cast . (+start) . finToNat) <$> positions {f=Vect (minus stop start)}
 
   ||| Here the type 'a' has to somehow be dependent on the shape?
   rangeA : TensorA ?whatShape ?whatType
 
+namespace Flip
+  ||| Reverse a tensor along a given axis
+  public export
+  flip : (axis : Fin (length shape)) -> Tensor shape a -> Tensor shape a
+
 namespace Size
   {----- 
   Can we measure the size of a tensor of containers?
-  Likely need to impose an additiona constraint that the set of positions is enumerable
+  Likely need to impose an additional constraint that the set of positions is enumerable
   -----}
   ||| Number of elements in a non-cubical tensor
   public export
@@ -113,6 +133,23 @@ namespace OneHot
   oneHot : Num a => {n : Nat} ->
     (i : Fin n) -> Tensor [n] a
   oneHot i = (.~) (zeros {shape=[n]}) [i] 1 
+
+
+namespace Triangular
+  ||| A matrix with ones below the diagonal, and zeros elsewhere
+  public export
+  tri : Num a => {n, m : Nat} -> Tensor [n, m] a
+  tri = let row_indices : Tensor [n] Nat := arange {stop=n}
+            col_indices : Tensor [m] Nat := arange {stop=m}
+            compFn : (Nat -> Nat -> a) := (\x, y => if x <= y then 0 else 1)
+        in outerWithFn compFn row_indices col_indices
+  -- tri = let t = zeros {shape=[n, n]} in ?tri_rhs
+
+  ||| Lower triangular part of a matrix
+  ||| The upper triangular part is set to zero
+  public export
+  tril : Num a => {n : Nat} -> Tensor [n, n] a -> Tensor [n, n] a
+  tril = (* tri)
 
 -- TODO Fix for strided
 -- public export

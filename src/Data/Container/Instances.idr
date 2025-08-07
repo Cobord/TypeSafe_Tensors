@@ -50,16 +50,37 @@ namespace MainContainerExamples
   public export
   Stream : Cont
   Stream = (_ : Unit) !> Nat
+
+  ||| Binary trees with data stored at both nodes and leaves
+  public export
+  BTree : Cont
+  BTree = (b : BTreeShape) !> BTreePos b
   
   ||| Binary trees with data stored at nodes
   public export
   BTreeNode : Cont
-  BTreeNode = (b : BTreeShape) !> FinBTreeNode b
+  BTreeNode = (b : BTreeShape) !> BTreePosNode b
   
   ||| Binary trees with data stored at leaves
   public export
   BTreeLeaf : Cont
-  BTreeLeaf = (b : BTreeShape) !> FinBTreeLeaf b
+  BTreeLeaf = (b : BTreeShape) !> BTreePosLeaf b
+
+  ||| Rose trees with data stored at both nodes and leaves
+  public export
+  RoseTree : Cont
+  RoseTree = (t : RoseTreeShape) !> RoseTreePos t
+
+  ||| Rose trees with data stored at nodes
+  public export
+  RoseTreeNode : Cont
+  RoseTreeNode = (t : RoseTreeShape) !> RoseTreePosNode t
+
+  ||| Rose trees with data stored at leaves
+  public export
+  RoseTreeLeaf : Cont
+  RoseTreeLeaf = (t : RoseTreeShape) !> RoseTreePosLeaf t
+
 
   ||| Every lens gives rise to a container
   ||| The set of shapes is the lens itself
@@ -106,16 +127,28 @@ namespace ExtensionsOfMainContainerExamples
   Stream' : Type -> Type
   Stream' = Ext Stream
 
-  
-  ||| Isomorphic to Trees with data at only nodes
+  ||| Isomorphic to Data.Tree.BTreeSame
+  public export
+  BTree' : Type -> Type
+  BTree' = Ext BTree
+
+  ||| Isomorphic to Data.Tree.BTreeNode
   public export
   BTreeNode' : Type -> Type
   BTreeNode' = Ext BTreeNode
   
-  ||| Isomorphic to Trees with data only at leaves
+  ||| Isomorphic to Data.Tree.BTreeLeaf
   public export
   BTreeLeaf' : Type -> Type
   BTreeLeaf' = Ext BTreeLeaf
+
+  public export
+  RoseTreeNode' : Type -> Type
+  RoseTreeNode' = Ext RoseTreeNode
+
+  public export
+  RoseTreeLeaf' : Type -> Type
+  RoseTreeLeaf' = Ext RoseTreeLeaf
 
 
 -- public export
@@ -161,7 +194,7 @@ namespace ConversionFunctions
   
   
   public export
-  fromTreeHelper : FinBTreeNode LeafS -> a
+  fromTreeHelper : BTreePosNode LeafS -> a
   fromTreeHelper Done impossible
   fromTreeHelper (GoLeft x) impossible
   fromTreeHelper (GoRight x) impossible
@@ -413,7 +446,7 @@ namespace BTreeLeafInstances
 namespace BTreeNodeInstances
   -- TODO missing Eq instance for trees
 
-  impossibleCase : FinBTreeNode LeafS -> (a, b)
+  impossibleCase : BTreePosNode LeafS -> (a, b)
   impossibleCase Done impossible
   impossibleCase (GoLeft x) impossible
   impossibleCase (GoRight x) impossible
@@ -426,7 +459,7 @@ namespace BTreeNodeInstances
     let (ls <| fl) = liftA2BTreeNode' (l1 <| f1 . GoLeft) (l2 <| f2 . GoLeft)
         (rs <| fr) = liftA2BTreeNode' (r1 <| f1 . GoRight) (r2 <| f2 . GoRight)
 
-        resultFunc : FinBTreeNode (NodeS ls rs) -> (a, b)
+        resultFunc : BTreePosNode (NodeS ls rs) -> (a, b)
         resultFunc Done = (f1 Done, f2 Done)
         resultFunc (GoLeft posL) = fl posL
         resultFunc (GoRight posR) = fr posR

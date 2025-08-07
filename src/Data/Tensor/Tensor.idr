@@ -71,46 +71,35 @@ namespace NestedTensorA
   extract : TensorA [] a -> a
   extract (TZ a) = a
 
-
   public export
-  toNestedTensorA : {n : ContA} -> {ns : List ContA} ->
-    TensorA (n :: ns) a -> TensorA [n] (TensorA ns a)
+  toNestedTensorA : TensorA (n :: ns) a -> TensorA [n] (TensorA ns a)
   toNestedTensorA (TS vs) = TS (TZ <$> vs)
 
-  
+  public export
+  fromNestedTensorA : TensorA [n] (TensorA ns a) -> TensorA (n :: ns) a
+  fromNestedTensorA (TS vs) = TS $ extract <$> vs
+
+  public export
+  tensorMapFirstAxisA : (f : TensorA ns a -> TensorA ms a) ->
+    TensorA (i :: ns) a -> TensorA (i :: ms) a
+  tensorMapFirstAxisA f t = fromNestedTensorA $ map f $ toNestedTensorA t
 
   public export infix 4 <-$
   public export infixr 4 $->
   public export infixr 4 <-$->
 
   public export
-  (<-$) : {n : ContA} -> {ns : List ContA} ->
-    TensorA (n :: ns) a -> TensorA [n] (TensorA ns a)
+  (<-$) : TensorA (n :: ns) a -> TensorA [n] (TensorA ns a)
   (<-$) = toNestedTensorA
 
   public export
-  fromNestedTensorA : {n : ContA} -> {ns : List ContA} ->
-    TensorA [n] (TensorA ns a) -> TensorA (n :: ns) a
-  fromNestedTensorA (TS vs) = TS $ extract <$> vs
-
-  public export
-  ($->) : {n : ContA} -> {ns : List ContA} ->
-    TensorA [n] (TensorA ns a) -> TensorA (n :: ns) a
+  ($->) : TensorA [n] (TensorA ns a) -> TensorA (n :: ns) a
   ($->) = fromNestedTensorA
-
-  public export
-  tensorMapFirstAxisA : {rest : ContA} ->
-    {s1, s2 : List ContA} ->
-    (f : TensorA s1 a -> TensorA s2 a) ->
-    TensorA (rest :: s1) a -> TensorA (rest :: s2) a
-  tensorMapFirstAxisA f t = fromNestedTensorA $ map f $ toNestedTensorA t
 
   ||| Map, but for nested tensors
   public export
-  (<-$->) : {rest : ContA} ->
-    {shape : List ContA} ->
-    (f : TensorA shape a -> TensorA shape a) ->
-    TensorA (rest :: shape) a -> TensorA (rest :: shape) a
+  (<-$->) : (f : TensorA ns a -> TensorA ms a) ->
+    TensorA (i :: ns) a -> TensorA (i :: ms) a
   (<-$->) = tensorMapFirstAxisA
 
 
@@ -455,43 +444,47 @@ namespace FoldableTensorA
 
 namespace TensorAContractions
   public export
-  dotA : {shape : List ContA} -> {a : Type} -> Num a =>
-    Algebra (TensorA shape) a =>
+  dotA : {shape : List ContA} -> Num a => Algebra (TensorA shape) a =>
     TensorA shape a -> TensorA shape a -> TensorA [] a
   dotA xs ys = TZ $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA xs ys
+
+  public export
+  outerAWithFn : {i, j : ContA} -> (a -> b -> c) ->
+    TensorA [i] a -> TensorA [j] b -> TensorA [i, j] c
+  outerAWithFn f t t' =
+    let tt = (\(t, a) => strength a t) <$> strength t' t
+    in uncurry f <$> fromNestedTensorA tt
+
+  public export
+  outerA : {i, j : ContA} -> {a : Type} -> Num a =>
+    TensorA [i] a -> TensorA [j] a -> TensorA [i, j] a
+  outerA t t' = outerAWithFn (*) t t'
 
 
   -- Multiply a matrix and a vector
   public export
-  matrixVectorProductA : {a : Type} -> Num a =>
-    {f, g : ContA} ->
-    AllAlgebra [g] a =>
+  matrixVectorProductA : {f, g : ContA} -> Num a => AllAlgebra [g] a =>
     TensorA [f, g] a -> TensorA [g] a -> TensorA [f] a
   matrixVectorProductA (TS m) v = TS (dotA v <$> m)
 
   -- Multiply a vector and a matrix
   public export
-  vectorMatrixProductA : {a : Type} -> Num a =>
-    {f, g : ContA} ->
-    (allAlgebra : AllAlgebra [f, g] a) =>
+  vectorMatrixProductA : Num a => (allAlg : AllAlgebra [f, g] a) =>
     TensorA [f] a -> TensorA [f, g] a -> TensorA [g] a
-  vectorMatrixProductA {f=(# fc)} {allAlgebra = (::)} (TS v) (TS m)
+  vectorMatrixProductA {f=(# fc)} {allAlg = (::)} (TS v) (TS m)
     = let t = liftA2 v m
           w = (\((TZ val), v') => (val *) <$> v') <$> t
       in reduce {f=(Ext fc)} w
 
   -- ij,jk->ik
   public export
-  matMulA : {a : Type} -> Num a =>
-    {f, g, h : ContA} ->
-    (allAlgebra : AllAlgebra [g, h] a) =>
+  matMulA : Num a => AllAlgebra [g, h] a =>
     TensorA [f, g] a -> TensorA [g, h] a -> TensorA [f, h] a
   matMulA (TS m1) m2 = TS $ m1 <&> (\row => vectorMatrixProductA row m2)
 
   -- ij,kj->ki
   public export
-  matrixMatrixProductA : {a : Type} -> Num a =>
-    {f, g, h : ContA} ->
+  matrixMatrixProductA : {f, g, h : ContA} -> Num a =>
     (allAlgebra : AllAlgebra [g] a) =>
     TensorA [f, g] a -> TensorA [h, g] a -> TensorA [h, f] a
   matrixMatrixProductA m (TS n) = TS (matrixVectorProductA m <$> n)
@@ -716,13 +709,22 @@ namespace CubicalTensor
 
   public export
   dot : {shape : List Nat} -> {a : Type}
-    -> Num a => AllAlgebra (NatToVect <$> shape) a
+    -> Num a => Algebra (TensorA (NatToVect <$> shape)) a
     => Tensor shape a -> Tensor shape a -> Tensor [] a
-  dot (ToCubicalTensor v) (ToCubicalTensor w)
-    = pure $ reduce $ (\(x, y) => x * y) <$> liftA2TensorA v w
-    -- = let tt = dotA (FromCubicalTensor v) (FromCubicalTensor w)
-    --   in ToCubicalTensor ?tuuu
-  
+  dot t t' = ToCubicalTensor (dotA (FromCubicalTensor t) (FromCubicalTensor t'))
+
+
+  public export
+  outerWithFn : {i, j : Nat} -> {a : Type} -> (a -> b -> c) ->
+    Tensor [i] a -> Tensor [j] b -> Tensor [i, j] c
+  outerWithFn f t t' = ToCubicalTensor $
+    outerAWithFn f (FromCubicalTensor t) (FromCubicalTensor t')
+
+  public export
+  outer : {i, j : Nat} -> {a : Type} -> Num a =>
+    Tensor [i] a -> Tensor [j] a -> Tensor [i, j] a
+  outer t t' = outerWithFn (*) t t'
+
   public export
   transposeMatrix : {i, j : Nat} ->
     Tensor [i, j] a -> Tensor [j, i] a
