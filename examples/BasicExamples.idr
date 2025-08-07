@@ -15,7 +15,7 @@ t0 = fromConcrete [ [0, 1, 2, 3]
 
 ||| Or using analogous functions to np.arange and np.reshape
 t1 : Tensor [6] Double
-t1 = range
+t1 = arange
 
 -- Need to fix reshape
 t2 : Tensor [2, 3] Double
