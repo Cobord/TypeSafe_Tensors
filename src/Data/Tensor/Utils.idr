@@ -137,16 +137,17 @@ namespace OneHot
 
 namespace Triangular
   ||| A matrix with ones below the diagonal, and zeros elsewhere
+  ||| Analogous to numpy.tri
   public export
   tri : Num a => {n, m : Nat} -> Tensor [n, m] a
   tri = let row_indices : Tensor [n] Nat := arange {stop=n}
             col_indices : Tensor [m] Nat := arange {stop=m}
             compFn : (Nat -> Nat -> a) := (\x, y => if x <= y then 0 else 1)
         in outerWithFn compFn row_indices col_indices
-  -- tri = let t = zeros {shape=[n, n]} in ?tri_rhs
 
   ||| Lower triangular part of a matrix
   ||| The upper triangular part is set to zero
+  ||| Analogous to numpy.tril
   public export
   tril : Num a => {n : Nat} -> Tensor [n, n] a -> Tensor [n, n] a
   tril = (* tri)

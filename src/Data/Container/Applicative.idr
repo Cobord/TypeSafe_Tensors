@@ -101,6 +101,11 @@ namespace ApplicativeInstances
   public export
   Stream : ContA
   Stream = (#) Stream
+
+  ||| Binary trees with data stored at both nodes and leaves
+  public export
+  BTree : ContA
+  BTree = (#) BTree
   
   ||| Binary trees with data stored at nodes
   public export

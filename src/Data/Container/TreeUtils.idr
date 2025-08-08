@@ -32,7 +32,7 @@ namespace BinaryTrees
     NodeS : BTreeShape -> BTreeShape -> BTreeShape
 
   %runElab derive "BTreeShape" [Eq, Show]
-  %name BTreeShape b, b1, b2, b3
+  %name BTreeShape b, b1, b2, b3, b4, b5
 
   public export
   numLeaves : BTreeShape -> Nat

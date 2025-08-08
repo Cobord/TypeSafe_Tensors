@@ -11,8 +11,6 @@ This file contains definitions of many useful tree types.
 These are all inductive in nature, and generally used
 as concrete representations of tree containers.
 
-Contains Binar
-
 Meant to be used as a concrete instance to define tree 
 containers from.
 
