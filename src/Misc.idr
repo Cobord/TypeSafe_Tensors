@@ -229,6 +229,12 @@ public export
 const2Unit : a -> b -> Unit
 const2Unit _ _ = ()
 
+public export
+fromBool : Num a => Bool -> a
+fromBool False = fromInteger 0
+fromBool True = fromInteger 1
+
+
 namespace FinArithmetic
   ||| Like weakenN from Data.Fin, but where n is on the other side of +
   public export

@@ -31,10 +31,6 @@ public export
 inorderBTreeNode : BTreeNode =%> List
 inorderBTreeNode = !% \b => (numNodes b ** inorderBTreeNodeBw b)
 
-boolToNat : Bool -> Nat
-boolToNat False = 0
-boolToNat True = 1
-
 maybeToList : Maybe =%> List
 maybeToList = !% \b => case b of 
   False => (0 ** absurd)

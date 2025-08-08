@@ -22,6 +22,15 @@ record ContA where
 
 public export prefix 0 #
 
+||| Convenience functions so we dont have to keep writing GetC
+public export
+(.shp) : ContA -> Type
+(.shp) c = (GetC c) .shp
+
+public export
+(.pos) : (c : ContA) -> c.shp -> Type
+(.pos) c sh = (GetC c) .pos sh
+
 ||| Every natural number n corresponds to a Vect n, which is applicative
 ||| Used in cubical tensors whose shapes are defined by lists of natural numbers
 public export

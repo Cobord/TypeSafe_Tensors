@@ -184,6 +184,25 @@ namespace ConversionFunctions
   public export
   toVect : {n : Nat} -> Vect' n x -> Vect n x
   toVect (_ <| indexCont) = vectTabulate indexCont
+
+  public export
+  fromBTreeSame : BTreeSame a -> BTree' a
+  fromBTreeSame (Leaf x) = LeafS <| \_ => x
+  fromBTreeSame (Node x lt rt) =
+    let (lts <| ltc) = fromBTreeSame lt
+        (rts <| rtc) = fromBTreeSame rt
+    in NodeS lts rts <| \case
+        DoneNode => x
+        GoLeft posL => ltc posL
+        GoRight posR => rtc posR
+
+  public export
+  toBTreeSame : BTree' a -> BTreeSame a
+  toBTreeSame (LeafS <| indexCont) = Leaf (indexCont DoneLeaf)
+  toBTreeSame (NodeS lt rt <| indexCont) =
+    Node (indexCont DoneNode)
+         (toBTreeSame (lt <| indexCont . GoLeft))
+         (toBTreeSame (rt <| indexCont . GoRight))
   
   
   public export
@@ -194,15 +213,14 @@ namespace ConversionFunctions
   
   public export
   fromBTreeNode : BTreeNode a -> BTreeNode' a
-  fromBTreeNode (Leaf ()) = (LeafS <| fromTreeHelper)
+  fromBTreeNode (Leaf ()) = LeafS <| fromTreeHelper
   fromBTreeNode (Node node leftTree rightTree)
     = let (lts <| ltc) = fromBTreeNode leftTree
           (rts <| rtc) = fromBTreeNode rightTree
-      in (NodeS lts rts <| \pos =>
-            case pos of
-              Done => node
-              GoLeft posL => ltc posL
-              GoRight posR => rtc posR)
+      in (NodeS lts rts <| \case
+            Done => node
+            GoLeft posL => ltc posL
+            GoRight posR => rtc posR)
 
   public export
   toBTreeNode : BTreeNode' a -> BTreeNode a
@@ -234,7 +252,7 @@ public export
 interface FromConcrete (cont : Cont) where
   constructor MkConcrete
   concreteType : Type -> Type
-  concreteFunctor : Functor (concreteType)
+  concreteFunctor : Functor concreteType
   fromConcreteTy : concreteType a -> Ext cont a
   toConcreteTy : Ext cont a -> concreteType a
 
@@ -269,6 +287,14 @@ public export
   concreteFunctor = %search
   fromConcreteTy = fromVect
   toConcreteTy = toVect
+
+
+public export
+FromConcrete BTree where
+  concreteType = BTreeSame
+  concreteFunctor = %search
+  fromConcreteTy = fromBTreeSame
+  toConcreteTy = toBTreeSame
 
 public export
 FromConcrete BTreeNode where
@@ -471,4 +497,6 @@ namespace BTreeNodeInstances
     reduce (NodeS l r <| v) = v Done +
       reduce {f=BTreeNode'} (l <| v . GoLeft) +
       reduce {f=BTreeNode'} (r <| v . GoRight)
-  
+
+
+

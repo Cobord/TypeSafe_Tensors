@@ -3,6 +3,8 @@ module Data.Container.TreeUtils
 import Language.Reflection
 import Derive.Prelude
 
+import Data.Container.SubTerm
+
 %language ElabReflection
 
 {-----------------------------------------------------------
@@ -52,6 +54,40 @@ namespace BinaryTrees
       DoneNode : {l, r : BTreeShape} -> BTreePos (NodeS l r)
       GoLeft : {l, r : BTreeShape} -> BTreePos l -> BTreePos (NodeS l r)
       GoRight : {l, r : BTreeShape} -> BTreePos r -> BTreePos (NodeS l r)
+
+    %runElab deriveIndexed "BTreePos" [Eq, Show]
+
+  ||| Check if a term is a subterm of another term
+  ||| t1 < t2 means that t2 > t1
+  public export
+  MOrd (BTreePos b) where
+    mcompare DoneLeaf DoneLeaf = Just EQ
+    mcompare DoneNode DoneNode = Just EQ
+    mcompare (GoLeft b1) (GoLeft b2) = mcompare b1 b2
+    mcompare (GoRight b1) (GoRight b2) = mcompare b1 b2
+    mcompare DoneNode (GoLeft _) = Just LT
+    mcompare DoneNode (GoRight _) = Just LT
+    mcompare (GoLeft _) DoneNode = Just GT
+    mcompare (GoRight _) DoneNode = Just GT
+    mcompare (GoLeft _) (GoRight _) = Nothing -- they diverge
+    mcompare (GoRight _) (GoLeft _) = Nothing -- they diverge
+
+
+
+  Tr : BTreeShape
+  Tr = NodeS (NodeS LeafS LeafS) LeafS
+    
+  Path1 : BTreePos Tr
+  Path1 = GoLeft DoneNode
+
+  Path2 : BTreePos Tr
+  Path2 = GoLeft (GoLeft DoneLeaf)
+
+  Path3 : BTreePos Tr
+  Path3 = GoRight DoneLeaf
+
+  fh : (mcompare Path1 Path2) = Just LT
+  fh = ?asdf
   
   namespace Nodes
     ||| Positions corresponding to nodes within a BTreeNode shape.
@@ -60,6 +96,8 @@ namespace BinaryTrees
       Done : {l, r : BTreeShape} -> BTreePosNode (NodeS l r)
       GoLeft  : {l, r : BTreeShape} -> BTreePosNode l -> BTreePosNode (NodeS l r)
       GoRight  : {l, r : BTreeShape} -> BTreePosNode r -> BTreePosNode (NodeS l r)
+
+    %runElab deriveIndexed "BTreePosNode" [Eq, Show]
   
   namespace Leaves
     ||| Positions corresponding to leaves within a BTreeShape 
@@ -68,6 +106,8 @@ namespace BinaryTrees
       Done : BTreePosLeaf LeafS
       GoLeft : {l, r : BTreeShape} -> BTreePosLeaf l -> BTreePosLeaf (NodeS l r)
       GoRight : {l, r : BTreeShape} -> BTreePosLeaf r -> BTreePosLeaf (NodeS l r)
+
+    %runElab deriveIndexed "BTreePosLeaf" [Eq, Show]
 
 
 namespace RoseTrees
@@ -103,6 +143,8 @@ namespace RoseTrees
         RoseTreePos (NodeS ts) ->
         RoseTreePos (NodeS (t :: ts))
 
+    %runElab deriveIndexed "RoseTreePos" [Eq, Show]
+
   namespace Nodes
     ||| Positions corresponding to internal nodes within a RoseTreeNode shape.
     public export
@@ -114,6 +156,8 @@ namespace RoseTrees
       There : {t : RoseTreeShape} -> {ts : List RoseTreeShape} ->
         RoseTreePosNode (NodeS ts) ->
         RoseTreePosNode (NodeS (t :: ts))
+
+    %runElab deriveIndexed "RoseTreePosNode" [Eq, Show]
   
   namespace Leaves
     ||| Positions corresponding to leaves within a RoseTreeLeaf shape.
@@ -127,4 +171,5 @@ namespace RoseTrees
         RoseTreePosLeaf (NodeS ts) ->
         RoseTreePosLeaf (NodeS (t :: ts))
   
+    %runElab deriveIndexed "RoseTreePosLeaf" [Eq, Show]
   

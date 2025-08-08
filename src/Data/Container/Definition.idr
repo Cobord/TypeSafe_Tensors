@@ -78,7 +78,7 @@ liftA2ConstCont (() <| va) (() <| vb) = () <| (\x => (va x, vb x))
 ||| The extension of any container with a unit shape
 ||| is an applicative functor
 ||| Examples: Scalar, Pair, Vect n, Stream
-||| Notably, lists are also applicative
+||| Notably, List and Maybe are also applicative
 public export
 Applicative (Ext (Nap l)) where
   pure a = () <| (\_ => a)
@@ -92,6 +92,22 @@ public export
   Log = l
   lookup = indexCont
   tabulate t = () <| t
+
+||| Generalisation of 'positions' from Data.Functor
+||| Works for an arbitrary container, as long as we supply its shape
+||| Data.Functor.positions is this definition for Naperian containers
+||| i.e. containers with a unit shape
+public export
+positionsCont : {c : Cont} ->
+  (sh : c.shp) -> Ext c (c.pos sh)
+positionsCont sh = sh <| id
+
+--ex1 : String
+--ex1 = let g = toConcreteTy $ Definition.positions {c=Vect 3} ()
+--          gg = toConcreteTy $ Definition.positions {c=BTree} (NodeS LeafS LeafS)
+--          h = toConcreteTy $ Definition.positions {c=List} 4
+--      in show gg
+
 
 ||| Container setter
 public export

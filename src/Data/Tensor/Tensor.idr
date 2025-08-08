@@ -12,6 +12,8 @@ import public Data.Container.Instances
 import public Data.Container.Morphism.Definition
 import public Data.Container.Morphism.Instances
 import public Data.Container.Applicative
+import public Data.Container.TreeUtils
+import public Data.Container.SubTerm
 import public Data.Algebra
 import public Data.Tree
 import public Misc
@@ -182,18 +184,17 @@ and without using the inductive definition via TS and TZ
 ----------------------------}
 
 public export
-data AllConcrete : (shape : List ContA) -> (dtype : Type) -> Type where
-  NilConcrete : AllConcrete [] dtype
-  ConsConcrete : {c : ContA} -> {cs : List ContA} -> 
-    (fr : FromConcrete (GetC c)) =>
-    (afr : AllConcrete cs dtype) =>
-    AllConcrete (c :: cs) dtype
+data AllConcrete : (shape : List ContA) -> Type where
+  NilConcrete : AllConcrete []
+  ConsConcrete : (fr : FromConcrete (GetC c)) =>
+    (afr : AllConcrete cs) =>
+    AllConcrete (c :: cs)
 
 ||| The input is a nested list of containers with a FromConcrete instance
 ||| Meaning they're matched to a concrete (usually inductively defined) Idris type
 public export
 ConcreteT : (shape : List ContA) -> (dtype : Type) ->
-  (concr : AllConcrete shape dtype) =>
+  (concr : AllConcrete shape) =>
   Type
 ConcreteT [] dtype = dtype
 ConcreteT (_ :: cs) {concr = ConsConcrete {fr}} dtype
@@ -202,21 +203,21 @@ ConcreteT (_ :: cs) {concr = ConsConcrete {fr}} dtype
 
 public export
 fromConcreteA : {shape : List ContA} ->
-  (concr : AllConcrete shape dtype) =>
+  (concr : AllConcrete shape) =>
   ConcreteT shape dtype -> TensorA shape dtype
 fromConcreteA {shape = []} x = TZ x
 fromConcreteA {shape = (_ :: _)} {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor fromConcreteFn _)}} xs = TS $ fromConcreteFn $ fromConcreteA <$> xs
 
 public export
 toConcreteA : {shape : List ContA} ->
-  (concr : AllConcrete shape dtype) =>
+  (concr : AllConcrete shape) =>
   TensorA shape dtype -> ConcreteT shape dtype
 toConcreteA (TZ val) = val
 toConcreteA {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor _ toConcreteFn)} {afr} } (TS xs) = toConcreteFn $ toConcreteA {concr=afr} <$> xs
 
 public export
 fromConcreteMapA : {oldShape, newShape : List ContA} ->
-  (ca : AllConcrete oldShape a) => (cb : AllConcrete newShape b) =>
+  (ca : AllConcrete oldShape) => (cb : AllConcrete newShape) =>
   (f : ConcreteT oldShape a -> ConcreteT newShape b) ->
   TensorA oldShape a -> TensorA newShape b
 fromConcreteMapA f = fromConcreteA . f . toConcreteA
@@ -226,8 +227,7 @@ namespace EqTensorA
   public export
   data AllEq : (shape : List ContA) -> (dtype : Type) -> Type where
     NilEq : Eq dtype => AllEq [] dtype
-    ConsEq : {c : ContA} -> {cs : List ContA} ->
-      (eqCont: Eq ((GetC c) `fullOf` (TensorA cs dtype))) =>
+    ConsEq : (eqCont: Eq (GetC c `fullOf` TensorA cs dtype)) =>
       AllEq (c :: cs) dtype
 
   public export
@@ -245,8 +245,7 @@ namespace ShowTensorA
   public export
   data AllShow : (shape : List ContA) -> (dtype : Type) -> Type where
     NilShow : Show dtype => AllShow [] dtype
-    ConsShow : {c : ContA} -> {cs : List ContA} ->
-      Show ((GetC c) `fullOf` (TensorA cs dtype)) =>
+    ConsShow : Show (GetC c `fullOf` TensorA cs dtype) =>
       AllShow (c :: cs) dtype
 
   -- public export
@@ -263,17 +262,14 @@ namespace ShowTensorA
 
   ||| TODO this works, but we need to actually implement pretty printing
   public export
-  tensorShow : {shape : List ContA} ->
-    (allShow : AllShow shape dtype) =>
+  tensorShow : (allShow : AllShow shape dtype) =>
     TensorA shape dtype ->
     String
   tensorShow {allShow = NilShow} (TZ val) = show val
   tensorShow {allShow = ConsShow} (TS xs) = show xs
 
   public export
-  {shape : List ContA} ->
-  (allShow : AllShow shape dtype) =>
-    Show (TensorA shape dtype) where
+  AllShow shape dtype => Show (TensorA shape dtype) where
       show = tensorShow
 
 namespace ApplicativeTensorA
@@ -323,6 +319,11 @@ namespace NumericTensorA
   {shape : List ContA} -> Exp a => Exp (TensorA shape a) where
     exp = (exp <$>)
 
+
+public export
+positions : {c : ContA} ->
+  (sh : c.shp) -> TensorA [c] (c.pos sh)
+positions sh = TS (TZ <$> positionsCont sh)
 
 namespace NaperianTensorA
   ||| Kind of departing from the list syntax
@@ -458,7 +459,7 @@ namespace TensorAContractions
   public export
   outerA : {i, j : ContA} -> {a : Type} -> Num a =>
     TensorA [i] a -> TensorA [j] a -> TensorA [i, j] a
-  outerA t t' = outerAWithFn (*) t t'
+  outerA = outerAWithFn (*)
 
 
   -- Multiply a matrix and a vector
@@ -622,7 +623,6 @@ namespace CubicalTensor
     Eq (Tensor shape a) where
         (==) = ToCubicalTensorRel (==)
 
-    -- TODO this needs to be fixed to work with new stride based indexing
     public export
     {shape : List Nat} ->
     AllShow (NatToVect <$> shape) a =>
@@ -658,6 +658,7 @@ namespace CubicalTensor
       -> a -> Tensor shape a
     tensorReplicate = ToCubicalTensor . tensorReplicateA
 
+    public export
     liftA2Tensor : {shape : List Nat} -> Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
     liftA2Tensor (ToCubicalTensor xs) (ToCubicalTensor ys)
       = ToCubicalTensor (liftA2TensorA xs ys)
@@ -667,7 +668,6 @@ namespace CubicalTensor
     Applicative (Tensor shape) where
       pure = tensorReplicate
       fs <*> xs = uncurry ($) <$> liftA2Tensor fs xs
-
 
     public export
     {shape : List Nat} ->
@@ -723,7 +723,7 @@ namespace CubicalTensor
   public export
   outer : {i, j : Nat} -> {a : Type} -> Num a =>
     Tensor [i] a -> Tensor [j] a -> Tensor [i, j] a
-  outer t t' = outerWithFn (*) t t'
+  outer = outerWithFn (*)
 
   public export
   transposeMatrix : {i, j : Nat} ->
@@ -848,7 +848,7 @@ namespace IndexTensor
       a
     (@@) = indexTensor
 
-    public export infixr 9 ^. -- Why can't I use @ here?
+    public export infixr 9 ^.
     public export
     (^.) : {shape : List Nat} ->
       (t : Tensor shape a) ->

@@ -4,6 +4,7 @@ import Data.Nat -- Add import for Cast
 import System.Random
 
 import Data.Tensor.Tensor
+import Data.Container.SubTerm
 import Misc
 
 
@@ -48,6 +49,7 @@ namespace Range
   ||| This allows the typechecker to more easily match the right implementation at call sites, as with only TwoArg implementation the following doesn't compile:
   ||| a = Tensor [6] Double
   ||| a = arange
+  ||| Otoh, we preclude calling this without a type specified
   namespace OneArg
     ||| A range of numbers [0, stop>
     public export
@@ -136,22 +138,39 @@ namespace OneHot
 
 
 namespace Triangular
+
+  public export
+  triABool : {c : ContA} -> (ip : InterfaceOnPositions MOrd (GetC c)) =>
+    (sh : c.shp) -> TensorA [c, c] Bool
+  triABool {ip = PosInterface {p}} sh
+    = let cPositions : TensorA [c] (c.pos sh) := positions sh
+          pp : MOrd (c.pos sh) := p sh
+      in outerAWithFn (flip isSubTerm) cPositions cPositions
+
+  public export
+  triA : Num a => {c : ContA} -> (ip : InterfaceOnPositions MOrd (GetC c)) =>
+    (sh : c.shp) -> TensorA [c, c] a
+  triA sh = fromBool <$> triABool sh
+
+  public export
+  triBool : {n : Nat} -> Tensor [n, n] Bool
+  triBool = ToCubicalTensor $ triABool ()
+
+
   ||| A matrix with ones below the diagonal, and zeros elsewhere
   ||| Analogous to numpy.tri
   public export
-  tri : Num a => {n, m : Nat} -> Tensor [n, m] a
-  tri = let row_indices : Tensor [n] Nat := arange {stop=n}
-            col_indices : Tensor [m] Nat := arange {stop=m}
-            compFn : (Nat -> Nat -> a) := (\x, y => if x <= y then 0 else 1)
-        in outerWithFn compFn row_indices col_indices
+  tri : Num a => {n : Nat} -> Tensor [n, n] a
+  tri = fromBool <$> triBool
 
   ||| Lower triangular part of a matrix
   ||| The upper triangular part is set to zero
   ||| Analogous to numpy.tril
   public export
-  tril : Num a => {n : Nat} -> Tensor [n, n] a -> Tensor [n, n] a
-  tril = (* tri)
+  lowerTriangular : Num a => {n : Nat} -> Tensor [n, n] a -> Tensor [n, n] a
+  lowerTriangular = (* tri)
 
+namespace Random
 -- TODO Fix for strided
 -- public export
 -- {shape : List Nat} -> Random a => Random (Tensor shape a) where

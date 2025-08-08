@@ -58,8 +58,9 @@ namespace BinaryTrees
     public export
     Functor BTreeLeaf where
         map f (Leaf x) = Leaf (f x)
-        map {a} {b} f (Node x leftTree rightTree)
-          = Node x (map {f=BTreeLeaf} f leftTree) (map {f=BTreeLeaf} f rightTree)
+        map f (Node x leftTree rightTree) = Node x
+          (map {f=BTreeLeaf} f leftTree)
+          (map {f=BTreeLeaf} f rightTree)
   
     public export
     liftA2BTreeLeaf : BTreeLeaf a -> BTreeLeaf b -> BTreeLeaf (a, b)
@@ -121,6 +122,13 @@ namespace BinaryTrees
     public export
     BTreeSame : (content : Type) -> Type
     BTreeSame content = BTree content content
+
+    public export
+    Functor BTreeSame where
+      map f (Leaf x) = Leaf (f x)
+      map f (Node x leftTree rightTree) = Node (f x)
+        (map {f=BTreeSame} f leftTree)
+        (map {f=BTreeSame} f rightTree)
   
   
   
