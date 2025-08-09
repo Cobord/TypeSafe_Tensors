@@ -8,13 +8,9 @@ import Derive.Prelude
 {-----------------------------------------------------------
 {-----------------------------------------------------------
 This file contains definitions of many useful tree types.
-These are all inductive in nature, and generally used
-as concrete representations of tree containers.
-
-Meant to be used as a concrete instance to define tree 
-containers from.
-
-All of the trees here are *finite*.
+These definitions are all inductive, representing finite
+trees, and generally used as concrete representations of
+tree containers.
 
 -----------------------------------------------------------}
 -----------------------------------------------------------}

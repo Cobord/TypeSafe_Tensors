@@ -32,7 +32,7 @@ public export
 -- aa : Algebra (TensorA [2]) (TensorA [3] a) => a
 -- aa = ?aa_rhs
 
-||| Just summing up elements of the tree given by the Num a structure
+||| Summing up elements of the tree given by the Num a structure
 public export
 Num a => Algebra BTreeLeaf a where
   reduce (Leaf leaf) = leaf

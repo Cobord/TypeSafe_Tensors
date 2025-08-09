@@ -33,6 +33,9 @@ IndexT -> machinery for indexing into TensorA
 This file also incluedes most common interfaces, such as
 Eq, Show, Functor, Applicative, Foldable, Num,...
 
+
+Also defines cubical tensors
+
 -----------------------------------------------------------}
 -----------------------------------------------------------}
 
@@ -67,24 +70,25 @@ namespace FunctorTensorA
     map f (TZ val) = TZ $ f val
     map f (TS xs) = TS $ (map f) <$> xs
 
-
 namespace NestedTensorA
   public export
   extract : TensorA [] a -> a
   extract (TZ a) = a
 
   public export
-  toNestedTensorA : TensorA (n :: ns) a -> TensorA [n] (TensorA ns a)
-  toNestedTensorA (TS vs) = TS (TZ <$> vs)
+  toNestedA : TensorA (n :: ns) a -> TensorA [n] (TensorA ns a)
+  toNestedA (TS vs) = TS (TZ <$> vs)
 
   public export
-  fromNestedTensorA : TensorA [n] (TensorA ns a) -> TensorA (n :: ns) a
-  fromNestedTensorA (TS vs) = TS $ extract <$> vs
+  fromNestedA : TensorA [n] (TensorA ns a) -> TensorA (n :: ns) a
+  fromNestedA (TS vs) = TS $ extract <$> vs
 
+  ||| Action of nesting on morphisms
+  ||| Map, but for nested tensors
   public export
   tensorMapFirstAxisA : (f : TensorA ns a -> TensorA ms a) ->
     TensorA (i :: ns) a -> TensorA (i :: ms) a
-  tensorMapFirstAxisA f t = fromNestedTensorA $ map f $ toNestedTensorA t
+  tensorMapFirstAxisA f = fromNestedA . map f . toNestedA
 
   public export infix 4 <-$
   public export infixr 4 $->
@@ -92,19 +96,19 @@ namespace NestedTensorA
 
   public export
   (<-$) : TensorA (n :: ns) a -> TensorA [n] (TensorA ns a)
-  (<-$) = toNestedTensorA
+  (<-$) = toNestedA
 
   public export
   ($->) : TensorA [n] (TensorA ns a) -> TensorA (n :: ns) a
-  ($->) = fromNestedTensorA
+  ($->) = fromNestedA
 
-  ||| Map, but for nested tensors
   public export
   (<-$->) : (f : TensorA ns a -> TensorA ms a) ->
     TensorA (i :: ns) a -> TensorA (i :: ms) a
   (<-$->) = tensorMapFirstAxisA
 
 
+{----------------------------
 {----------------------------
 It will be immensely useful to leverage the following fact about TensorA:
 `Tensor shape a` is isomorphic to the extension of the container that arises as the composition of all the containers in shape.
@@ -114,6 +118,7 @@ The maps defining this isomorphism are `toCompProduct` and `fromCompProduct`.
 
 This allows us to define the reshape map using a dependent lens
 ----------------------------}
+----------------------------}
 
 ||| This states a frames a tensor as a 
 ||| composition of extensions of containers making its shape
@@ -121,21 +126,20 @@ public export
 toExtComposition : {shape : List ContA} ->
   TensorA shape a -> ComposeExtensions shape a
 toExtComposition {shape = []} (TZ val) = fromIdentity val
-toExtComposition {shape = [c]} (TS xs) = extract <$> xs
-toExtComposition {shape = (c :: d :: cs)} (TS xs)
-  = toExtComposition {shape=(d :: cs)} <$> xs
-
-public export
-toCompProduct : {shape : List ContA} ->
-  TensorA shape a -> Ext (ComposeContainers shape) a
-toCompProduct = toContainerComp . toExtComposition
+toExtComposition {shape = [_]} (TS xs) = extract <$> xs
+toExtComposition {shape = (_ :: _ :: _)} (TS xs) = toExtComposition <$> xs
 
 public export
 fromExtComposition : {shape : List ContA} ->
   ComposeExtensions shape a -> TensorA shape a
 fromExtComposition {shape = []} ce = TZ $ toIdentity ce
-fromExtComposition {shape = [c]} ce = TS $ TZ <$> ce
-fromExtComposition {shape = (c :: d :: cs)} ce = TS $ fromExtComposition <$> ce
+fromExtComposition {shape = [_]} ce = TS $ TZ <$> ce
+fromExtComposition {shape = (_ :: _ :: _)} ce = TS $ fromExtComposition <$> ce
+
+public export
+toCompProduct : {shape : List ContA} ->
+  TensorA shape a -> Ext (ComposeContainers shape) a
+toCompProduct = toContainerComp . toExtComposition
 
 public export
 fromCompProduct : {shape : List ContA} ->
@@ -153,9 +157,9 @@ reshapeTensorA dLens = fromCompProduct . (contMapExt dLens) . toCompProduct
 
 {----------------------------
 ArrayA
-Convenience datatype and functions for constructing from its extensions
+Convenience datatype and functions for constructing TensorA from its extensions
+TODO do we need those?
 ----------------------------}
-
 
 public export
 ArrayA : (shape : List ContA) -> (dtype : Type) -> Type
@@ -180,61 +184,60 @@ by writing
 [ [1, 2, 3]
 , [4, 5, 6]]
 and without using the inductive definition via TS and TZ
-
 ----------------------------}
 
-public export
-data AllConcrete : (shape : List ContA) -> Type where
-  NilConcrete : AllConcrete []
-  ConsConcrete : (fr : FromConcrete (GetC c)) =>
-    (afr : AllConcrete cs) =>
-    AllConcrete (c :: cs)
-
-||| The input is a nested list of containers with a FromConcrete instance
-||| Meaning they're matched to a concrete (usually inductively defined) Idris type
-public export
-ConcreteT : (shape : List ContA) -> (dtype : Type) ->
-  (concr : AllConcrete shape) =>
-  Type
-ConcreteT [] dtype = dtype
-ConcreteT (_ :: cs) {concr = ConsConcrete {fr}} dtype
-  = concreteType @{fr} (ConcreteT cs dtype)
-
-
-public export
-fromConcreteA : {shape : List ContA} ->
-  (concr : AllConcrete shape) =>
-  ConcreteT shape dtype -> TensorA shape dtype
-fromConcreteA {shape = []} x = TZ x
-fromConcreteA {shape = (_ :: _)} {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor fromConcreteFn _)}} xs = TS $ fromConcreteFn $ fromConcreteA <$> xs
-
-public export
-toConcreteA : {shape : List ContA} ->
-  (concr : AllConcrete shape) =>
-  TensorA shape dtype -> ConcreteT shape dtype
-toConcreteA (TZ val) = val
-toConcreteA {concr = ConsConcrete {fr = (MkConcrete f concreteFunctor _ toConcreteFn)} {afr} } (TS xs) = toConcreteFn $ toConcreteA {concr=afr} <$> xs
-
-public export
-fromConcreteMapA : {oldShape, newShape : List ContA} ->
-  (ca : AllConcrete oldShape) => (cb : AllConcrete newShape) =>
-  (f : ConcreteT oldShape a -> ConcreteT newShape b) ->
-  TensorA oldShape a -> TensorA newShape b
-fromConcreteMapA f = fromConcreteA . f . toConcreteA
+namespace ConcreteTensorA
+  public export
+  data AllConcrete : (shape : List ContA) -> Type where
+    Nil : AllConcrete []
+    Cons : (fr : FromConcrete (GetC c)) =>
+      (afr : AllConcrete cs) =>
+      AllConcrete (c :: cs)
+  
+  ||| The input is a nested list of containers with a FromConcrete instance
+  ||| Meaning they're matched to a concrete (usually inductively defined) Idris type
+  public export
+  ConcreteT : (shape : List ContA) ->
+    (concr : AllConcrete shape) =>
+    Type -> Type
+  ConcreteT [] dtype = dtype
+  ConcreteT {concr = Cons {fr}} (_ :: cs) dtype
+    = concreteType @{fr} (ConcreteT cs dtype)
+  
+  public export
+  fromConcreteA : {shape : List ContA} ->
+    (concr : AllConcrete shape) =>
+    ConcreteT shape dtype -> TensorA shape dtype
+  fromConcreteA {shape = []} x = TZ x
+  fromConcreteA {shape = (_ :: _)} {concr = Cons {fr = (MkConcrete f concreteFunctor fromConcreteFn _)}} xs = TS $ fromConcreteFn $ fromConcreteA <$> xs
+  
+  public export
+  toConcreteA : {shape : List ContA} ->
+    (concr : AllConcrete shape) =>
+    TensorA shape dtype -> ConcreteT shape dtype
+  toConcreteA (TZ val) = val
+  toConcreteA {concr = Cons {fr = (MkConcrete f concreteFunctor _ toConcreteFn)} {afr} } (TS xs) = toConcreteFn $ toConcreteA {concr=afr} <$> xs
+  
+  public export
+  fromConcreteMapA : {oldShape, newShape : List ContA} ->
+    (ca : AllConcrete oldShape) => (cb : AllConcrete newShape) =>
+    (f : ConcreteT oldShape a -> ConcreteT newShape b) ->
+    TensorA oldShape a -> TensorA newShape b
+  fromConcreteMapA f = fromConcreteA . f . toConcreteA
 
 
 namespace EqTensorA
   public export
   data AllEq : (shape : List ContA) -> (dtype : Type) -> Type where
-    NilEq : Eq dtype => AllEq [] dtype
-    ConsEq : (eqCont: Eq (GetC c `fullOf` TensorA cs dtype)) =>
+    Nil : Eq dtype => AllEq [] dtype
+    Cons : Eq (GetC c `fullOf` TensorA cs dtype) =>
       AllEq (c :: cs) dtype
 
   public export
   tensorEq : {shape : List ContA} -> (allEq : AllEq shape dtype) =>
     TensorA shape dtype -> TensorA shape dtype -> Bool
-  tensorEq {allEq = NilEq} (TZ val) (TZ val') = val == val'
-  tensorEq {allEq = ConsEq} (TS xs) (TS xs') = xs == xs'
+  tensorEq {allEq = Nil} (TZ val) (TZ val') = val == val'
+  tensorEq {allEq = Cons} (TS xs) (TS xs') = xs == xs'
 
   public export
   {shape : List ContA} -> (allEq : AllEq shape dtype) =>
@@ -244,8 +247,8 @@ namespace EqTensorA
 namespace ShowTensorA
   public export
   data AllShow : (shape : List ContA) -> (dtype : Type) -> Type where
-    NilShow : Show dtype => AllShow [] dtype
-    ConsShow : Show (GetC c `fullOf` TensorA cs dtype) =>
+    Nil : Show dtype => AllShow [] dtype
+    Cons : Show (GetC c `fullOf` TensorA cs dtype) =>
       AllShow (c :: cs) dtype
 
   -- public export
@@ -265,15 +268,18 @@ namespace ShowTensorA
   tensorShow : (allShow : AllShow shape dtype) =>
     TensorA shape dtype ->
     String
-  tensorShow {allShow = NilShow} (TZ val) = show val
-  tensorShow {allShow = ConsShow} (TS xs) = show xs
+  tensorShow {allShow = Nil} (TZ val) = show val
+  tensorShow {allShow = Cons} (TS xs) = show xs
 
   public export
   AllShow shape dtype => Show (TensorA shape dtype) where
       show = tensorShow
 
 namespace ApplicativeTensorA
-  -- Unlike with other interfaces, Applicative is baked in to the tensor
+  {-----------
+  Unlike with other interfaces, Applicative is baked in to TensorA
+  This means that we do not need an AllApplicative data type here.
+  -----------}
 
   ||| Unit of the monoidal functor
   public export
@@ -320,13 +326,7 @@ namespace NumericTensorA
     exp = (exp <$>)
 
 
-public export
-positions : {c : ContA} ->
-  (sh : c.shp) -> TensorA [c] (c.pos sh)
-positions sh = TS (TZ <$> positionsCont sh)
-
 namespace NaperianTensorA
-  ||| Kind of departing from the list syntax
   public export
   data AllNaperian : (shape : List ContA) -> Type where
     Nil : AllNaperian []
@@ -370,8 +370,13 @@ namespace NaperianTensorA
     TensorA [i, j] a -> TensorA [j, i] a
   transposeMatrixA {allNaperian = ((::) {napC=napI} ((::) {napC=napJ} []))}
     = fromExtComposition . Naperian.transpose . toExtComposition
-  
-  
+
+  ||| Not requiring the Naperian instance here
+  public export
+  positions : {c : ContA} ->
+    (sh : c.shp) -> TensorA [c] (c.pos sh)
+  positions sh = TS (TZ <$> positionsCont sh)
+
   -- public export
   -- data IndexTData : Type where
   --   NonCubical : (shape : ContAontList conts) -> IndexTData
@@ -396,10 +401,11 @@ namespace AlgebraTensorA
 
   public export
   reduceTensorA : {shape : List ContA} ->
-    (allAlgebra : AllAlgebra shape a) =>
+    (allAlg : AllAlgebra shape a) =>
     TensorA shape a -> a
-  reduceTensorA {allAlgebra = []} (TZ val) = val
-  reduceTensorA {allAlgebra = ((::) {allAlg=cs})} (TS xs) = reduceTensorA @{cs} (reduce xs)
+  reduceTensorA {allAlg = []} (TZ val) = val
+  reduceTensorA {allAlg = ((::) {allAlg=cs})} (TS xs)
+    = reduceTensorA $ reduce xs
 
 
   public export
@@ -423,8 +429,8 @@ namespace AlgebraTensorA
 namespace FoldableTensorA
   public export
   data AllFoldable : (shape : List ContA) -> Type where
-      NilFoldable : AllFoldable []
-      ConsFoldable : Foldable (Ext (GetC c)) =>
+      Nil : AllFoldable []
+      Cons : Foldable (Ext (GetC c)) =>
         AllFoldable cs ->
         AllFoldable (c :: cs)
 
@@ -432,8 +438,8 @@ namespace FoldableTensorA
   public export
   tensorFoldrA : (allFoldable : AllFoldable shape) =>
     (el -> acc -> acc) -> acc -> TensorA shape el -> acc
-  tensorFoldrA {allFoldable = NilFoldable} f z (TZ val) = f val z
-  tensorFoldrA {allFoldable = (ConsFoldable recAllFoldable)} f z (TS xs) =
+  tensorFoldrA {allFoldable = Nil} f z (TZ val) = f val z
+  tensorFoldrA {allFoldable = (Cons recAllFoldable)} f z (TS xs) =
       foldr (\t, acc => tensorFoldrA {allFoldable=recAllFoldable} f acc t) z xs
 
   public export
@@ -454,7 +460,7 @@ namespace TensorAContractions
     TensorA [i] a -> TensorA [j] b -> TensorA [i, j] c
   outerAWithFn f t t' =
     let tt = (\(t, a) => strength a t) <$> strength t' t
-    in uncurry f <$> fromNestedTensorA tt
+    in uncurry f <$> fromNestedA tt
 
   public export
   outerA : {i, j : ContA} -> {a : Type} -> Num a =>
@@ -573,7 +579,6 @@ namespace CubicalTensor
   public export
   record Tensor (shape : List Nat) a where
     constructor ToCubicalTensor
-    -- FromCubicalTensor : TensorA (NatsToContAonts shape) a
     FromCubicalTensor : TensorA (NatToVect <$> shape) a
 
   public export
@@ -583,7 +588,7 @@ namespace CubicalTensor
 
   public export
   ToCubicalTensorMap :
-    (TensorA (NatToVect <$> oldShape) a -> TensorA (NatToVect <$> newShape) b) ->
+    (TensorA (NatToVect <$> oldShape) a ->  TensorA (NatToVect <$> newShape) b) ->
     Tensor oldShape a -> Tensor newShape b
   ToCubicalTensorMap f = ToCubicalTensor . f . FromCubicalTensor
 
@@ -598,23 +603,6 @@ namespace CubicalTensor
     (Tensor shape a -> Tensor shape b -> c) ->
     TensorA (NatToVect <$> shape) a -> TensorA (NatToVect <$> shape) b -> c
   FromCubicalTensorRel f t t' = f (ToCubicalTensor t) (ToCubicalTensor t')
-
-    
-  -- public export
-  -- data TensorView : (shape : List Nat) -> (a : Type) -> Type where
-  --     FlatTensor : {shape : List Nat} -> TensorA (NatsToContAonts shape) a -> Tensor shape a
-  --     NonFlatTensor : {shape : List Nat} -> TensorA (NatsToContAonts shape) a -> Tensor shape a
-
-  -- public export
-  -- reshapeView : {oldShape, newShape : List Nat} ->
-  --   {auto prf : prod newShape = prod oldShape} ->
-  --   TensorView oldShape a ->
-  --   TensorView newShape a
-  -- reshapeView {prf} (MkTensorView flatData)
-  --   = MkTensorView $ rewrite prf in flatData
-
-  -- TODO we also have, what? 
-  -- index, slice, take
 
   namespace TensorInterfaces
     public export
@@ -652,12 +640,6 @@ namespace CubicalTensor
     Functor (Tensor shape) where
       map f = ToCubicalTensorMap (map f)
 
-
-    public export
-    tensorReplicate : {shape : List Nat}
-      -> a -> Tensor shape a
-    tensorReplicate = ToCubicalTensor . tensorReplicateA
-
     public export
     liftA2Tensor : {shape : List Nat} -> Tensor shape a -> Tensor shape b -> Tensor shape (a, b)
     liftA2Tensor (ToCubicalTensor xs) (ToCubicalTensor ys)
@@ -666,7 +648,7 @@ namespace CubicalTensor
     public export
     {shape : List Nat} ->
     Applicative (Tensor shape) where
-      pure = tensorReplicate
+      pure = ToCubicalTensor . tensorReplicateA
       fs <*> xs = uncurry ($) <$> liftA2Tensor fs xs
 
     public export
@@ -729,7 +711,6 @@ namespace CubicalTensor
   transposeMatrix : {i, j : Nat} ->
     Tensor [i, j] a -> Tensor [j, i] a
   transposeMatrix = ToCubicalTensor . transposeMatrixA . FromCubicalTensor
-
 
   public export
   Array : (shape : List Nat) -> (dtype : Type) -> Type
