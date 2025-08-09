@@ -7,109 +7,114 @@ import Para.Para
 parameters {a : Type} {auto _ : Num a}
   ||| Generalised form of attention
   public export
-  crossAttention : {inputStructure, crossStructure, features : ContA} ->
+  crossAttentionA : {crossStructure : ContA} ->
     (allAlg : AllAlgebra [inputStructure, features] a) =>
     (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a) ->
-    (q : TensorA [inputStructure, features] a) ->
+    (q, v : TensorA [inputStructure, features] a) ->
     (k : TensorA [crossStructure, features] a) ->
-    (v : TensorA [inputStructure, features] a) ->
     TensorA [crossStructure, features] a
-  crossAttention {allAlg = ((::) {allAlg=_})} softmax q k v =
+  crossAttentionA {allAlg = ((::) {allAlg=_})} softmax q v k =
     let attentionMatrix : TensorA [crossStructure, inputStructure] a
         attentionMatrix = softmax <-$-> (q `matrixMatrixProductA` k)
     in attentionMatrix `matMulA` v
   
-
   ||| Self-attention is cross-attention where inputStructure = crossStructure
   public export
-  selfAttention : {inputStructure, features : ContA} ->
+  selfAttentionA : {inputStructure, features : ContA} ->
     (allAlg : AllAlgebra [inputStructure, features] a) =>
     (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a) ->
-    (q : TensorA [inputStructure, features] a) ->
-    (k : TensorA [inputStructure, features] a) ->
-    (v : TensorA [inputStructure, features] a) ->
+    (q, v, k : TensorA [inputStructure, features] a) ->
     TensorA [inputStructure, features] a
-  selfAttention = crossAttention
-
-  ||| Self-attention for cubical tensors
-  public export
-  selfAttention' : {inputSize, featureSize : Nat} ->
-    (softmax' : Tensor [inputSize] a -> Tensor [inputSize] a) ->
-    (q : Tensor [inputSize, featureSize] a) ->
-    (k : Tensor [inputSize, featureSize] a) ->
-    (v : Tensor [inputSize, featureSize] a) ->
-    Tensor [inputSize, featureSize] a
-  selfAttention' softmax' (ToCubicalTensor q) (ToCubicalTensor k) (ToCubicalTensor v)
-    = ToCubicalTensor $ selfAttention (FromCubicalTensor . softmax' . ToCubicalTensor) q k v
-
+  selfAttentionA = crossAttentionA
 
   ||| Data structure for holding parameters of self-attention
   public export
-  record SelfAttentionParams (features : ContA) where
-    constructor MkSAParams
+  record SelfAttentionParamsA (features : ContA) where
+    constructor MkSAParamsA
     queryMatParam : TensorA [features, features] a
-    keyMatParam : TensorA [features, features] a
     valueMatParam : TensorA [features, features] a
+    keyMatParam : TensorA [features, features] a
 
-  ||| Forward pass of self-attention
-  SAImpl : (allAlg : AllAlgebra [inputStructure, features] a) =>
+  ||| Forward pass of self-attention, from input
+  SAImplA : (allAlg : AllAlgebra [inputStructure, features] a) =>
     (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a) ->
     (input : TensorA [inputStructure, features] a) ->
-    (params : SelfAttentionParams features) ->
+    (params : SelfAttentionParamsA features) ->
     TensorA [inputStructure, features] a
-  SAImpl {allAlg = ((::) {allAlg=_})} softmax input (MkSAParams queryMat keyMat valueMat)
+  SAImplA {allAlg = ((::) {allAlg=_})} softmax input (MkSAParamsA queryMat valueMat keyMat)
     = let queries = queryMat `matrixMatrixProductA` input
           keys = keyMat `matrixMatrixProductA` input
           values = valueMat `matrixMatrixProductA` input
-      in selfAttention softmax queries keys values
+      in selfAttentionA softmax queries values keys
 
   ||| Self-attention as a parametric map
   public export
-  SelfAttention : {inputStructure, features : ContA} ->
+  SelfAttentionA : {features : ContA} ->
     (allAlg : AllAlgebra [inputStructure, features] a) =>
     (softmax : TensorA [inputStructure] a -> TensorA [inputStructure] a) ->
     Para (TensorA [inputStructure, features] a)
          (TensorA [inputStructure, features] a)
-  SelfAttention softmax = MkPara
-    (const (SelfAttentionParams features))
-    (SAImpl softmax)
+  SelfAttentionA softmax = MkPara
+    (const (SelfAttentionParamsA features))
+    (SAImplA softmax)
 
+  ||| Self-attention for cubical tensors
+  namespace CubicalAttention
+    public export
+    selfAttention : {inputSize, featureSize : Nat} ->
+      (softmax' : Tensor [inputSize] a -> Tensor [inputSize] a) ->
+      (q, v, k : Tensor [inputSize, featureSize] a) ->
+      Tensor [inputSize, featureSize] a
+    selfAttention softmax q v k
+      = ToCubicalTensor $ selfAttentionA (FromCubicalTensorMap softmax)
+         (FromCubicalTensor q)
+         (FromCubicalTensor v)
+         (FromCubicalTensor k)
 
-  ||| Self-attention for cubical tensors as a parametric map
-  public export
-  SelfAttention' : {inputSize, featureSize : Nat} ->
-    (softmax' : Tensor [inputSize] a -> Tensor [inputSize] a) ->
-    Para (Tensor [inputSize, featureSize] a)
-         (Tensor [inputSize, featureSize] a)
-  SelfAttention' softmax' = MkPara
-    (const (SelfAttentionParams (Vect featureSize)))
-    (\inp => ToCubicalTensor . (SAImpl (FromCubicalTensorMap softmax') (FromCubicalTensor inp)))
+    ||| Cubical variant of SelfAttentionParamsA
+    public export
+    record SelfAttentionParams (features : Nat) where
+      constructor MkSAParams
+      queryMatParam : Tensor [features, features] a
+      valueMatParam : Tensor [features, features] a
+      keyMatParam : Tensor [features, features] a
 
-  totalPosEnc : {inputSize : Nat} ->
-    (Fin inputSize -> Tensor [featureSize] a) ->
-    Tensor [inputSize, featureSize] a
-  totalPosEnc f = let t = tabulate {f=Vect inputSize} f
-                  in ToCubicalTensor $ ?totalPosEnc_rhs
-  
-  selfAttentionWithPosEnc : {inputSize, featureSize : Nat} ->
-    (softmax' : Tensor [inputSize] a -> Tensor [inputSize] a) ->
-    Para (Tensor [inputSize, featureSize] a)
-         (Tensor [inputSize, featureSize] a)
-  selfAttentionWithPosEnc softmax' = MkPara
-    (const (SelfAttentionParams (Vect featureSize)))
-    (\i, p => Run (SelfAttention' softmax') ?myInput p)
-  
+    public export
+    ToCubicalParams : {features : Nat} ->
+      SelfAttentionParamsA (Vect features) -> SelfAttentionParams features
+    ToCubicalParams (MkSAParamsA queryMatParam valueMatParam keyMatParam)
+      = MkSAParams (ToCubicalTensor queryMatParam)
+                   (ToCubicalTensor valueMatParam)
+                   (ToCubicalTensor keyMatParam)
 
--- Self Attention for matrices
-SelfAttentionMat : {n, d : Nat}
-  -> Para (Tensor [n, d] Double) (Tensor [n, d] Double)
-SelfAttentionMat = SelfAttention' softmax'
+    public export
+    FromCubicalParams : {features : Nat} ->
+      SelfAttentionParams features -> SelfAttentionParamsA (Vect features)
+    FromCubicalParams (MkSAParams queryMatParam valueMatParam keyMatParam)
+      = MkSAParamsA (FromCubicalTensor queryMatParam)
+                    (FromCubicalTensor valueMatParam)
+                    (FromCubicalTensor keyMatParam)
 
--- Self Attention for trees
-SelfAttentionTree : {d : Nat} -> Para
-  (TensorA [BTreeLeaf, Vect d] Double)
-  (TensorA [BTreeLeaf, Vect d] Double)
-SelfAttentionTree = SelfAttention softmaxBTreeLeaf
+    public export
+    SAImpl : {inputStructure, features : Nat} ->
+      (sm : Tensor [inputStructure] a -> Tensor [inputStructure] a) ->
+      (input : Tensor [inputStructure, features] a) ->
+      (params : SelfAttentionParams features) ->
+      Tensor [inputStructure, features] a
+    SAImpl sm input params = ToCubicalTensor $ SAImplA
+      (FromCubicalTensorMap sm)
+      (FromCubicalTensor input)
+      (FromCubicalParams params)
+
+    ||| Self-attention for cubical tensors as a parametric map
+    public export
+    SelfAttention : {inputSize, featureSize : Nat} ->
+      (sm : Tensor [inputSize] a -> Tensor [inputSize] a) ->
+      Para (Tensor [inputSize, featureSize] a)
+           (Tensor [inputSize, featureSize] a)
+    SelfAttention sm = MkPara
+      (const (SelfAttentionParams featureSize))
+      (SAImpl sm) 
 
 
 --------------------
@@ -117,13 +122,16 @@ SelfAttentionTree = SelfAttention softmaxBTreeLeaf
 --------------------
 -- Will run self attention as usual, on matrices, and one on trees
 
+-- Self Attention for matrices
+SelfAttentionMat : {n, d : Nat}
+  -> Para (Tensor [n, d] Double) (Tensor [n, d] Double)
+SelfAttentionMat = SelfAttention softmax
 
-||| Consume an input matrix, parameters, and produce the output of a self-attention layer
-SAMatrixForwardPass : {n, d : Nat}
-  -> (input : Tensor [n, d] Double)
-  -> (p : Param SelfAttentionMat input)
-  -> Tensor [n, d] Double
-SAMatrixForwardPass = Run SelfAttentionMat
+-- Self Attention for trees
+SelfAttentionTree : {d : Nat} -> Para
+  (TensorA [BTreeLeaf, Vect d] Double)
+  (TensorA [BTreeLeaf, Vect d] Double)
+SelfAttentionTree = SelfAttentionA softmaxBTreeLeaf
 
 
 inputMatrix : Tensor [4, 2] Double
@@ -134,25 +142,16 @@ inputMatrix = fromConcrete [ [1, 3]
 
 ||| Parameters for self-attention
 ||| Here just a matrix of ones
-params : {d : Nat} -> SelfAttentionParams (Vect d) {a=Double}
-params = MkSAParams onesA onesA onesA
+params : {d : Nat} -> SelfAttentionParamsA (Vect d) {a=Double}
+params = MkSAParamsA onesA onesA onesA
 
 ||| Example output for cubical self-attention
 SAOutputMatrix : Tensor [4, 2] Double
-SAOutputMatrix = SAMatrixForwardPass inputMatrix params
-
-||| Consume a tree of vectors of features, parameters, and produce the output of a self-attention layer
-SATreeForwardPass : {d : Nat}
-  -> (input : TensorA [BTreeLeaf, Vect d] Double)
-  -> (p : Param SelfAttentionTree input)
-  -> TensorA [BTreeLeaf, Vect d] Double
-SATreeForwardPass = Run SelfAttentionTree
-
+SAOutputMatrix = (Run SelfAttentionMat) inputMatrix (ToCubicalParams params)
 
 tree1 : TensorA [BTreeLeaf, Vect 2] Double
-tree1 = fromConcreteA $ 
-  Node' (Leaf [4, 5]) (Leaf [-12, 25])
+tree1 = fromConcreteA $ Node' (Leaf [4, 5]) (Leaf [-12, 25])
 
 ||| Example output for tree self-attention
 SAOutputTree : TensorA [BTreeLeaf, Vect 2] Double
-SAOutputTree = SATreeForwardPass tree1 params
+SAOutputTree = (Run SelfAttentionTree) tree1 params
