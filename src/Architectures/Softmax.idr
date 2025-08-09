@@ -3,33 +3,32 @@ module Architectures.Softmax
 import Data.Tensor
 
 public export
-softmax : {i : ContA} -> Fractional a => Exp a =>
+softmaxA : {i : ContA} -> Fractional a => Exp a =>
   (allAlg : AllAlgebra [i] a) =>
   {default 1 temperature : a} ->
   TensorA [i] a -> TensorA [i] a
-softmax {temperature} t = let exps = exp <$> (t <&> (/ temperature))
-                          in exps <&> (/ (reduce exps))
+softmaxA {temperature} t = let exps = exp <$> (t <&> (/ temperature))
+                           in exps <&> (/ (reduce exps))
 
 
 
 ||| Softmax for a cubical 1D tensor, i.e. a vector
 public export
-softmax' : {i : Nat} -> {a : Type} -> Fractional a => Exp a => 
+softmax : {i : Nat} -> {a : Type} -> Fractional a => Exp a => 
   {default 1 temperature : a} ->
   Tensor [i] a -> Tensor [i] a
-softmax' {temperature} t = let exps = exp <$> (t <&> (/ temperature))
-                           in exps <&> (/ (reduce exps))
+softmax {temperature} = ToCubicalTensorMap softmaxA
 
 
 public export
 softmaxBTreeLeaf : {a : Type} -> Fractional a => Exp a =>
   TensorA [BTreeLeaf] a -> TensorA [BTreeLeaf] a
-softmaxBTreeLeaf = softmax
+softmaxBTreeLeaf = softmaxA
 
 public export
 softmaxBTreeNode : {a : Type} -> Fractional a => Exp a =>
   TensorA [BTreeNode] a -> TensorA [BTreeNode] a
-softmaxBTreeNode = softmax
+softmaxBTreeNode = softmaxA
 
 
 -- public export
