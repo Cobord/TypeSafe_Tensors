@@ -2,20 +2,23 @@ module Data.Container.Instances
 
 import Data.Fin
 import Data.Vect
-
+import Data.List
+import Data.DPair
 
 import Data.Container.Definition
+import Data.Container.Applicative.Definition
 import Data.Functor.Naperian
+import Data.List.Quantifiers
 import Misc
-import Data.Tree
 import Data.Algebra
+import Data.Tree
 import public Data.Container.TreeUtils -- rexport all the stuff inside
 
 
 %hide Data.Vect.fromList
 
 
-||| Examples
+||| Examples that do not require any additional constraints such as Applicative
 namespace MainContainerExamples
   ||| Container with a single thing
   public export
@@ -54,18 +57,25 @@ namespace MainContainerExamples
 
   ||| Binary trees with data stored at both nodes and leaves
   public export
-  BTree : Cont
-  BTree = (b : BTreeShape) !> BTreePos b
+  BinTree : Cont
+  BinTree = (b : BinTreeShape) !> BinTreePos b
   
   ||| Binary trees with data stored at nodes
   public export
-  BTreeNode : Cont
-  BTreeNode = (b : BTreeShape) !> BTreePosNode b
+  BinTreeNode : Cont
+  BinTreeNode = (b : BinTreeShape) !> BinTreePosNode b
   
   ||| Binary trees with data stored at leaves
   public export
-  BTreeLeaf : Cont
-  BTreeLeaf = (b : BTreeShape) !> BTreePosLeaf b
+  BinTreeLeaf : Cont
+  BinTreeLeaf = (b : BinTreeShape) !> BinTreePosLeaf b
+  
+  ||| Generalisation of Rose trees whose which has a container
+  ||| of subtrees (container whose extension is applicative)
+  ||| instead of a list of a subtrees
+  public export
+  ApplicativeRoseTree : ContA -> Cont
+  ApplicativeRoseTree c = (t : RoseTreeShape c) !> RoseTreePos c t
 
   ||| Rose trees with data stored at both nodes and leaves
   public export
@@ -82,14 +92,24 @@ namespace MainContainerExamples
   RoseTreeLeaf : Cont
   RoseTreeLeaf = (t : RoseTreeShape) !> RoseTreePosLeaf t
 
+  -- Should add Tensor here
+
   ||| Every lens gives rise to a container
   ||| The set of shapes is the lens itself
   ||| The set of positions is the inputs to the lens
+  ||| This is the closure with respect to the Hancock tensor product
   public export
   InternalLens : Cont -> Cont -> Cont
   InternalLens c d
     = (f : ((x : c.shp) -> (y : d.shp ** d.pos y -> c.pos x)))
       !> (xx : c.shp ** d.pos (fst (f xx)))
+
+
+  ||| From https://www.cs.ox.ac.uk/people/samuel.staton/papers/cie10.pdf
+  CartesianClosure : Cont -> Cont -> Cont
+  CartesianClosure c d
+    = (f : ((x : c.shp) -> (y : d.shp ** d.pos y -> Maybe (c.pos x))))
+      !> (xx : c.shp ** yy' : d.pos (fst (f xx)) ** ?hh)
 
 namespace ExtensionsOfMainContainerExamples
   ||| Isomorphic to the Identity
@@ -120,38 +140,44 @@ namespace ExtensionsOfMainContainerExamples
   ||| Isomorphic to Vect
   public export
   Vect' : (n : Nat) -> Type -> Type
-  Vect' n x = (Vect n) `fullOf` x
+  Vect' n = Ext (Vect n)
 
   ||| Isomorphic to Stream
   public export
   Stream' : Type -> Type
   Stream' = Ext Stream
 
-  ||| Isomorphic to Data.Tree.BTreeSame
+  ||| Isomorphic to Data.Tree.BinTreeSame
   public export
-  BTree' : Type -> Type
-  BTree' = Ext BTree
+  BinTree' : Type -> Type
+  BinTree' = Ext BinTree
 
-  ||| Isomorphic to Data.Tree.BTreeNode
+  ||| Isomorphic to Data.Tree.BinTreeNode
   public export
-  BTreeNode' : Type -> Type
-  BTreeNode' = Ext BTreeNode
+  BinTreeNode' : Type -> Type
+  BinTreeNode' = Ext BinTreeNode
   
-  ||| Isomorphic to Data.Tree.BTreeLeaf
+  ||| Isomorphic to Data.Tree.BinTreeLeaf
   public export
-  BTreeLeaf' : Type -> Type
-  BTreeLeaf' = Ext BTreeLeaf
+  BinTreeLeaf' : Type -> Type
+  BinTreeLeaf' = Ext BinTreeLeaf
 
-  ||| Isomorphic to Data.Tree.RoseTree (TODO)
+  ||| Isomorphic to Data.Tree.ApplicativeRoseTree (TODO)
+  public export
+  ApplicativeRoseTree' : (c : ContA) -> Type -> Type
+  ApplicativeRoseTree' c = Ext (ApplicativeRoseTree c)
+
+  ||| Isomorphic to Data.Tree.RoseTree
   public export
   RoseTree' : Type -> Type
   RoseTree' = Ext RoseTree
 
-  ||| Isomorphic to RoseTreeNode
+  ||| Isomorphic to Data.Tree.RoseTreeNode (TODO)
   public export
   RoseTreeNode' : Type -> Type
   RoseTreeNode' = Ext RoseTreeNode
 
+  ||| Isomorphic to Data.Tree.RoseTreeLeaf (TODO)
   public export
   RoseTreeLeaf' : Type -> Type
   RoseTreeLeaf' = Ext RoseTreeLeaf
@@ -186,66 +212,101 @@ namespace ConversionFunctions
   toVect (_ <| indexCont) = vectTabulate indexCont
 
   public export
-  fromBTreeSame : BTreeSame a -> BTree' a
-  fromBTreeSame (Leaf x) = LeafS <| \_ => x
-  fromBTreeSame (Node x lt rt) =
-    let (lts <| ltc) = fromBTreeSame lt
-        (rts <| rtc) = fromBTreeSame rt
+  fromBinTreeSame : BinTreeSame a -> BinTree' a
+  fromBinTreeSame (Leaf x) = LeafS <| \_ => x
+  fromBinTreeSame (Node x lt rt) =
+    let (lts <| ltc) = fromBinTreeSame lt
+        (rts <| rtc) = fromBinTreeSame rt
     in NodeS lts rts <| \case
         DoneNode => x
         GoLeft posL => ltc posL
         GoRight posR => rtc posR
 
   public export
-  toBTreeSame : BTree' a -> BTreeSame a
-  toBTreeSame (LeafS <| indexCont) = Leaf (indexCont DoneLeaf)
-  toBTreeSame (NodeS lt rt <| indexCont) =
+  toBinTreeSame : BinTree' a -> BinTreeSame a
+  toBinTreeSame (LeafS <| indexCont) = Leaf (indexCont DoneLeaf)
+  toBinTreeSame (NodeS lt rt <| indexCont) =
     Node (indexCont DoneNode)
-         (toBTreeSame (lt <| indexCont . GoLeft))
-         (toBTreeSame (rt <| indexCont . GoRight))
+         (toBinTreeSame (lt <| indexCont . GoLeft))
+         (toBinTreeSame (rt <| indexCont . GoRight))
   
   
   public export
-  fromTreeHelper : BTreePosNode LeafS -> a
+  fromTreeHelper : BinTreePosNode LeafS -> a
   fromTreeHelper Done impossible
   fromTreeHelper (GoLeft x) impossible
   fromTreeHelper (GoRight x) impossible
   
   public export
-  fromBTreeNode : BTreeNode a -> BTreeNode' a
-  fromBTreeNode (Leaf ()) = LeafS <| fromTreeHelper
-  fromBTreeNode (Node node leftTree rightTree)
-    = let (lts <| ltc) = fromBTreeNode leftTree
-          (rts <| rtc) = fromBTreeNode rightTree
+  fromBinTreeNode : BinTreeNode a -> BinTreeNode' a
+  fromBinTreeNode (Leaf ()) = LeafS <| fromTreeHelper
+  fromBinTreeNode (Node node leftTree rightTree)
+    = let (lts <| ltc) = fromBinTreeNode leftTree
+          (rts <| rtc) = fromBinTreeNode rightTree
       in (NodeS lts rts <| \case
             Done => node
             GoLeft posL => ltc posL
             GoRight posR => rtc posR)
 
   public export
-  toBTreeNode : BTreeNode' a -> BTreeNode a
-  toBTreeNode (LeafS <| indexCont) = Leaf ()
-  toBTreeNode (NodeS lt rt <| indexCont) = 
+  toBinTreeNode : BinTreeNode' a -> BinTreeNode a
+  toBinTreeNode (LeafS <| indexCont) = Leaf ()
+  toBinTreeNode (NodeS lt rt <| indexCont) = 
     Node (indexCont Done)
-         (toBTreeNode (lt <| indexCont . GoLeft))
-         (toBTreeNode (rt <| indexCont . GoRight))
+         (toBinTreeNode (lt <| indexCont . GoLeft))
+         (toBinTreeNode (rt <| indexCont . GoRight))
   
   public export
-  fromBTreeLeaf : BTreeLeaf a -> BTreeLeaf' a
-  fromBTreeLeaf (Leaf leaf) = LeafS <| \_ => leaf
-  fromBTreeLeaf (Node node lt rt) =
-    let (shL <| fnL) = fromBTreeLeaf lt
-        (shR <| fnR) = fromBTreeLeaf rt
+  fromBinTreeLeaf : BinTreeLeaf a -> BinTreeLeaf' a
+  fromBinTreeLeaf (Leaf leaf) = LeafS <| \_ => leaf
+  fromBinTreeLeaf (Node node lt rt) =
+    let (shL <| fnL) = fromBinTreeLeaf lt
+        (shR <| fnR) = fromBinTreeLeaf rt
     in NodeS shL shR <| \case
           GoLeft posL => fnL posL
           GoRight posR => fnR posR
 
   public export
-  toBTreeLeaf : BTreeLeaf' a -> BTreeLeaf a
-  toBTreeLeaf (LeafS <| content) = Leaf (content Done)
-  toBTreeLeaf (NodeS l r <| content) =
-    Node' (toBTreeLeaf (l <| content . GoLeft))
-          (toBTreeLeaf (r <| content . GoRight))
+  toBinTreeLeaf : BinTreeLeaf' a -> BinTreeLeaf a
+  toBinTreeLeaf (LeafS <| content) = Leaf (content Done)
+  toBinTreeLeaf (NodeS l r <| content) =
+    Node' (toBinTreeLeaf (l <| content . GoLeft))
+          (toBinTreeLeaf (r <| content . GoRight))
+
+
+  public export
+  fromRoseTreeSame : RoseTreeSame a -> RoseTree' a
+  fromRoseTreeSame rt = ?fromRoseTreeSame_rhs
+
+
+  public export 
+  positionsList : (l : Nat) -> List (Fin l)
+  positionsList 0 = []
+  positionsList (S k) = FZ :: (FS <$> positionsList k)
+
+  -- combineDependent : {r : a -> Type} ->
+  --   List a -> List 
+  -- fromLists : {c : ContA} ->
+  --   List ((sh : c.shp) ** c.pos sh -> a) ->
+  --   List 
+
+  public export
+  toRoseTreeSame : RoseTree' a -> RoseTreeSame a
+  toRoseTreeSame (LeafS <| indexCont) = Leaf (indexCont DoneLeaf)
+  toRoseTreeSame {a} (NodeS ts <| indexCont) = Node
+    (indexCont DoneNode)
+    (let s = RoseTrees.NodesAndLeaves.SubTree
+         pss = positionsList (length ts)
+     in toRoseTreeSame <$> (\i => index' ts i <| indexCont . s i) <$> pss)
+  {-
+   ts : List RoseTreeShape
+   indexCont : RoseTreePos (NodeS ts) -> a
+   t : RoseTreePos (NodeS ts) -> a
+   ------------------------------
+   bb : List (RoseTree a a)
+   -}
+
+  -- indexSubTree : RoseTreePos (NodeS (t :: ts)) -> a
 
 
 public export
@@ -290,25 +351,35 @@ public export
 
 
 public export
-FromConcrete BTree where
-  concreteType = BTreeSame
+FromConcrete BinTree where
+  concreteType = BinTreeSame
   concreteFunctor = %search
-  fromConcreteTy = fromBTreeSame
-  toConcreteTy = toBTreeSame
+  fromConcreteTy = fromBinTreeSame
+  toConcreteTy = toBinTreeSame
 
 public export
-FromConcrete BTreeNode where
-  concreteType = BTreeNode
+FromConcrete BinTreeNode where
+  concreteType = BinTreeNode
   concreteFunctor = %search
-  fromConcreteTy = fromBTreeNode
-  toConcreteTy = toBTreeNode
+  fromConcreteTy = fromBinTreeNode
+  toConcreteTy = toBinTreeNode
 
 public export
-FromConcrete BTreeLeaf where
-  concreteType = BTreeLeaf
+FromConcrete BinTreeLeaf where
+  concreteType = BinTreeLeaf
   concreteFunctor = %search
-  fromConcreteTy = fromBTreeLeaf
-  toConcreteTy = toBTreeLeaf
+  fromConcreteTy = fromBinTreeLeaf
+  toConcreteTy = toBinTreeLeaf
+
+
+public export
+FromConcrete RoseTree where
+  concreteType = RoseTreeSame
+  concreteFunctor = %search
+  fromConcreteTy = fromRoseTreeSame
+  toConcreteTy = toRoseTreeSame
+
+
 
 namespace VectInstances
   public export
@@ -349,21 +420,15 @@ namespace ListInstances
     show x = "[" ++ showListHelper x ++ "]"
 
   ||| This arises out of the Prelude.Types List applicative 
-  ||| Effectively it behaves like the outer product
+  ||| Effectively it behaves like a cartesian product
   public export 
-  [cartProd] Applicative List' where
+  [cartProdInstance] Applicative List' where
     pure = fromList . pure
     fs <*> vs = fromList $ toList fs <*> toList vs
 
   public export
-  listZip : List a -> List b -> List (a, b)
-  listZip [] [] = []
-  listZip [] (y :: ys) = []
-  listZip (x :: xs) [] = []
-  listZip (x :: xs) (y :: ys) = (x, y) :: listZip xs ys
-
   listZip' : List' a -> List' b -> List' (a, b)
-  listZip' (sh1 <| ind1) (sh2 <| ind2) = minimum sh1 sh2 <| \p => ?vm
+  listZip' l1 l2 = fromList $ listZip (toList l1) (toList l2)
 
   ||| This another List applicative, behaving like the usual zip one
   ||| It appears that List doesn't have the concret Zippable instance written
@@ -374,7 +439,7 @@ namespace ListInstances
     fs <*> vs = fromList $ uncurry ($) <$> listZip (toList fs) (toList vs)
 
 
-namespace BTreeInstances
+namespace BinTreeInstances
   {- 
      a           b 
     / \         / \ 
@@ -382,19 +447,19 @@ namespace BTreeInstances
   -}
   ||| TODO finish implementation
   public export
-  liftA2BTree' : BTree' a -> BTree' b -> BTree' (a, b)
-  liftA2BTree' (LeafS <| i1) (LeafS <| i2) = LeafS <| \pos => (i1 pos, i2 pos)
-  liftA2BTree' (LeafS <| i1) ((NodeS lt2 rt2) <| i2) = NodeS lt2 rt2 <| \case
+  liftA2BinTree' : BinTree' a -> BinTree' b -> BinTree' (a, b)
+  liftA2BinTree' (LeafS <| i1) (LeafS <| i2) = LeafS <| \pos => (i1 pos, i2 pos)
+  liftA2BinTree' (LeafS <| i1) ((NodeS lt2 rt2) <| i2) = NodeS lt2 rt2 <| \case
     DoneNode => (i1 DoneLeaf, i2 DoneNode)
     GoLeft posL => (i1 DoneLeaf, i2 (GoLeft posL)) 
     GoRight posR => (i1 DoneLeaf, i2 (GoRight posR))
-  liftA2BTree' ((NodeS lt1 rt1) <| i1) (LeafS <| i2) = NodeS lt1 rt1 <| \case
+  liftA2BinTree' ((NodeS lt1 rt1) <| i1) (LeafS <| i2) = NodeS lt1 rt1 <| \case
     DoneNode => (i1 DoneNode, i2 DoneLeaf)
     GoLeft posL => (i1 (GoLeft posL), i2 DoneLeaf)
     GoRight posR => (i1 (GoRight posR), i2 DoneLeaf)
-  liftA2BTree' ((NodeS lt1 rt1) <| i1) ((NodeS lt2 rt2) <| i2) =
-    let (ls <| fl) = liftA2BTree' (lt1 <| i1 . GoLeft) (lt2 <| i2 . GoLeft)
-        (rs <| fr) = liftA2BTree' (rt1 <| i1 . GoRight) (rt2 <| i2 . GoRight)
+  liftA2BinTree' ((NodeS lt1 rt1) <| i1) ((NodeS lt2 rt2) <| i2) =
+    let (ls <| fl) = liftA2BinTree' (lt1 <| i1 . GoLeft) (lt2 <| i2 . GoLeft)
+        (rs <| fr) = liftA2BinTree' (rt1 <| i1 . GoRight) (rt2 <| i2 . GoRight)
     in NodeS ls rs <| \case
         DoneNode => (i1 DoneNode, i2 DoneNode)
         GoLeft posL => fl posL
@@ -402,101 +467,110 @@ namespace BTreeInstances
   -- Is the above correct? I think so
 
   public export
-  Applicative BTree' where
+  Applicative BinTree' where
     pure a = LeafS <| \_ => a
-    fs <*> vs = uncurry ($) <$> liftA2BTree' fs vs
+    fs <*> vs = uncurry ($) <$> liftA2BinTree' fs vs
 
 
-namespace BTreeLeafInstances
+namespace BinTreeLeafInstances
   public export
-  showBTreeLeaf' : Show a => BTreeLeaf' a -> String
-  showBTreeLeaf' (LeafS <| content) = "Leaf (" ++ show (content Done) ++ ")"
-  showBTreeLeaf' ((NodeS l r) <| content) =
-    let leftSubtree : BTreeLeaf' a = (l <| \posL => content (GoLeft posL))
-        rightSubtree : BTreeLeaf' a = (r <| \posR => content (GoRight posR))
-    in "Node (" ++ showBTreeLeaf' leftSubtree ++ ") (" ++ showBTreeLeaf' rightSubtree ++ ")"
+  showBinTreeLeaf' : Show a => BinTreeLeaf' a -> String
+  showBinTreeLeaf' (LeafS <| content) = "Leaf (" ++ show (content Done) ++ ")"
+  showBinTreeLeaf' ((NodeS l r) <| content) =
+    let leftSubtree : BinTreeLeaf' a = (l <| \posL => content (GoLeft posL))
+        rightSubtree : BinTreeLeaf' a = (r <| \posR => content (GoRight posR))
+    in "Node (" ++ showBinTreeLeaf' leftSubtree ++ ") (" ++ showBinTreeLeaf' rightSubtree ++ ")"
 
   partial -- not partial but not sure how to convince Idris totality checker
   public export
-  Show a => Show (BTreeLeaf' a) where
-    show t = show (toBTreeLeaf t)
+  Show a => Show (BinTreeLeaf' a) where
+    show t = show (toBinTreeLeaf t)
 
   public export
-  Eq a => Eq (BTreeLeaf' a) where
+  Eq a => Eq (BinTreeLeaf' a) where
     (LeafS <| v) == (LeafS <| v') = v Done == v' Done
     ((NodeS l r) <| v) == ((NodeS l' r') <| v') =
-      (l == l') && (r == r') && ?vnm -- Assuming Eq BTreeShape is defined elsewhere
+      (l == l') && (r == r') && ?vnm -- Assuming Eq BinTreeShape is defined elsewhere
     _ == _ = False
 
   public export
-  liftA2BBTreeLeaf' : BTreeLeaf' a -> BTreeLeaf' b -> BTreeLeaf' (a, b)
-  liftA2BBTreeLeaf' (LeafS <| v) (LeafS <| v') = LeafS <| (\x => (v x, v' x))
-  liftA2BBTreeLeaf' (LeafS <| v) (NodeS l' r' <| v') =
+  liftA2BBinTreeLeaf' : BinTreeLeaf' a -> BinTreeLeaf' b -> BinTreeLeaf' (a, b)
+  liftA2BBinTreeLeaf' (LeafS <| v) (LeafS <| v') = LeafS <| (\x => (v x, v' x))
+  liftA2BBinTreeLeaf' (LeafS <| v) (NodeS l' r' <| v') =
     NodeS l' r' <| \case
         GoLeft posL' => (v Done, v' (GoLeft posL'))
         GoRight posR' => (v Done, v' (GoRight posR'))
-  liftA2BBTreeLeaf' (NodeS l r <| v) (LeafS <| v') =
+  liftA2BBinTreeLeaf' (NodeS l r <| v) (LeafS <| v') =
     NodeS l r <| \case
         GoLeft posL => (v (GoLeft posL), v' Done)
         GoRight posR => (v (GoRight posR), v' Done)
-  liftA2BBTreeLeaf' (NodeS l r <| v) (NodeS l' r' <| v') =
-    let (ls <| fl) = liftA2BBTreeLeaf' (l <| v . GoLeft) (l' <| v' . GoLeft)
-        (rs <| fr) = liftA2BBTreeLeaf' (r <| v . GoRight) (r' <| v' . GoRight)
+  liftA2BBinTreeLeaf' (NodeS l r <| v) (NodeS l' r' <| v') =
+    let (ls <| fl) = liftA2BBinTreeLeaf' (l <| v . GoLeft) (l' <| v' . GoLeft)
+        (rs <| fr) = liftA2BBinTreeLeaf' (r <| v . GoRight) (r' <| v' . GoRight)
     in (NodeS ls rs <| \case
           GoLeft posL => fl posL
           GoRight posR => fr posR)
 
   public export
-  Applicative BTreeLeaf' where
+  Applicative BinTreeLeaf' where
     pure a = LeafS <| \_ => a
-    fs <*> vs = uncurry ($) <$> liftA2BBTreeLeaf' fs vs 
+    fs <*> vs = uncurry ($) <$> liftA2BBinTreeLeaf' fs vs 
 
 
   ||| Just summing up elements of the tree given by the Num a structure
   public export
-  Num a => Algebra BTreeLeaf' a where
+  Num a => Algebra BinTreeLeaf' a where
     reduce (LeafS <| v) = v Done
     reduce (NodeS l r <| v) =
       let leftSubtree = l <| v . GoLeft
           rightSubtree = r <| v . GoRight
-      in reduce {f=BTreeLeaf'} leftSubtree +
-         reduce {f=BTreeLeaf'} rightSubtree
+      in reduce {f=BinTreeLeaf'} leftSubtree +
+         reduce {f=BinTreeLeaf'} rightSubtree
 
 
-namespace BTreeNodeInstances
+namespace BinTreeNodeInstances
   -- TODO missing Eq instance for trees
 
-  impossibleCase : BTreePosNode LeafS -> (a, b)
+  impossibleCase : BinTreePosNode LeafS -> (a, b)
   impossibleCase Done impossible
   impossibleCase (GoLeft x) impossible
   impossibleCase (GoRight x) impossible
 
-  ||| Combine two BTreeNode' structures, pairing values at corresponding nodes.
+  ||| Combine two BinTreeNode' structures, pairing values at corresponding nodes.
   ||| The resulting shape is the intersection of the input shapes.
   public export
-  liftA2BTreeNode' : BTreeNode' a -> BTreeNode' b -> BTreeNode' (a, b)
-  liftA2BTreeNode' (NodeS l1 r1 <| f1) (NodeS l2 r2 <| f2) =
-    let (ls <| fl) = liftA2BTreeNode' (l1 <| f1 . GoLeft) (l2 <| f2 . GoLeft)
-        (rs <| fr) = liftA2BTreeNode' (r1 <| f1 . GoRight) (r2 <| f2 . GoRight)
+  liftA2BinTreeNode' : BinTreeNode' a -> BinTreeNode' b -> BinTreeNode' (a, b)
+  liftA2BinTreeNode' (NodeS l1 r1 <| f1) (NodeS l2 r2 <| f2) =
+    let (ls <| fl) = liftA2BinTreeNode' (l1 <| f1 . GoLeft) (l2 <| f2 . GoLeft)
+        (rs <| fr) = liftA2BinTreeNode' (r1 <| f1 . GoRight) (r2 <| f2 . GoRight)
 
-        resultFunc : BTreePosNode (NodeS ls rs) -> (a, b)
+        resultFunc : BinTreePosNode (NodeS ls rs) -> (a, b)
         resultFunc Done = (f1 Done, f2 Done)
         resultFunc (GoLeft posL) = fl posL
         resultFunc (GoRight posR) = fr posR
     in (NodeS ls rs <| resultFunc)
-  liftA2BTreeNode' _ _ = LeafS <| impossibleCase
+  liftA2BinTreeNode' _ _ = LeafS <| impossibleCase
 
   public export
-  Applicative BTreeNode' where
+  Applicative BinTreeNode' where
     pure a = NodeS LeafS LeafS <| \_ => a
-    fs <*> vs = uncurry ($) <$> liftA2BTreeNode' fs vs 
+    fs <*> vs = uncurry ($) <$> liftA2BinTreeNode' fs vs 
 
   public export
-  Num a => Algebra BTreeNode' a where
+  Num a => Algebra BinTreeNode' a where
     reduce (LeafS <| v) = fromInteger 0
     reduce (NodeS l r <| v) = v Done +
-      reduce {f=BTreeNode'} (l <| v . GoLeft) +
-      reduce {f=BTreeNode'} (r <| v . GoRight)
+      reduce {f=BinTreeNode'} (l <| v . GoLeft) +
+      reduce {f=BinTreeNode'} (r <| v . GoRight)
 
 
 
+-- namespace RoseTreeInstances
+--   public export
+--   liftA2RoseTree' : RoseTree' a -> RoseTree' b -> RoseTree' (a, b)
+--   liftA2RoseTree' t1 t2 = 
+-- 
+--   public export
+--   Applicative RoseTree' where
+--     pure a = LeafS <| \_ => a
+--     fs <*> vs = uncurry ($) <$> liftA2RoseTree' fs vs
