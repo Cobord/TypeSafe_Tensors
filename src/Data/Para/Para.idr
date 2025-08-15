@@ -1,4 +1,4 @@
-module Para.Para
+module Data.Para.Para
 
 import Data.Vect
 import Data.Vect.Quantifiers

@@ -143,7 +143,7 @@ namespace Triangular
   triABool : {c : ContA} -> (ip : InterfaceOnPositions MOrd (GetC c)) =>
     (sh : c.shp) -> TensorA [c, c] Bool
   triABool {ip = PosInterface {p}} sh
-    = let cPositions : TensorA [c] (c.pos sh) := positions sh
+    = let cPositions = positions {sh=sh}
           pp : MOrd (c.pos sh) := p sh
       in outerAWithFn (flip isSubTerm) cPositions cPositions
 

@@ -34,24 +34,24 @@ public export
 
 ||| Summing up elements of the tree given by the Num a structure
 public export
-Num a => Algebra BTreeLeaf a where
+Num a => Algebra BinTreeLeaf a where
   reduce (Leaf leaf) = leaf
   reduce (Node _ leftTree rightTree)
-    = (reduce {f=BTreeLeaf} leftTree) + 
-      (reduce {f=BTreeLeaf} rightTree)
+    = (reduce {f=BinTreeLeaf} leftTree) + 
+      (reduce {f=BinTreeLeaf} rightTree)
 
 -- can be simplified by uncommenting the Num (f a) instance in Num.idr
 public export
-[usualSum'] Num a => Applicative f => Algebra BTreeLeaf (f a) where
+[usualSum'] Num a => Applicative f => Algebra BinTreeLeaf (f a) where
   reduce (Leaf leaf) = leaf
   reduce (Node node leftTree rightTree)
-    = let lt = reduce {f=BTreeLeaf} leftTree 
-          rt = reduce {f=BTreeLeaf} rightTree
+    = let lt = reduce {f=BinTreeLeaf} leftTree 
+          rt = reduce {f=BinTreeLeaf} rightTree
       in (uncurry (+)) <$> (liftA2 lt rt) 
 
 public export
-Num a => Algebra BTreeNode a where
+Num a => Algebra BinTreeNode a where
   reduce (Leaf _) = fromInteger 0
   reduce (Node node leftTree rightTree)
-     = node + (reduce {f=BTreeNode} leftTree)
-            + (reduce {f=BTreeNode} rightTree)
+     = node + (reduce {f=BinTreeNode} leftTree)
+            + (reduce {f=BinTreeNode} rightTree)

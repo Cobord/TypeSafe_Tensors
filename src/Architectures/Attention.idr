@@ -129,9 +129,9 @@ SelfAttentionMat = SelfAttention softmax
 
 -- Self Attention for trees
 SelfAttentionTree : {d : Nat} -> Para
-  (TensorA [BTreeLeaf, Vect d] Double)
-  (TensorA [BTreeLeaf, Vect d] Double)
-SelfAttentionTree = SelfAttentionA softmaxBTreeLeaf
+  (TensorA [BinTreeLeaf, Vect d] Double)
+  (TensorA [BinTreeLeaf, Vect d] Double)
+SelfAttentionTree = SelfAttentionA softmaxBinTreeLeaf
 
 
 inputMatrix : Tensor [4, 2] Double
@@ -149,9 +149,9 @@ params = MkSAParamsA onesA onesA onesA
 SAOutputMatrix : Tensor [4, 2] Double
 SAOutputMatrix = (Run SelfAttentionMat) inputMatrix (ToCubicalParams params)
 
-tree1 : TensorA [BTreeLeaf, Vect 2] Double
+tree1 : TensorA [BinTreeLeaf, Vect 2] Double
 tree1 = fromConcreteA $ Node' (Leaf [4, 5]) (Leaf [-12, 25])
 
 ||| Example output for tree self-attention
-SAOutputTree : TensorA [BTreeLeaf, Vect 2] Double
+SAOutputTree : TensorA [BinTreeLeaf, Vect 2] Double
 SAOutputTree = (Run SelfAttentionTree) tree1 params

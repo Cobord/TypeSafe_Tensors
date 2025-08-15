@@ -4,31 +4,29 @@ import Data.Tensor
 import Para.Para
 
 public export
-linearImpl : {x, y : ContA} -> {a : Type} -> Num a =>
+linearImplA : {x, y : ContA} -> Num a =>
   AllAlgebra [x] a =>
   TensorA [y, x] a -> TensorA [y] a -> TensorA [x] a -> TensorA [y] a
-linearImpl weights bias input = matrixVectorProductA weights input + bias
+linearImplA weights bias input = matrixVectorProductA weights input + bias
 
-linearImpl' : {i, j : Nat} -> {a : Type} -> Num a =>
+linearImpl : {i, j : Nat} -> Num a =>
   Tensor [j, i] a -> Tensor [j] a -> Tensor [i] a -> Tensor [j] a
-linearImpl' = ?ghh -- linearImpl {x=Vect i, y=Vect j} {a}
-
-linearImplTreeLeaf : {a : Type} -> Num a =>
-  TensorA [BTreeLeaf, BTreeLeaf] a ->
-  TensorA [BTreeLeaf] a ->
-  TensorA [BTreeLeaf] a ->
-  TensorA [BTreeLeaf] a
-linearImplTreeLeaf = linearImpl
+linearImpl weights bias input = ToCubicalTensor $ linearImplA
+  (FromCubicalTensor weights)
+  (FromCubicalTensor bias)
+  (FromCubicalTensor input)
 
 public export
-linearPara : {x, y : ContA} -> {a : Type} -> Num a =>
+linearParaA : {x, y : ContA} -> {a : Type} -> Num a =>
   AllAlgebra [x] a =>
   Para (TensorA [x] a) (TensorA [y] a)
-linearPara = MkPara
+linearParaA = MkPara
   (const (TensorA [y, x] a, TensorA [y] a))
+  (\input, (weights, bias) => linearImplA weights bias input)
+
+public export
+linearPara : {i, j : Nat} -> {a : Type} -> Num a =>
+  Para (Tensor [i] a) (Tensor [j] a)
+linearPara = MkPara
+  (const (Tensor [j, i] a, Tensor [j] a))
   (\input, (weights, bias) => linearImpl weights bias input)
-
-
--- linearPara' : {i, j : Nat} -> {a : Type} -> Num a =>
---   Para (Tensor [i] a) (Tensor [j] a)
--- linearPara' = ?ghh -- linearPara {x=Vect i, y=Vect j} {a}

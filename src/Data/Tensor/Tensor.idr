@@ -374,8 +374,8 @@ namespace NaperianTensorA
   ||| Not requiring the Naperian instance here
   public export
   positions : {c : ContA} ->
-    (sh : c.shp) -> TensorA [c] (c.pos sh)
-  positions sh = TS (TZ <$> positionsCont sh)
+    {sh : c.shp} -> TensorA [c] (c.pos sh)
+  positions = TS (TZ <$> positionsCont)
 
   -- public export
   -- data IndexTData : Type where
@@ -579,41 +579,41 @@ namespace CubicalTensor
   public export
   record Tensor (shape : List Nat) a where
     constructor ToCubicalTensor
-    FromCubicalTensor : TensorA (NatToVect <$> shape) a
+    FromCubicalTensor : TensorA (Vect <$> shape) a
 
   public export
   FromCubicalTensorMap : (Tensor oldShape a -> Tensor newShape b) ->
-    TensorA (NatToVect <$> oldShape) a -> TensorA (NatToVect <$> newShape) b
+    TensorA (Vect <$> oldShape) a -> TensorA (Vect <$> newShape) b
   FromCubicalTensorMap f = FromCubicalTensor . f . ToCubicalTensor
 
   public export
   ToCubicalTensorMap :
-    (TensorA (NatToVect <$> oldShape) a ->  TensorA (NatToVect <$> newShape) b) ->
+    (TensorA (Vect <$> oldShape) a ->  TensorA (Vect <$> newShape) b) ->
     Tensor oldShape a -> Tensor newShape b
   ToCubicalTensorMap f = ToCubicalTensor . f . FromCubicalTensor
 
   public export
   ToCubicalTensorRel : {shape : List Nat} ->
-    (TensorA (NatToVect <$> shape) a -> TensorA (NatToVect <$> shape) b -> c) ->
+    (TensorA (Vect <$> shape) a -> TensorA (Vect <$> shape) b -> c) ->
     Tensor shape a -> Tensor shape b -> c
   ToCubicalTensorRel f t t' = f (FromCubicalTensor t) (FromCubicalTensor t')
 
   public export
   FromCubicalTensorRel : {shape : List Nat} ->
     (Tensor shape a -> Tensor shape b -> c) ->
-    TensorA (NatToVect <$> shape) a -> TensorA (NatToVect <$> shape) b -> c
+    TensorA (Vect <$> shape) a -> TensorA (Vect <$> shape) b -> c
   FromCubicalTensorRel f t t' = f (ToCubicalTensor t) (ToCubicalTensor t')
 
   namespace TensorInterfaces
     public export
     {shape : List Nat} ->
-    AllEq (NatToVect <$> shape) a =>
+    AllEq (Vect <$> shape) a =>
     Eq (Tensor shape a) where
         (==) = ToCubicalTensorRel (==)
 
     public export
     {shape : List Nat} ->
-    AllShow (NatToVect <$> shape) a =>
+    AllShow (Vect <$> shape) a =>
     Show (Tensor shape a) where
       show (ToCubicalTensor t) = show t
 
@@ -621,16 +621,16 @@ namespace CubicalTensor
     {shape : List Nat} ->
     Num a =>
     Num (Tensor shape a) where
-      fromInteger i = ToCubicalTensor $ fromInteger {ty=(TensorA (NatToVect <$> shape) a)} i
-      (ToCubicalTensor xs) + (ToCubicalTensor ys) = ToCubicalTensor $ (+) {ty=(TensorA (NatToVect <$> shape) a)} xs ys
-      (ToCubicalTensor xs) * (ToCubicalTensor ys) = ToCubicalTensor $ (*) {ty=(TensorA (NatToVect <$> shape) a)} xs ys
+      fromInteger i = ToCubicalTensor $ fromInteger {ty=(TensorA (Vect <$> shape) a)} i
+      (ToCubicalTensor xs) + (ToCubicalTensor ys) = ToCubicalTensor $ (+) {ty=(TensorA (Vect <$> shape) a)} xs ys
+      (ToCubicalTensor xs) * (ToCubicalTensor ys) = ToCubicalTensor $ (*) {ty=(TensorA (Vect <$> shape) a)} xs ys
 
     public export
     {shape : List Nat} ->
     Neg a =>
     Neg (Tensor shape a) where
       negate (ToCubicalTensor t) = ToCubicalTensor $ negate t
-      (ToCubicalTensor xs) - (ToCubicalTensor ys) = ToCubicalTensor $ (-) {ty=(TensorA (NatToVect <$> shape) a)} xs ys
+      (ToCubicalTensor xs) - (ToCubicalTensor ys) = ToCubicalTensor $ (-) {ty=(TensorA (Vect <$> shape) a)} xs ys
 
     public export
     {shape : List Nat} -> Abs a => Abs (Tensor shape a) where
@@ -653,13 +653,13 @@ namespace CubicalTensor
 
     public export
     {shape : List Nat} ->
-    AllAlgebra (NatToVect <$> shape) a =>
+    AllAlgebra (Vect <$> shape) a =>
     Algebra (Tensor shape) a where
         reduce (ToCubicalTensor t) = reduce t
 
     public export
     tensorFoldr : {shape : List Nat} ->
-      (el -> acc -> acc) -> acc -> TensorA (NatToVect <$> shape) el -> acc
+      (el -> acc -> acc) -> acc -> TensorA (Vect <$> shape) el -> acc
     tensorFoldr {shape = []} f z t = foldr f z t
     tensorFoldr {shape = (s :: ss)} f z (TS xs)
       = foldr (\t, acc => tensorFoldr f acc t) z xs
@@ -672,7 +672,7 @@ namespace CubicalTensor
 
     -- public export
     -- {shape : List Nat} ->
-    -- Foldable (TensorA (NatToVect <$> shape)) where
+    -- Foldable (TensorA (Vect <$> shape)) where
     --   foldr f z t = tensorFoldr f z t
 
 
@@ -691,7 +691,7 @@ namespace CubicalTensor
 
   public export
   dot : {shape : List Nat} -> {a : Type}
-    -> Num a => Algebra (TensorA (NatToVect <$> shape)) a
+    -> Num a => Algebra (TensorA (Vect <$> shape)) a
     => Tensor shape a -> Tensor shape a -> Tensor [] a
   dot t t' = ToCubicalTensor (dotA (FromCubicalTensor t) (FromCubicalTensor t'))
 
@@ -720,14 +720,14 @@ namespace CubicalTensor
   public export
   fromArrayHelper : {shape : List Nat}
     -> Array shape a
-    -> TensorA (NatToVect <$> shape) a
+    -> TensorA (Vect <$> shape) a
   fromArrayHelper {shape=[]} a = TZ a
   fromArrayHelper {shape=(s :: ss)} xs
     = TS $ fromVect $ fromArrayHelper <$> xs
 
   public export
   toArrayHelper : {shape : List Nat} ->
-    TensorA (NatToVect <$> shape) a -> Array shape a
+    TensorA (Vect <$> shape) a -> Array shape a
   toArrayHelper {shape = []} (TZ a) = a
   toArrayHelper {shape = (s :: ss)} (TS xs) = toVect $ toArrayHelper <$> xs
 
@@ -797,7 +797,7 @@ namespace IndexTensor
     %hint
     public export
     allPosEqCubical : {shape : List Nat} ->
-      AllPosEq (NatToVect <$> shape)
+      AllPosEq (Vect <$> shape)
     allPosEqCubical {shape = []} = []
     allPosEqCubical {shape = (_ :: _)} = ConsPosEq {apecs=allPosEqCubical}
       
@@ -817,7 +817,7 @@ namespace IndexTensor
     public export
     indexTensor : {shape : List Nat} ->
       (t : Tensor shape a) ->
-      (ind : IndexTA (NatToVect <$> shape) (FromCubicalTensor t)) ->
+      (ind : IndexTA (Vect <$> shape) (FromCubicalTensor t)) ->
       a
     indexTensor t index = indexTensorA (FromCubicalTensor t) index
 
@@ -825,7 +825,7 @@ namespace IndexTensor
     public export
     (@@) : {shape : List Nat} ->
       (t : Tensor shape a) ->
-      (ind : IndexTA (NatToVect <$> shape) (FromCubicalTensor t)) ->
+      (ind : IndexTA (Vect <$> shape) (FromCubicalTensor t)) ->
       a
     (@@) = indexTensor
 
@@ -833,7 +833,7 @@ namespace IndexTensor
     public export
     (^.) : {shape : List Nat} ->
       (t : Tensor shape a) ->
-      (ind : IndexTA (NatToVect <$> shape) (FromCubicalTensor t)) ->
+      (ind : IndexTA (Vect <$> shape) (FromCubicalTensor t)) ->
       a
     (^.) = indexTensor
 
@@ -843,7 +843,7 @@ namespace IndexTensor
     public export
     (.~) : {shape : List Nat} ->
       (t : Tensor shape a) ->
-      IndexTA (NatToVect <$> shape) (FromCubicalTensor t) ->
+      IndexTA (Vect <$> shape) (FromCubicalTensor t) ->
       a ->
       Tensor shape a
     (.~) t i val = ToCubicalTensor $

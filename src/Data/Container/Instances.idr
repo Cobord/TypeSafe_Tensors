@@ -273,40 +273,38 @@ namespace ConversionFunctions
     Node' (toBinTreeLeaf (l <| content . GoLeft))
           (toBinTreeLeaf (r <| content . GoRight))
 
+  ||| Indexing an element of `xs` and then applying `f` to it is the same as
+  ||| mapping `f` over xs, and then indexing the result
+  public export
+  mapIndexPreserve : {0 f : a -> b} ->
+    (xs : List a) ->
+    (i : Fin (length (f <$> xs))) ->
+    f (index' xs (rewrite sym (lengthMap {f=f} xs) in i)) = index' (f <$> xs) i
+  mapIndexPreserve (x :: xs) FZ = Refl
+  mapIndexPreserve (x :: xs) (FS j) = mapIndexPreserve xs j
 
   public export
   fromRoseTreeSame : RoseTreeSame a -> RoseTree' a
-  fromRoseTreeSame rt = ?fromRoseTreeSame_rhs
-
+  fromRoseTreeSame (Leaf a) = LeafS <| \DoneLeaf => a
+  fromRoseTreeSame (Node a rts) =
+    let t = fromRoseTreeSame <$> rts
+    in NodeS (shapeExt <$> t) <| \case
+      DoneNode => a
+      SubTree ps posSt => indexCont
+        (index' t (rewrite sym (lengthMap {f=shapeExt} t) in ps))
+        (rewrite mapIndexPreserve {f=shapeExt} t ps in posSt)
 
   public export 
   positionsList : (l : Nat) -> List (Fin l)
   positionsList 0 = []
   positionsList (S k) = FZ :: (FS <$> positionsList k)
 
-  -- combineDependent : {r : a -> Type} ->
-  --   List a -> List 
-  -- fromLists : {c : ContA} ->
-  --   List ((sh : c.shp) ** c.pos sh -> a) ->
-  --   List 
-
   public export
   toRoseTreeSame : RoseTree' a -> RoseTreeSame a
   toRoseTreeSame (LeafS <| indexCont) = Leaf (indexCont DoneLeaf)
-  toRoseTreeSame {a} (NodeS ts <| indexCont) = Node
-    (indexCont DoneNode)
-    (let s = RoseTrees.NodesAndLeaves.SubTree
-         pss = positionsList (length ts)
-     in toRoseTreeSame <$> (\i => index' ts i <| indexCont . s i) <$> pss)
-  {-
-   ts : List RoseTreeShape
-   indexCont : RoseTreePos (NodeS ts) -> a
-   t : RoseTreePos (NodeS ts) -> a
-   ------------------------------
-   bb : List (RoseTree a a)
-   -}
-
-  -- indexSubTree : RoseTreePos (NodeS (t :: ts)) -> a
+  toRoseTreeSame (NodeS ts <| indexCont) = Node (indexCont DoneNode) $
+    let ps = positionsList (length ts)
+    in toRoseTreeSame <$> (\i => index' ts i <| indexCont . SubTree i) <$> ps
 
 
 public export
@@ -378,7 +376,6 @@ FromConcrete RoseTree where
   concreteFunctor = %search
   fromConcreteTy = fromRoseTreeSame
   toConcreteTy = toRoseTreeSame
-
 
 
 namespace VectInstances
@@ -565,12 +562,13 @@ namespace BinTreeNodeInstances
 
 
 
--- namespace RoseTreeInstances
---   public export
---   liftA2RoseTree' : RoseTree' a -> RoseTree' b -> RoseTree' (a, b)
---   liftA2RoseTree' t1 t2 = 
--- 
---   public export
---   Applicative RoseTree' where
---     pure a = LeafS <| \_ => a
---     fs <*> vs = uncurry ($) <$> liftA2RoseTree' fs vs
+namespace RoseTreeInstances
+  public export
+  liftA2RoseTree' : RoseTree' a -> RoseTree' b -> RoseTree' (a, b)
+  liftA2RoseTree' t1 t2 = fromRoseTreeSame $
+    liftA2RoseTreeSame (toRoseTreeSame t1) (toRoseTreeSame t2)
+
+  public export
+  Applicative RoseTree' where
+    pure a = LeafS <| \_ => a
+    fs <*> vs = uncurry ($) <$> liftA2RoseTree' fs vs

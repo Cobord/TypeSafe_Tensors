@@ -63,10 +63,9 @@ failing
    indexExampleFail : Double
    indexExampleFail = t1 @@ [7, 2]
 
--- ||| Safe transposition
--- For some reason this started being incredibly slow to typecheck, commenting out for the time being
--- t1Transposed : Tensor [4, 3] Double
--- t1Transposed = transposeMatrix t1
+||| Safe transposition
+t1Transposed : Tensor [4, 3] Double
+t1Transposed = transposeMatrix t0
 
 ||| Safe slicing
 takeExample : Tensor [2, 1] Double
@@ -102,7 +101,7 @@ exList2 : TensorA [List] Double
 exList2 = fromConcreteA [100,-200,1000]
 
 {- 
-We can also use BTreeLeaf, allowing us to store a tree with data on its leaves
+We can also use BinTreeLeaf, allowing us to store a tree with data on its leaves
 
         *
       /   \
@@ -110,7 +109,7 @@ We can also use BTreeLeaf, allowing us to store a tree with data on its leaves
     / \
 (-42)  46 
 -}
-exTree1 : TensorA [BTreeLeaf] Double
+exTree1 : TensorA [BinTreeLeaf] Double
 exTree1 = fromConcreteA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
 
@@ -121,21 +120,21 @@ Here's another tree, with a different number of elements
       /   \
      10   100 
 -}
-exTree2 : TensorA [BTreeLeaf] Double
+exTree2 : TensorA [BinTreeLeaf] Double
 exTree2 = fromConcreteA $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take the dot product of these two trees
 ||| The fact that they don't have the same number of elements is irrelevant
-||| What matters is that the container defining them 'BTreeLeaf' is the same
+||| What matters is that the container defining them 'BinTreeLeaf' is the same
 dotProduct2 : TensorA [] Double
 dotProduct2 = dotA exTree1 exTree2
 
 ||| Here's a tree with whose nodes are vectors of size 2
-exTree3 : TensorA [BTreeNode, Vect 2] Double
+exTree3 : TensorA [BinTreeNode, Vect 2] Double
 exTree3 = fromConcreteA $ Node [4,1] (Node [17, 4] Leaf' Leaf') Leaf'
 
 ||| This can get very complex, but is still fully type-checked
-exTree4 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
+exTree4 : TensorA [BinTreeNode, BinTreeLeaf, Vect 3] Double
 exTree4 = fromConcreteA $
   Node (Node'
           (Leaf [1,2,3])
@@ -179,9 +178,9 @@ Here's a tree-vector with nodes as elements
   / \
  *   *
 -}
-exTree5 : TensorA [BTreeNode] Double
+exTree5 : TensorA [BinTreeNode] Double
 exTree5 = fromConcreteA $ Node 3 (Node 2 (Node 1 Leaf' Leaf') Leaf') (Node 4 Leaf' Leaf')
 
 ||| And here is the in-order traversal of that tree
 traverseTree : TensorA [List] Double
-traverseTree = reshapeTensorA inorderBTreeNode exTree5
+traverseTree = reshapeTensorA inorderBinTreeNode exTree5

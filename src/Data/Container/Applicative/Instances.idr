@@ -65,6 +65,10 @@ namespace ApplicativeInstances
   BinTreeLeaf : ContA
   BinTreeLeaf = (#) BinTreeLeaf
 
+  public export
+  RoseTree : ContA
+  RoseTree = (#) RoseTree
+
   -- namespace ContDefs
   --   ||| Rose trees with data stored at both nodes and leaves
   --   public export
@@ -99,8 +103,16 @@ namespace ConversionFunctions
     = NodeS $ fromList (fromRoseTreeSameToShape <$> xs)
 
 
-  -- public export
-  -- fromRoseTreeSame : RoseTreeSame a -> ApplicativeRoseTree' List a
+  public export
+  fromRoseTreeSameAppl : RoseTreeSame a -> ApplicativeRoseTree' List a
+  fromRoseTreeSameAppl (Leaf a) = LeafS <| \_ => a
+  fromRoseTreeSameAppl (Node a rts) = let h = fromList rts in
+    NodeS (shapeExt <$> (fromRoseTreeSameAppl <$> fromList rts)) <| \case
+      DoneNode => a
+      SubTree ps posSt =>
+        let t = indexCont (fromRoseTreeSameAppl <$> fromList rts)
+        in ?what
+
   -- fromRoseTreeSame (Leaf a) = LeafS <| \_ => a 
   -- fromRoseTreeSame (Node a sts)
   --   = let ges = fromList sts
@@ -140,28 +152,12 @@ namespace ConversionFunctions
   public export
   toRoseTreeSameAppl : ApplicativeRoseTree' List a -> RoseTreeSame a
   toRoseTreeSameAppl (LeafS <| indexC) = Leaf (indexC DoneLeaf)
-  toRoseTreeSameAppl (NodeS exts <| indexC) = Node
-    (indexC DoneNode) $
-    let pss = positionsCont {c=List} (shapeExt exts)
-        s = ApplicativeRoseTree.NodesAndLeaves.SubTree
-    in toList $
-      toRoseTreeSameAppl <$> (\i => indexCont exts i <| indexC . s i) <$> pss
+  toRoseTreeSameAppl (NodeS (len <| content) <| indexC)
+    = Node (indexC DoneNode)
+           (toList $ toRoseTreeSameAppl 
+                  <$> (\i => content i <| indexC . SubTree i)
+                  <$> positionsCont)
     
-    
-    -- toList (toRoseTreeSame <$> (?tuuu)) -- toList (toRoseTreeSame <$> ?whao)
-            -- is = indexCont exts <$> pss
-        -- indexC : RoseTreePos List (NodeS sts)
-        -- ?uuu : Ext List (RoseTreeSame a)
-
-  {-
-   exts : Ext List (RoseTreeShape List)
-   indexC : RoseTreePos List (NodeS exts) -> a
-   s : (ps : c .pos (shapeExt ts)) -> RoseTreePos c (indexCOnt ts ps) -> RoseTreePos c (NodeS ts)
-   t : RoseTreePos List (NodeS exts) -> a
-   ------------------------------
-   vnnn : List (RoseTree a a)
-   -}
-
   -- public export
   -- RoseTree : ContA
   -- RoseTree = (#) RoseTree

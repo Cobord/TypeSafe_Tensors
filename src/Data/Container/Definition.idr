@@ -98,13 +98,13 @@ public export
 ||| Data.Functor.positions is this definition for Naperian containers
 ||| i.e. containers with a unit shape
 public export
-positionsCont : {c : Cont} ->
-  (sh : c.shp) -> Ext c (c.pos sh)
-positionsCont sh = sh <| id
+positionsCont : {c : Cont} -> {sh : c.shp} ->
+  Ext c (c.pos sh)
+positionsCont = sh <| id
 
 --ex1 : String
 --ex1 = let g = toConcreteTy $ Definition.positions {c=Vect 3} ()
---          gg = toConcreteTy $ Definition.positions {c=BTree} (NodeS LeafS LeafS)
+--          gg = toConcreteTy $ Definition.positions {c=BinTree} (NodeS LeafS LeafS)
 --          h = toConcreteTy $ Definition.positions {c=List} 4
 --      in show gg
 

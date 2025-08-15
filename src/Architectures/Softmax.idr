@@ -7,9 +7,9 @@ softmaxA : {i : ContA} -> Fractional a => Exp a =>
   (allAlg : AllAlgebra [i] a) =>
   {default 1 temperature : a} ->
   TensorA [i] a -> TensorA [i] a
-softmaxA {temperature} t = let exps = exp <$> (t <&> (/ temperature))
-                           in exps <&> (/ (reduce exps))
-
+softmaxA {temperature} t
+  = let exps : TensorA [i] a := exp <$> (t <&> (/ temperature))
+    in exps <&> (/ (reduce exps))
 
 
 ||| Softmax for a cubical 1D tensor, i.e. a vector
@@ -17,18 +17,18 @@ public export
 softmax : {i : Nat} -> {a : Type} -> Fractional a => Exp a => 
   {default 1 temperature : a} ->
   Tensor [i] a -> Tensor [i] a
-softmax {temperature} = ToCubicalTensorMap softmaxA
+softmax {temperature} = ToCubicalTensorMap (softmaxA {temperature=temperature})
 
 
 public export
-softmaxBTreeLeaf : {a : Type} -> Fractional a => Exp a =>
-  TensorA [BTreeLeaf] a -> TensorA [BTreeLeaf] a
-softmaxBTreeLeaf = softmaxA
+softmaxBinTreeLeaf : {a : Type} -> Fractional a => Exp a =>
+  TensorA [BinTreeLeaf] a -> TensorA [BinTreeLeaf] a
+softmaxBinTreeLeaf = softmaxA
 
 public export
-softmaxBTreeNode : {a : Type} -> Fractional a => Exp a =>
-  TensorA [BTreeNode] a -> TensorA [BTreeNode] a
-softmaxBTreeNode = softmaxA
+softmaxBinTreeNode : {a : Type} -> Fractional a => Exp a =>
+  TensorA [BinTreeNode] a -> TensorA [BinTreeNode] a
+softmaxBinTreeNode = softmaxA
 
 
 -- public export
@@ -40,11 +40,11 @@ softmaxBTreeNode = softmaxA
 -- softmaxVect : {n : Nat} -> Vect n Double -> Vect n Double
 -- softmaxVect = softmax
 -- 
--- softmaxTreeLeaf : BTreeLeaf Double -> BTreeLeaf Double
--- softmaxTreeLeaf = softmax {f=BTreeLeaf}
+-- softmaxTreeLeaf : BinTreeLeaf Double -> BinTreeLeaf Double
+-- softmaxTreeLeaf = softmax {f=BinTreeLeaf}
 -- 
--- softmaxTreeNode : BTreeNode Double -> BTreeNode Double
--- softmaxTreeNode = softmax {f=BTreeNode}
+-- softmaxTreeNode : BinTreeNode Double -> BinTreeNode Double
+-- softmaxTreeNode = softmax {f=BinTreeNode}
 
 --- TensorA softmax
 
@@ -66,11 +66,11 @@ softmaxBTreeNode = softmaxA
 -- softmaxVect' : {n : Nat} -> TensorA [Vect n] Double -> TensorA [Vect n] Double
 -- softmaxVect' = softmax'
 -- 
--- softmaxBTreeLeaf' : TensorA [BTreeLeaf] Double -> TensorA [BTreeLeaf] Double
--- softmaxBTreeLeaf' = softmax'
+-- softmaxBinTreeLeaf' : TensorA [BinTreeLeaf] Double -> TensorA [BinTreeLeaf] Double
+-- softmaxBinTreeLeaf' = softmax'
 -- 
--- softmaxBTreeNode' : TensorA [BTreeNode] Double -> TensorA [BTreeNode] Double
--- softmaxBTreeNode' = softmax'
+-- softmaxBinTreeNode' : TensorA [BinTreeNode] Double -> TensorA [BinTreeNode] Double
+-- softmaxBinTreeNode' = softmax'
  
 
 

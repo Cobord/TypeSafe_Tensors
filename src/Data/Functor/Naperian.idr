@@ -10,7 +10,7 @@ Lists -> not Naperian! Their shape isn't uniform (they can be of different lengt
 Stream -> Naperian, and is represented by Nat
 Vect n ->Naperian, and are represented by Fin n
 
-BTree in general is not Naperian, but if we restrict to trees of a particular shape, then they are Naperian
+BinTree in general is not Naperian, but if we restrict to trees of a particular shape, then they are Naperian
 
 Q: Are Naperian functors just containers with unit shape?
 This is about non-ragged shapes.

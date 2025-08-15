@@ -22,6 +22,20 @@ public export
 strength : Applicative f => a -> f b -> f (a, b)
 strength a fb = liftA2 (pure a) fb
 
+||| Prelude.Types already has one implementation of Applicative List
+||| This is the other one, which behaves like a zip
+namespace ListApplicative
+  public export
+  listZip : List a -> List b -> List (a, b)
+  listZip [] _ = []
+  listZip (x :: xs) [] = []
+  listZip (x :: xs) (y :: ys) = (x, y) :: listZip xs ys
+  
+  public export
+  [zipInstance] Applicative List where
+    pure a = [a]
+    fs <*> xs = uncurry ($) <$> listZip fs xs
+
 ||| Starting with (Fin l -> x) and an extra x, we produce a map (Fin (S l) -> x) whose first element is the extra x 
 public export
 addBeginning : x -> (Fin l -> x) -> (Fin (S l) -> x)
