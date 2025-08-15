@@ -106,13 +106,27 @@ namespace ConversionFunctions
   public export
   fromRoseTreeSameAppl : RoseTreeSame a -> ApplicativeRoseTree' List a
   fromRoseTreeSameAppl (Leaf a) = LeafS <| \_ => a
-  fromRoseTreeSameAppl (Node a rts) = let h = fromList rts in
-    NodeS (shapeExt <$> (fromRoseTreeSameAppl <$> fromList rts)) <| \case
+  fromRoseTreeSameAppl (Node a rts) =
+    let t = fromRoseTreeSameAppl <$> fromList rts
+    in NodeS (shapeExt <$> t) <| \case
       DoneNode => a
       SubTree ps posSt =>
-        let t = indexCont (fromRoseTreeSameAppl <$> fromList rts)
-        in ?what
+        let rw1 : (shapeExt t = shapeExt (shapeExt <$> t)) := sym (mapShapeExt t)
+            rw2 : (shapeExt (indexCont t (rewrite sym (mapShapeExt {f=shapeExt} t) in ps)) = indexCont (shapeExt <$> t) ps) := mapIndexCont {c=List} {f=shapeExt} t ps
+        in indexCont
+        (indexCont t (rewrite rw1 in ps))
+        (rewrite rw2 in posSt)
+        -- for some reason all the explicit type annotations above are needed
 
+  public export
+  toRoseTreeSameAppl : ApplicativeRoseTree' List a -> RoseTreeSame a
+  toRoseTreeSameAppl (LeafS <| contentAt) = Leaf (contentAt DoneLeaf)
+  toRoseTreeSameAppl (NodeS (len <| content) <| contentAt)
+    = Node (contentAt DoneNode)
+           (toList $ toRoseTreeSameAppl 
+                  <$> (\i => content i <| contentAt . SubTree i)
+                  <$> positionsCont)
+    
   -- fromRoseTreeSame (Leaf a) = LeafS <| \_ => a 
   -- fromRoseTreeSame (Node a sts)
   --   = let ges = fromList sts
@@ -149,15 +163,6 @@ namespace ConversionFunctions
     --     GoLeft posL => subTreesCont (GoLeft posL)
     --     GoRight posR => subTreesCont (GoRight posR)
 
-  public export
-  toRoseTreeSameAppl : ApplicativeRoseTree' List a -> RoseTreeSame a
-  toRoseTreeSameAppl (LeafS <| indexC) = Leaf (indexC DoneLeaf)
-  toRoseTreeSameAppl (NodeS (len <| content) <| indexC)
-    = Node (indexC DoneNode)
-           (toList $ toRoseTreeSameAppl 
-                  <$> (\i => content i <| indexC . SubTree i)
-                  <$> positionsCont)
-    
   -- public export
   -- RoseTree : ContA
   -- RoseTree = (#) RoseTree
