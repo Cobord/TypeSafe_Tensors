@@ -73,6 +73,7 @@ namespace BinaryTrees
     mcompare (GoRight _) DoneNode = Just GT
     mcompare (GoLeft _) (GoRight _) = Nothing -- they diverge
     mcompare (GoRight _) (GoLeft _) = Nothing -- they diverge
+    -- for quantitave version of MOrd the last two should map to BinTreePos b extende with a negative direction
 
 
 
@@ -143,16 +144,6 @@ namespace RoseTrees
         (i : Fin (length ts)) -> -- which subtree
         RoseTreePos (index' ts i) -> -- position in that subtree
         RoseTreePos (NodeS ts)
-      -- ||| The 'Here' and 'There' really correspond to list constructors
-      -- Here : {t : RoseTreeShape} -> {ts : List RoseTreeShape} ->
-      --   RoseTreePos t ->
-      --   RoseTreePos (NodeS (t :: ts))
-      -- There : {t : RoseTreeShape} -> {ts : List RoseTreeShape} ->
-      --   RoseTreePos (NodeS ts) ->
-      --   RoseTreePos (NodeS (t :: ts))
-      -- ListIndex : {t : RoseTreeShape} -> {ts : List RoseTreeShape} ->
-      --   -- provide an 
-      --   RoseTreePos (NodeS (t :: ts))
 
     -- For some reason the line below breaks?
     -- %runElab deriveIndexed "RoseTreePos" [Eq, Show]
@@ -162,28 +153,24 @@ namespace RoseTrees
     public export
     data RoseTreePosNode : (t : RoseTreeShape) -> Type where
       Done : {ts : List RoseTreeShape} -> RoseTreePosNode (NodeS ts)
-      Here : {t : RoseTreeShape} -> {ts : List RoseTreeShape} ->
-        RoseTreePosNode t ->
-        RoseTreePosNode (NodeS (t :: ts))
-      There : {t : RoseTreeShape} -> {ts : List RoseTreeShape} ->
-        RoseTreePosNode (NodeS ts) ->
-        RoseTreePosNode (NodeS (t :: ts))
+      SubTree : {ts : List RoseTreeShape} ->
+        (i : Fin (length ts)) -> -- which subtree
+        RoseTreePosNode (index' ts i) -> -- position in that subtree
+        RoseTreePosNode (NodeS ts)
 
-    %runElab deriveIndexed "RoseTreePosNode" [Eq, Show]
+    -- %runElab deriveIndexed "RoseTreePosNode" [Eq, Show]
   
   namespace Leaves
     ||| Positions corresponding to leaves within a RoseTreeLeaf shape.
     public export
     data RoseTreePosLeaf : (t : RoseTreeShape) -> Type where
       Done : RoseTreePosLeaf LeafS
-      Here : {t : RoseTreeShape} -> {ts : List RoseTreeShape} ->
-        RoseTreePosLeaf t ->
-        RoseTreePosLeaf (NodeS (t :: ts))
-      There : {t : RoseTreeShape} -> {ts : List RoseTreeShape} ->
-        RoseTreePosLeaf (NodeS ts) ->
-        RoseTreePosLeaf (NodeS (t :: ts))
+      SubTree : {ts : List RoseTreeShape} ->
+        (i : Fin (length ts)) -> -- which subtree
+        RoseTreePosLeaf (index' ts i) -> -- position in that subtree
+        RoseTreePosLeaf (NodeS ts)
   
-    %runElab deriveIndexed "RoseTreePosLeaf" [Eq, Show]
+    -- %runElab deriveIndexed "RoseTreePosLeaf" [Eq, Show]
 
 
 
@@ -197,7 +184,6 @@ It became clear that it's better to extract the functionality of indexing into a
 As a matter of fact, it became clear that we can replace List with anything else that's applicative
 That might make it easier to understand how the original datatype should've been changed
 So here I've started implementing the Applicative Rose tree
-Fixed: And now there's questions about how to best structure file dependencies
  -}
 namespace ApplicativeRoseTree
   public export

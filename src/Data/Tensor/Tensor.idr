@@ -712,6 +712,13 @@ namespace CubicalTensor
     Tensor [i, j] a -> Tensor [j, i] a
   transposeMatrix = ToCubicalTensor . transposeMatrixA . FromCubicalTensor
 
+
+  public export
+  matMul : {i, j, k : Nat} -> {a : Type} -> Num a =>
+    Tensor [i, j] a -> Tensor [j, k] a -> Tensor [i, k] a
+  matMul m n = ToCubicalTensor $
+    matMulA (FromCubicalTensor m) (FromCubicalTensor n)
+
   public export
   Array : (shape : List Nat) -> (dtype : Type) -> Type
   Array [] dtype = dtype

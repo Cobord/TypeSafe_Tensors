@@ -1,6 +1,6 @@
 module Architectures.Residual
 
-import Para.Para
+import Data.Para
 
 public export
 addResidual : Num a => Para a a -> Para a a

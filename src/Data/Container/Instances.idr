@@ -20,32 +20,32 @@ import public Data.Container.TreeUtils -- rexport all the stuff inside
 
 ||| Examples that do not require any additional constraints such as Applicative
 namespace MainContainerExamples
-  ||| Container with a single thing
+  ||| Container of a single thing
   public export
   Scalar : Cont
   Scalar = (_ : Unit) !> Unit
 
-  ||| Product
+  ||| Product, container of two things
   public export
   Pair : Cont
   Pair = (_ : Unit) !> Bool
 
-  ||| Coproduct
+  ||| Coproduct, container of either one of two things
   public export
   Either : Cont
   Either = (_ : Bool) !> Unit
 
-  ||| +1  
+  ||| +1, container of either one thing, or nothing
   public export
   Maybe : Cont
   Maybe = (b : Bool) !> (if b then Unit else Void)
 
-  ||| List, container with an unknown number of elements 
+  ||| List, container with an arbitrary number of things
   public export
   List : Cont
   List = (n : Nat) !> Fin n
   
-  ||| Vect, container of a known number of things 
+  ||| Vect, container of a fixed/known number of things
   public export
   Vect : Nat -> Cont
   Vect n = (_ : Unit) !> Fin n
@@ -55,42 +55,27 @@ namespace MainContainerExamples
   Stream : Cont
   Stream = (_ : Unit) !> Nat
 
-  ||| Binary trees with data stored at both nodes and leaves
+  ||| Container of things stored at nodes and leaves of a binary tree
   public export
   BinTree : Cont
   BinTree = (b : BinTreeShape) !> BinTreePos b
   
-  ||| Binary trees with data stored at nodes
+  ||| Container of things stored at nodes of a binary tree
   public export
   BinTreeNode : Cont
   BinTreeNode = (b : BinTreeShape) !> BinTreePosNode b
   
-  ||| Binary trees with data stored at leaves
+  ||| Container of things stored at leaves of a binary tree
   public export
   BinTreeLeaf : Cont
   BinTreeLeaf = (b : BinTreeShape) !> BinTreePosLeaf b
   
-  ||| Generalisation of Rose trees whose which has a container
+  ||| Generalisation of Rose trees with a container
   ||| of subtrees (container whose extension is applicative)
   ||| instead of a list of a subtrees
   public export
   ApplicativeRoseTree : ContA -> Cont
   ApplicativeRoseTree c = (t : RoseTreeShape c) !> RoseTreePos c t
-
-  ||| Rose trees with data stored at both nodes and leaves
-  public export
-  RoseTree : Cont
-  RoseTree = (t : RoseTreeShape) !> RoseTreePos t
-
-  ||| Rose trees with data stored at nodes
-  public export
-  RoseTreeNode : Cont
-  RoseTreeNode = (t : RoseTreeShape) !> RoseTreePosNode t
-
-  ||| Rose trees with data stored at leaves
-  public export
-  RoseTreeLeaf : Cont
-  RoseTreeLeaf = (t : RoseTreeShape) !> RoseTreePosLeaf t
 
   -- Should add Tensor here
 
@@ -166,21 +151,6 @@ namespace ExtensionsOfMainContainerExamples
   public export
   ApplicativeRoseTree' : (c : ContA) -> Type -> Type
   ApplicativeRoseTree' c = Ext (ApplicativeRoseTree c)
-
-  ||| Isomorphic to Data.Tree.RoseTree
-  public export
-  RoseTree' : Type -> Type
-  RoseTree' = Ext RoseTree
-
-  ||| Isomorphic to Data.Tree.RoseTreeNode (TODO)
-  public export
-  RoseTreeNode' : Type -> Type
-  RoseTreeNode' = Ext RoseTreeNode
-
-  ||| Isomorphic to Data.Tree.RoseTreeLeaf (TODO)
-  public export
-  RoseTreeLeaf' : Type -> Type
-  RoseTreeLeaf' = Ext RoseTreeLeaf
 
 namespace ConversionFunctions
   public export
@@ -279,32 +249,38 @@ namespace ConversionFunctions
   mapIndexPreserve : {0 f : a -> b} ->
     (xs : List a) ->
     (i : Fin (length (f <$> xs))) ->
-    f (index' xs (rewrite sym (lengthMap {f=f} xs) in i)) = index' (f <$> xs) i
+    f (index' xs (rewrite sym (lengthMap {f=f} xs) in i))
+      = index' (f <$> xs) i
   mapIndexPreserve (x :: xs) FZ = Refl
   mapIndexPreserve (x :: xs) (FS j) = mapIndexPreserve xs j
 
-  public export
-  fromRoseTreeSame : RoseTreeSame a -> RoseTree' a
-  fromRoseTreeSame (Leaf a) = LeafS <| \DoneLeaf => a
-  fromRoseTreeSame (Node a rts) =
-    let t = fromRoseTreeSame <$> rts
-    in NodeS (shapeExt <$> t) <| \case
-      DoneNode => a
-      SubTree ps posSt => indexCont
-        (index' t (rewrite sym (lengthMap {f=shapeExt} t) in ps))
-        (rewrite mapIndexPreserve {f=shapeExt} t ps in posSt)
+  -- public export
+  -- fromRoseTreeSame : RoseTreeSame a -> RoseTree' a
+  -- fromRoseTreeSame (Leaf a) = LeafS <| \DoneLeaf => a
+  -- fromRoseTreeSame (Node a rts) =
+  --   let t = fromRoseTreeSame <$> rts
+  --   in NodeS (shapeExt <$> t) <| \case
+  --     DoneNode => a
+  --     SubTree ps posSt => 
+  --        let rw1 = sym (lengthMap {f=shapeExt} t)
+  --            rw2 = mapIndexPreserve {f=shapeExt} t ps
+  --        in indexCont
+  --       (index' t (rewrite rw1 in ps))
+  --       (rewrite rw2 in posSt)
 
   public export 
   positionsList : (l : Nat) -> List (Fin l)
   positionsList 0 = []
   positionsList (S k) = FZ :: (FS <$> positionsList k)
 
-  public export
-  toRoseTreeSame : RoseTree' a -> RoseTreeSame a
-  toRoseTreeSame (LeafS <| indexCont) = Leaf (indexCont DoneLeaf)
-  toRoseTreeSame (NodeS ts <| indexCont) = Node (indexCont DoneNode) $
-    let ps = positionsList (length ts)
-    in toRoseTreeSame <$> (\i => index' ts i <| indexCont . SubTree i) <$> ps
+  -- public export
+  -- toRoseTreeSame : RoseTree' a -> RoseTreeSame a
+  -- toRoseTreeSame (LeafS <| contentAt) = Leaf (contentAt DoneLeaf)
+  -- toRoseTreeSame (NodeS ts <| contentAt)
+  --   = Node (contentAt DoneNode)
+  --          (    toRoseTreeSame
+  --           <$> (\i => index' ts i <| contentAt . SubTree i)
+  --           <$> positionsList (length ts))
 
 
 public export
@@ -369,13 +345,6 @@ FromConcrete BinTreeLeaf where
   fromConcreteTy = fromBinTreeLeaf
   toConcreteTy = toBinTreeLeaf
 
-
-public export
-FromConcrete RoseTree where
-  concreteType = RoseTreeSame
-  concreteFunctor = %search
-  fromConcreteTy = fromRoseTreeSame
-  toConcreteTy = toRoseTreeSame
 
 
 namespace VectInstances
@@ -561,14 +530,3 @@ namespace BinTreeNodeInstances
       reduce {f=BinTreeNode'} (r <| v . GoRight)
 
 
-
-namespace RoseTreeInstances
-  public export
-  liftA2RoseTree' : RoseTree' a -> RoseTree' b -> RoseTree' (a, b)
-  liftA2RoseTree' t1 t2 = fromRoseTreeSame $
-    liftA2RoseTreeSame (toRoseTreeSame t1) (toRoseTreeSame t2)
-
-  public export
-  Applicative RoseTree' where
-    pure a = LeafS <| \_ => a
-    fs <*> vs = uncurry ($) <$> liftA2RoseTree' fs vs

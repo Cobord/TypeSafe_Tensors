@@ -65,26 +65,23 @@ namespace ApplicativeInstances
   BinTreeLeaf : ContA
   BinTreeLeaf = (#) BinTreeLeaf
 
-  public export
-  RoseTree : ContA
-  RoseTree = (#) RoseTree
-
-  -- namespace ContDefs
-  --   ||| Rose trees with data stored at both nodes and leaves
-  --   public export
-  --   RoseTree : Cont
-  --   RoseTree = (t : RoseTreeShape List) !> RoseTreePos List t
+  namespace ContDefs
+    ||| Rose trees with data stored at both nodes and leaves
+    public export
+    RoseTree : Cont
+    RoseTree = (t : RoseTreeShape List) !> RoseTreePos List t
   
-  --   ||| Rose trees with data stored at nodes
-  --   public export
-  --   RoseTreeNode : Cont
-  --   RoseTreeNode = (t : RoseTreeShape List) !> RoseTreePosNode List t
+    ||| Rose trees with data stored at nodes
+    public export
+    RoseTreeNode : Cont
+    RoseTreeNode = (t : RoseTreeShape List) !> RoseTreePosNode List t
   
-  --   ||| Rose trees with data stored at leaves
-  --   public export
-  --   RoseTreeLeaf : Cont
-  --   RoseTreeLeaf = (t : RoseTreeShape List) !> RoseTreePosLeaf List t
+    ||| Rose trees with data stored at leaves
+    public export
+    RoseTreeLeaf : Cont
+    RoseTreeLeaf = (t : RoseTreeShape List) !> RoseTreePosLeaf List t
 
+  -- TODO
   public export
   Applicative (Ext (ApplicativeRoseTree c)) where
     pure a = ?one
@@ -95,19 +92,29 @@ namespace ApplicativeInstances
   ApplicativeRoseTree c = (#) (ApplicativeRoseTree c)
 
 
+namespace ExtensionsOfApplicativeExamples
+  ||| Isomorphic to Data.Tree.RoseTree
+  public export
+  RoseTree' : Type -> Type
+  RoseTree' = Ext RoseTree
+
+  ||| Isomorphic to Data.Tree.RoseTreeNode (TODO)
+  public export
+  RoseTreeNode' : Type -> Type
+  RoseTreeNode' = Ext RoseTreeNode
+
+  ||| Isomorphic to Data.Tree.RoseTreeLeaf (TODO)
+  public export
+  RoseTreeLeaf' : Type -> Type
+  RoseTreeLeaf' = Ext RoseTreeLeaf
+
 
 namespace ConversionFunctions
-  fromRoseTreeSameToShape : RoseTreeSame a -> RoseTreeShape List
-  fromRoseTreeSameToShape (Leaf a) = LeafS
-  fromRoseTreeSameToShape (Node a xs)
-    = NodeS $ fromList (fromRoseTreeSameToShape <$> xs)
-
-
   public export
-  fromRoseTreeSameAppl : RoseTreeSame a -> ApplicativeRoseTree' List a
-  fromRoseTreeSameAppl (Leaf a) = LeafS <| \_ => a
-  fromRoseTreeSameAppl (Node a rts) =
-    let t = fromRoseTreeSameAppl <$> fromList rts
+  fromRoseTreeSame : RoseTreeSame a -> RoseTree' a
+  fromRoseTreeSame (Leaf a) = LeafS <| \_ => a
+  fromRoseTreeSame (Node a rts) =
+    let t = fromRoseTreeSame <$> fromList rts
     in NodeS (shapeExt <$> t) <| \case
       DoneNode => a
       SubTree ps posSt =>
@@ -119,66 +126,30 @@ namespace ConversionFunctions
         -- for some reason all the explicit type annotations above are needed
 
   public export
-  toRoseTreeSameAppl : ApplicativeRoseTree' List a -> RoseTreeSame a
-  toRoseTreeSameAppl (LeafS <| contentAt) = Leaf (contentAt DoneLeaf)
-  toRoseTreeSameAppl (NodeS (len <| content) <| contentAt)
+  toRoseTreeSame : RoseTree' a -> RoseTreeSame a
+  toRoseTreeSame (LeafS <| contentAt) = Leaf (contentAt DoneLeaf)
+  toRoseTreeSame (NodeS (len <| content) <| contentAt)
     = Node (contentAt DoneNode)
-           (toList $ toRoseTreeSameAppl 
+           (toList $ toRoseTreeSame 
                   <$> (\i => content i <| contentAt . SubTree i)
                   <$> positionsCont)
-    
-  -- fromRoseTreeSame (Leaf a) = LeafS <| \_ => a 
-  -- fromRoseTreeSame (Node a sts)
-  --   = let ges = fromList sts
-  --         gg = shapeExt <$> fromList (fromRoseTreeSame <$> sts)
-  --         -- tes = fromRoseTreeSame <$> sts
-  --     in NodeS (shapeExt <$> fromRoseTreeSame <$> fromList sts) <| \case
-  --       DoneNode => a
-  --       SubTree ps ww =>
-  --         let g : RoseTreeShape List := indexCont (shapeExt <$> fromRoseTreeSame <$> fromList sts) ps
-  --         -- first use ps to index into ges
-  --         -- then use ww to index inside the result
-  --             h = indexCont (fromList sts)
-  --         in indexCont ?oo ?tt
 
-  -- fromRoseTreeSame (Leaf a) = LeafS <| \_ => a
-  -- fromRoseTreeSame (Node a []) = NodeS [] <| \_ => a
-  -- fromRoseTreeSame (Node a (t :: ts))
-  --   = let te = fromRoseTreeSame t
-  --         tes = fromRoseTreeSame <$> ts
-  --     in NodeS (shapeExt <$> (te :: tes)) <| ?ffn --\case
-        -- DoneNode => a
-        -- Here posL => indexCont te posL
-        -- There posR => ?ccc
-    -- = let subTreeExtensions = fromRoseTreeSame <$> subTrees
-    --   in NodeS (shapeExt <$> subTreeExtensions) <| \case
-    --     DoneNode => a
-    --     Here posL => ?bbb
-    --     There posR => ?ccc
-        -- Here posL => let t = indexCont in ?bbb
-        -- There posR => ?ccc
-    -- let (subTrees' <| subTreesCont) = fromRoseTreeSame subTrees
-    -- in NodeS subTrees' subTreesCont <| \case
-    --     DoneNode => x
-    --     GoLeft posL => subTreesCont (GoLeft posL)
-    --     GoRight posR => subTreesCont (GoRight posR)
 
-  -- public export
-  -- RoseTree : ContA
-  -- RoseTree = (#) RoseTree
+public export
+FromConcrete RoseTree where
+  concreteType = RoseTreeSame
+  concreteFunctor = %search
+  fromConcreteTy = fromRoseTreeSame
+  toConcreteTy = toRoseTreeSame
 
-  -- ||| Rose trees with data stored at nodes
-  -- public export
-  -- RoseTreeNode : ContA
-  -- RoseTreeNode = (#) RoseTreeNode
+namespace RoseTreeInstances
+  -- TODO this should be superseeded by the general applicative instance above?
+  public export
+  liftA2RoseTree' : RoseTree' a -> RoseTree' b -> RoseTree' (a, b)
+  liftA2RoseTree' t1 t2 = fromRoseTreeSame $
+    liftA2RoseTreeSame (toRoseTreeSame t1) (toRoseTreeSame t2)
 
-  -- ||| Rose trees with data stored at leaves
-  -- public export
-  -- RoseTreeLeaf : ContA
-  -- RoseTreeLeaf = (#) RoseTreeLeaf
-
-  -- public export
-  -- InternalLens : Cont -> Cont -> Cont
-  -- InternalLens c d
-  --   = (f : ((x : c.shp) -> (y : d.shp ** d.pos y -> c.pos x)))
-  --     !> (xx : c.shp ** d.pos (fst (f xx)))
+  public export
+  Applicative RoseTree' where
+    pure a = LeafS <| \_ => a
+    fs <*> vs = uncurry ($) <$> liftA2RoseTree' fs vs

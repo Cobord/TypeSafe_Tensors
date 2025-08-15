@@ -63,6 +63,21 @@ public export
 Functor (Ext c) where
   map {c=shp !> pos} f (s <| v) = s <| f . v
 
+||| Map preserves the shape of the extension
+public export
+mapShapeExt : {c : Cont} ->
+  (l : c `fullOf` a) ->
+  shapeExt (f <$> l) = shapeExt l
+mapShapeExt {c=shp !> pos} (sh <| _) = Refl
+
+public export
+mapIndexCont : {0 f : a -> b} -> {c : Cont} ->
+  (l : c `fullOf` a) ->
+  (ps : c.pos (shapeExt (f <$> l))) ->
+  f (indexCont l (rewrite sym (mapShapeExt {f=f} l) in ps))
+    = indexCont (f <$> l) ps
+mapIndexCont {c=shp !> pos} (sh <| contentAt) ps = Refl
+
 public export
 Functor (Ext c) => Functor (Ext d) => Functor ((Ext d) . (Ext c)) where
   map f e = (map f) <$> e
@@ -116,8 +131,8 @@ setExt : (e : Ext ((!>) sh ps) x) ->
   (i : ps (shapeExt e)) ->
   x ->
   Ext ((!>) sh ps) x
-setExt (shapeExt <| indexCont) i x
-  = shapeExt <| updateAt indexCont (i, x)
+setExt (sh <| contentAt) i x
+  = sh <| updateAt contentAt (i, x)
 
 ||| Convenience interface to denote that a container 
 ||| has a given interface on positions
