@@ -1,7 +1,7 @@
 module Architectures.Linear
 
 import Data.Tensor
-import Para.Para
+import Data.Para
 
 public export
 linearImplA : {x, y : ContA} -> Num a =>

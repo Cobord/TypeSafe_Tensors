@@ -140,8 +140,8 @@ namespace RoseTrees
       DoneLeaf : RoseTreePos LeafS
       DoneNode : {ts : List RoseTreeShape} -> RoseTreePos (NodeS ts)
       SubTree : {ts : List RoseTreeShape} ->
-        (i : Fin (length ts)) ->
-        RoseTreePos (index' ts i) ->
+        (i : Fin (length ts)) -> -- which subtree
+        RoseTreePos (index' ts i) -> -- position in that subtree
         RoseTreePos (NodeS ts)
       -- ||| The 'Here' and 'There' really correspond to list constructors
       -- Here : {t : RoseTreeShape} -> {ts : List RoseTreeShape} ->

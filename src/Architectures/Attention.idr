@@ -2,7 +2,7 @@ module Architectures.Attention
 
 import Data.Tensor
 import Architectures.Softmax
-import Para.Para
+import Data.Para
 
 parameters {a : Type} {auto _ : Num a}
   ||| Generalised form of attention
