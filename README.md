@@ -10,7 +10,7 @@ This is framework for pure functional tensor processing, implemented in Idris 2.
 * **implements non-cubical tensors**: tensors of trees and streams are supported, instead of just arrays
 * **is made with ergonomics in mind**: it aims to provide the standard numpy/Pytorch interface to the user in a purely functional language with first-class types
 
-At the moment its main purpose is to enable rapid prototyping of structured neural network architectures. It is currently expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/Architectures/Attention.idr#L19) originally described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
+At the moment its main purpose is to enable rapid prototyping of structured neural network architectures. It is currently expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/src/Architectures/Attention.idr#L10) originally described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
 It is in very early stages of development, and not yet performant. Down the line its goal is to achieve performance not at the expense of compositionality, but because of it. See more in the section [below](#Goal-and-technical-details).
 
 
@@ -110,7 +110,7 @@ exList2 : TensorA [List] Double
 exList2 = fromConcreteA [100,-200,1000]
 
 {- 
-We can also use BTreeLeaf, allowing us to store a tree with data on its leaves
+We can also use BinTreeLeaf, allowing us to store a tree with data on its leaves
 
         *
       /   \
@@ -118,7 +118,7 @@ We can also use BTreeLeaf, allowing us to store a tree with data on its leaves
     / \
 (-42)  46 
 -}
-exTree1 : TensorA [BTreeLeaf] Double
+exTree1 : TensorA [BinTreeLeaf] Double
 exTree1 = fromConcreteA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
 
@@ -129,21 +129,21 @@ Here's another tree, with a different number of elements
       /   \
      10   100 
 -}
-exTree2 : TensorA [BTreeLeaf] Double
+exTree2 : TensorA [BinTreeLeaf] Double
 exTree2 = fromConcreteA $ Node' (Leaf 10) (Leaf 100)
 
 ||| We can take the dot product of these two trees
 ||| The fact that they don't have the same number of elements is irrelevant
-||| What matters is that the container defining them 'BTreeLeaf' is the same
+||| What matters is that the container defining them 'BinTreeLeaf' is the same
 dotProduct2 : TensorA [] Double
 dotProduct2 = dotA exTree1 exTree2
 
 ||| Here's a tree with whose nodes are vectors of size 2
-exTree3 : TensorA [BTreeNode, Vect 2] Double
+exTree3 : TensorA [BinTreeNode, Vect 2] Double
 exTree3 = fromConcreteA $ Node [4,1] (Node [17, 4] Leaf' Leaf') Leaf'
 
 ||| This can get very complex, but is still fully type-checked
-exTree4 : TensorA [BTreeNode, BTreeLeaf, Vect 3] Double
+exTree4 : TensorA [BinTreeNode, BinTreeLeaf, Vect 3] Double
 exTree4 = fromConcreteA $
   Node (Node'
           (Leaf [1,2,3])
@@ -187,12 +187,12 @@ Here's a tree-vector with nodes as elements
   / \
  *   *
 -}
-exTree5 : TensorA [BTreeNode] Double
+exTree5 : TensorA [BinTreeNode] Double
 exTree5 = fromConcreteA $ Node 3 (Node 2 (Node 1 Leaf' Leaf') Leaf') (Node 4 Leaf' Leaf')
 
 ||| And here is the in-order traversal of that tree
 traverseTree : TensorA [List] Double
-traverseTree = reshapeTensorA inorderBTreeNode exTree5
+traverseTree = reshapeTensorA inorderBinTreeNode exTree5
 ```
 
 ## Installation instructions
@@ -231,7 +231,7 @@ by taking special care to:
 This static analysis is aimed to inform performance optimisations down the line, especially when in context of non-cubical tensors. These are at the moment only scarcely explored, without any existing CUDA packages or optimisation algorithms.
 
 When it comes to technical details, this library hinges of three interdependent components:
-* **Containers** for **well-typed indexing of non-cubical tensors**: they allow us to check that indexing a generalised Tensor is well-typed at compile-time. Doing this with cubical containers is easy since they expose the size information at the type level (i.e. `Tensor [2,3,4] Double`), but once we move on to the world of applicative functors this is no longer the case. Checking that an index into a `Tensor [BTreeNode] Double` is well-typed is only possible if the underlying functor additionally comes equipped with the data of a "shape", i.e. if the functor is a polynomial one, i.e. if the functor is the extension of a container.
+* **Containers** for **well-typed indexing of non-cubical tensors**: they allow us to check that indexing a generalised Tensor is well-typed at compile-time. Doing this with cubical containers is easy since they expose the size information at the type level (i.e. `Tensor [2,3,4] Double`), but once we move on to the world of applicative functors this is no longer the case. Checking that an index into a `Tensor [BinTreeNode] Double` is well-typed is only possible if the underlying functor additionally comes equipped with the data of a "shape", i.e. if the functor is a polynomial one, i.e. if the functor is the extension of a container.
 * **Applicative functors** for **generalised linear algebra**: they allow us to perform generalised linear algebra operations as described in the [Applicative Programming with Naperian Functors](https://www.cs.ox.ac.uk/people/jeremy.gibbons/publications/aplicative.pdf) paper.
 * **Dependent lenses** for **reshaping and traversing operations**: they allow us to define morphisms of containers, and therefore generalised tensor reshaping operations that do not operate on the content of the data, only the shape. These include views, reshapes, and traversals, and many other culprits that appear in libraries like numpy.
 
