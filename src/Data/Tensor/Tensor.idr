@@ -23,8 +23,9 @@ import public Data.Functor.Naperian
 
 {-----------------------------------------------------------
 {-----------------------------------------------------------
-This file defines applicative tensors and functions 
-for working with them.
+This file defines the main constructions of this repository:
+Applicative Tensors, Cubical Tensors, and functions for
+working with them.
 
 TensorA -> the main applicative tensor type
 ConcreteT -> machinery for working with TensorA as nested Idris types
@@ -34,8 +35,7 @@ This file also incluedes most common interfaces, such as
 Eq, Show, Functor, Applicative, Foldable, Num,...
 
 
-Also defines cubical tensors
-
+Tensor -> the main cubical tensor type
 -----------------------------------------------------------}
 -----------------------------------------------------------}
 
@@ -49,20 +49,7 @@ data TensorA : (conts : List ContA) -> (dtype : Type) -> Type where
     ||| a tensor of shape (c :: cs)
     TS : (GetC c) `fullOf` (TensorA cs dtype) -> TensorA (c :: cs) dtype
 
-%name TensorA t, t'
-
-public export
-ScalarA : (dtype : Type) -> Type
-ScalarA dtype = TensorA [] dtype
-
-public export
-VectorA : (c : ContA) -> (dtype : Type) -> Type
-VectorA c dtype = TensorA [c] dtype
-
-public export
-MatrixA : (row, col : ContA) -> (dtype : Type) -> Type
-MatrixA row col dtype = TensorA [row, col] dtype
-
+%name TensorA t, t', t''
 
 namespace FunctorTensorA
   public export
@@ -70,6 +57,7 @@ namespace FunctorTensorA
     map f (TZ val) = TZ $ f val
     map f (TS xs) = TS $ (map f) <$> xs
 
+||| Functions for manipulating nested tensors
 namespace NestedTensorA
   public export
   extract : TensorA [] a -> a
@@ -117,6 +105,12 @@ For instance, `Tensor [c, d] a` is isomorphic to Ext (c . d) a
 The maps defining this isomorphism are `toCompProduct` and `fromCompProduct`.
 
 This allows us to define the reshape map using a dependent lens
+
+That is, we have the following chain:
+Tensor [c, d] a <=> Ext c (Ext d a) <=> Ext (c . d) a
+
+The first isomorphism almost definitional - up to extra constructors.
+Second isomorphism is the non-trivial one
 ----------------------------}
 ----------------------------}
 
@@ -124,57 +118,37 @@ This allows us to define the reshape map using a dependent lens
 ||| composition of extensions of containers making its shape
 public export
 toExtComposition : {shape : List ContA} ->
-  TensorA shape a -> ComposeExtensions shape a
+  TensorA shape a -> composeExtensionsA shape a
 toExtComposition {shape = []} (TZ val) = fromIdentity val
 toExtComposition {shape = [_]} (TS xs) = extract <$> xs
 toExtComposition {shape = (_ :: _ :: _)} (TS xs) = toExtComposition <$> xs
 
 public export
 fromExtComposition : {shape : List ContA} ->
-  ComposeExtensions shape a -> TensorA shape a
+  composeExtensionsA shape a -> TensorA shape a
 fromExtComposition {shape = []} ce = TZ $ toIdentity ce
 fromExtComposition {shape = [_]} ce = TS $ TZ <$> ce
 fromExtComposition {shape = (_ :: _ :: _)} ce = TS $ fromExtComposition <$> ce
 
+||| TODO which composition product (name unclear)? Composition product of containers, or composition of extensions of containers
 public export
 toCompProduct : {shape : List ContA} ->
-  TensorA shape a -> Ext (ComposeContainers shape) a
-toCompProduct = toContainerComp . toExtComposition
+  TensorA shape a -> Ext (composeContainersA shape) a
+toCompProduct = ToContainerComp . toExtComposition
 
 public export
 fromCompProduct : {shape : List ContA} ->
-  (ComposeContainers shape) `fullOf` a -> TensorA shape a
-fromCompProduct = fromExtComposition . fromContainerComp
+  (composeContainersA shape) `fullOf` a -> TensorA shape a
+fromCompProduct = fromExtComposition . FromContainerComp
 
 ||| General, dependent-lens based applicative tensor reshaping
 ||| Should capture views, traversals, and other ops that don't touch content 
 public export
 reshapeTensorA : {oldShape, newShape : List ContA} ->
-  (ComposeContainers oldShape =%> ComposeContainers newShape) ->
+  (composeContainersA oldShape =%> composeContainersA newShape) ->
   TensorA oldShape a -> TensorA newShape a
 reshapeTensorA dLens = fromCompProduct . (contMapExt dLens) . toCompProduct
 
-
-{----------------------------
-ArrayA
-Convenience datatype and functions for constructing TensorA from its extensions
-TODO do we need those?
-----------------------------}
-
-public export
-ArrayA : (shape : List ContA) -> (dtype : Type) -> Type
-ArrayA shape dtype = ComposeExtensions shape dtype
-
-public export
-fromArrayA : {shape : List ContA} ->
-  ArrayA shape dtype -> TensorA shape dtype
-fromArrayA = fromExtComposition
-
-public export
-toArrayA : {shape : List ContA} ->
-  TensorA shape dtype -> ArrayA shape dtype
-toArrayA = toExtComposition
-    
 
 {----------------------------
 ConcreteT
@@ -187,6 +161,7 @@ and without using the inductive definition via TS and TZ
 ----------------------------}
 
 namespace ConcreteTensorA
+  ||| A tensor has a concrete instance if all of its shape containers have a concete instance too
   public export
   data AllConcrete : (shape : List ContA) -> Type where
     Nil : AllConcrete []
@@ -209,7 +184,8 @@ namespace ConcreteTensorA
     (concr : AllConcrete shape) =>
     ConcreteT shape dtype -> TensorA shape dtype
   fromConcreteA {shape = []} x = TZ x
-  fromConcreteA {shape = (_ :: _)} {concr = Cons {fr = (MkConcrete f concreteFunctor fromConcreteFn _)}} xs = TS $ fromConcreteFn $ fromConcreteA <$> xs
+  fromConcreteA {shape = (_ :: _)} {concr = Cons {fr = (MkConcrete f concreteFunctor fromConcreteFn _)}} xs
+    = TS $ fromConcreteFn $ fromConcreteA <$> xs
   
   public export
   toConcreteA : {shape : List ContA} ->
@@ -224,6 +200,14 @@ namespace ConcreteTensorA
     (f : ConcreteT oldShape a -> ConcreteT newShape b) ->
     TensorA oldShape a -> TensorA newShape b
   fromConcreteMapA f = fromConcreteA . f . toConcreteA
+
+  -- public export
+  -- {shape : List ContA} ->
+  -- (concr : AllConcrete shape) => FromConcrete (composeContainersA shape) where
+  --   concreteType = ConcreteT shape
+  --   concreteFunctor = ?todooo -- %search TODO we'd need to write an AllFunctor instance? 
+  --   fromConcreteTy = ?hhiii -- fromConcreteA
+  --   toConcreteTy = ?vnnnn -- toConcreteA
 
 
 namespace EqTensorA
@@ -499,80 +483,6 @@ namespace TensorAContractions
 
 
 namespace CubicalTensor
-  {-
-  -----------------------------------------------------------
-
-  public export
-  Tensor' : (shape : List Nat) -> Type -> Type
-  Tensor' shape = TensorA (NatsToContAonts shape)
-
-  public export
-  {shape : List Nat} ->
-  AllEq (NatsToContAonts shape) a =>
-  Eq (Tensor' shape a) where
-    (==) = tensorEq
-
-  public export
-  {shape : List Nat} ->
-  AllShow (NatsToContAonts shape) a =>
-  Show (Tensor' shape a) where
-    show = tensorShow
-
-  public export
-  {shape : List Nat} ->
-  Num a =>
-  Num (Tensor' shape a) where
-    fromInteger i = fromInteger i
-    t + t' = t + t'
-    t * t' = t * t'
-
-  {-
-  TODO neg, abs, exp
-   -}
-
-  public export
-  Functor (Tensor' shape) where
-    map = map
-
-  public export
-  {shape : List Nat} ->
-  Applicative (Tensor' shape) where
-    pure = tensorReplicateA
-    fs <*> xs = uncurry ($) <$> liftA2TensorA fs xs
-
-  public export
-  Array' : (shape : List Nat) -> (dtype : Type) -> Type
-  Array' [] dtype = dtype
-  Array' (s :: ss) dtype = Vect s (Array' ss dtype)
-    
-
-  public export
-  fromArray' : {shape : List Nat} -> Array' shape a -> Tensor' shape a
-  fromArray' {shape = []} x = TZ x
-  fromArray' {shape = (s :: ss)} x = TS $ fromVect $ fromArray' <$> x
-
-
-  public export
-  ToCubicalTensor' : {shape : List Nat} ->
-    TensorA (NatsToContAonts shape) a -> Tensor' shape a
-  -- ToCubicalTensor' t = ToCubicalTensor t
-  ToCubicalTensor' t = ?ToCubicalTensor'_rhs
-  -}
-
-  -- This recovers usual tensors in Tensor.Tensor
-
-  -- public export infixr 5 +++
-  -- public export
-  -- (+++) : {cs : Vect n ContA} -> {ds : Vect m ContA}
-  --   -> ContAontList cs -> ContAontList ds -> ContAontList (cs ++ ds)
-  -- [] +++ ys = ys
-  -- (c :: cs) +++ ys = c :: (cs +++ ys)
-
-
-  -- vvv : (shape : Vect n Nat) -> Vect n ContA
-  -- vvv shape = (\n => # (Vect n)) <$> shape
-
-
   ||| This is a helper datatype for cubical tensors, i.e. those made only out of Vect
   ||| It allows specifying a tensor only by the size of the content, and is needed (instead of Tensor') to aid type inference
   ||| There might be a more ergonomic way to do this
@@ -747,15 +657,17 @@ namespace CubicalTensor
   toConcrete : {shape : List Nat} -> Tensor shape a -> Array shape a
   toConcrete = toArrayHelper . FromCubicalTensor
 
+  public export
   reshapeDLens : {oldShape, newShape : List ContA} ->
-    ComposeContainers oldShape =%> ComposeContainers newShape
+    composeContainersA oldShape =%> composeContainersA newShape
+  reshapeDLens = ?ff <%! ?bbbw
 
   public export
   reshape : {oldShape, newShape : List Nat} ->
     Tensor oldShape a ->
     {auto prf : prod oldShape = prod newShape} ->
     Tensor newShape a
-  reshape t = ToCubicalTensorMap (reshapeTensorA ?vnfh) t
+  reshape t = ToCubicalTensorMap (reshapeTensorA reshapeDLens) t
   -- reshape t = ToCubicalTensorMap (reshapeTensorA (cubicalTensorToFlat %>>  %>> flatToCubicalTensor)) t
 
 

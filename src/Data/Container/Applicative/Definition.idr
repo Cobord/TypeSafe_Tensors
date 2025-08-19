@@ -8,6 +8,7 @@ import Data.Container.Morphism.Definition
 import Misc
 
 %hide Builtin.infixr.(#)
+%hide Prelude.(<|)
 
 ||| Applicative Container
 ||| Consists of a container and a proof that its extension is an applicative functor
@@ -30,69 +31,61 @@ public export
 (.pos) : (c : ContA) -> c.shp -> Type
 (.pos) c sh = (GetC c) .pos sh
 
-||| Specialised to composition product of containers
-||| We pattern match on three cases to simplify resulting expressions
 public export
-ComposeContainers : List ContA -> Cont
-ComposeContainers [] = CUnit
-ComposeContainers [c] = GetC c
-ComposeContainers (c :: d :: cs) = GetC c >@< ComposeContainers (d :: cs)
--- ComposeContainers cs = foldr (>@<) CUnit (GetC <$> cs)
+composeContainersA : List ContA -> Cont
+composeContainersA cs = composeContainers (GetC <$> cs)
 
 public export
-ComposeExtensions : List ContA -> Type -> Type
-ComposeExtensions [] a = Ext CUnit a
-ComposeExtensions [c] a = Ext (GetC c) a
-ComposeExtensions (c :: d :: cs) a
-  = Ext (GetC c) (ComposeExtensions (d :: cs) a)
+composeExtensionsA : List ContA -> Type -> Type
+composeExtensionsA cs = composeExtensions (GetC <$> cs)
 
 ||| This states a list version of 
 ||| Ext c2 . Ext c1 = Ext (c2 . c1)
 public export
-toContainerComp : {conts : List ContA} ->
-  ComposeExtensions conts a -> Ext (ComposeContainers conts) a
-toContainerComp {conts = []} ce = ce
-toContainerComp {conts = [c]} ce = ce
-toContainerComp {conts = (c :: d :: cs)} (shp <| idx) = 
-  let rst = (toContainerComp {conts=(d :: cs)}) . idx
+ToContainerComp : {conts : List ContA} ->
+  composeExtensionsA conts a -> Ext (composeContainersA conts) a
+ToContainerComp {conts = []} ce = ce
+ToContainerComp {conts = [c]} ce = ce
+ToContainerComp {conts = (c :: d :: cs)} (shp <| idx) = 
+  let rst = (ToContainerComp {conts=(d :: cs)}) . idx
   in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
 
 public export
-fromContainerComp : {conts : List ContA} ->
-  Ext (ComposeContainers conts) a -> ComposeExtensions conts a
-fromContainerComp {conts = []} ce = ce
-fromContainerComp {conts = [c]} ce = ce
-fromContainerComp {conts = (c :: d :: cs)} ((csh <| cpos) <| idx)
-  = csh <| \d => fromContainerComp (cpos d <| curry idx d)
+FromContainerComp : {conts : List ContA} ->
+  Ext (composeContainersA conts) a -> composeExtensionsA conts a
+FromContainerComp {conts = []} ce = ce
+FromContainerComp {conts = [c]} ce = ce
+FromContainerComp {conts = (c :: d :: cs)} ((csh <| cpos) <| idx)
+  = csh <| \dd => FromContainerComp {conts=(d::cs)} (cpos dd <| curry idx dd)
 
 
 
 
 -- public export
--- mapComposeExtensions : {conts : List ContA} ->
---   (f : a -> b) -> ComposeExtensions conts a -> ComposeExtensions conts b
--- mapComposeExtensions {conts = []} f e = f <$> e
--- mapComposeExtensions {conts = ((# c) :: cs)} f e = mapComposeExtensions f <$> e
+-- mapcomposeExtensionsA : {conts : List ContA} ->
+--   (f : a -> b) -> composeExtensionsA conts a -> composeExtensionsA conts b
+-- mapcomposeExtensionsA {conts = []} f e = f <$> e
+-- mapcomposeExtensionsA {conts = ((# c) :: cs)} f e = mapcomposeExtensionsA f <$> e
 -- 
 -- public export
--- [FCE] {conts : List ContA} -> Functor (ComposeExtensions conts) where
---   map f ce = ?vnn -- mapComposeExtensions
+-- [FCE] {conts : List ContA} -> Functor (composeExtensionsA conts) where
+--   map f ce = ?vnn -- mapcomposeExtensionsA
 -- 
--- testTT : {c : ContA} -> (f : String -> Int) -> ComposeExtensions [c] String -> ComposeExtensions [c] Int
+-- testTT : {c : ContA} -> (f : String -> Int) -> composeExtensionsA [c] String -> composeExtensionsA [c] Int
 -- testTT f = map @{FCE {conts=[c]}} f
 -- 
 -- public export
 -- compExtReplicate : {conts : List ContA} ->
---   a -> ComposeExtensions conts a
+--   a -> composeExtensionsA conts a
 -- compExtReplicate {conts = []} a = fromIdentity a
 -- compExtReplicate {conts = ((#) _ {applPrf} :: _)} a
 --   = compExtReplicate <$> pure a
 -- 
 -- public export
 -- compExtLiftA2 : {conts : List ContA} ->
---   ComposeExtensions conts a ->
---   ComposeExtensions conts b ->
---   ComposeExtensions conts (a, b)
+--   composeExtensionsA conts a ->
+--   composeExtensionsA conts b ->
+--   composeExtensionsA conts (a, b)
 -- compExtLiftA2 {conts = []} ca cb = fromIdentity (toIdentity ca, toIdentity cb)
 -- compExtLiftA2 {conts = ((#) c {applPrf} :: cs)} ca cb
 --   = uncurry compExtLiftA2 <$> liftA2 ca cb
@@ -100,13 +93,13 @@ fromContainerComp {conts = (c :: d :: cs)} ((csh <| cpos) <| idx)
 
 -- Tensors should eventually more and more use the container backend
 -- public export
--- Applicative (ComposeExtensions conts) using FCE where
+-- Applicative (composeExtensionsA conts) using FCE where
 --   pure = compExtReplicate
 --   fs <*> xs = uncurry ($) <$> compExtLiftA2 fs xs
 
 -- public export
 -- compReplicate : {conts : List ContA} ->
---   a -> Ext (ComposeContainers conts) a
+--   a -> Ext (composeContainersA conts) a
 -- compReplicate {conts = []} x = fromIdentity x
 -- compReplicate {conts = (c :: cs)} x
 --   = ?ff <| ?bb
@@ -126,21 +119,21 @@ fromContainerComp {conts = (c :: d :: cs)} ((csh <| cpos) <| idx)
 -- ||| Hence, just like with EmptyExt we provide convenience functions to create this unit shape easily
 -- public export
 -- emptyShapeCubicalTensor : {shape : List Nat} ->
---   (ComposeContainers (Vect <$> shape)) .shp
+--   (composeContainersA (Vect <$> shape)) .shp
 -- emptyShapeCubicalTensor {shape = []} = ()
 -- emptyShapeCubicalTensor {shape = (_ :: _)}
 --   = () <| (\_ => emptyShapeCubicalTensor)
 
 -- shapeOfCubicalTensorIsUnit : {shape : List Nat} ->
---   (ComposeContainers (Vect <$> shape)) .shp = ()
+--   (composeContainersA (Vect <$> shape)) .shp = ()
 -- shapeOfCubicalTensorIsUnit {shape = []} = Refl
 -- shapeOfCubicalTensorIsUnit {shape = (s :: ss)}
 --   = rewrite shapeOfCubicalTensorIsUnit {shape = ss} in ?afasdf
 
 -- public export
--- ComposeContainers' : {conts : List ContA} ->
+-- composeContainersA' : {conts : List ContA} ->
 --   ContAontList conts -> ContA
--- ComposeContainers' [] = # CUnit
--- ComposeContainers' (c :: cs) =
+-- composeContainersA' [] = # CUnit
+-- composeContainersA' (c :: cs) =
 --   (#) (c >< prodConts (applContListToContList cs))
---     {applPrf = ?ComposeContainers_rhs_1}
+--     {applPrf = ?composeContainersA_rhs_1}

@@ -124,6 +124,7 @@ namespace ConversionFunctions
         (indexCont t (rewrite rw1 in ps))
         (rewrite rw2 in posSt)
         -- for some reason all the explicit type annotations above are needed
+        -- to convince the typechecker
 
   public export
   toRoseTreeSame : RoseTree' a -> RoseTreeSame a

@@ -20,6 +20,16 @@ import public Data.Container.TreeUtils -- rexport all the stuff inside
 
 ||| Examples that do not require any additional constraints such as Applicative
 namespace MainContainerExamples
+  ||| Empty container, isomorphic to Void
+  public export
+  Empty : Cont
+  Empty = (x : Void) !> absurd x
+
+  ||| Container with a single shape, but no positions, isomorphic to Unit : Type
+  public export
+  Unit : Cont
+  Unit = (_ : Unit) !> Void 
+
   ||| Container of a single thing
   public export
   Scalar : Cont
@@ -77,8 +87,12 @@ namespace MainContainerExamples
   ApplicativeRoseTree : ContA -> Cont
   ApplicativeRoseTree c = (t : RoseTreeShape c) !> RoseTreePos c t
 
-  -- Should add Tensor here
-
+  ||| Tensors are containers
+  ||| TODO not used yet, new finding
+  public export
+  Tensor : List Cont -> Cont
+  Tensor cs = composeContainers cs
+  
   ||| Every lens gives rise to a container
   ||| The set of shapes is the lens itself
   ||| The set of positions is the inputs to the lens
@@ -91,6 +105,7 @@ namespace MainContainerExamples
 
 
   ||| From https://www.cs.ox.ac.uk/people/samuel.staton/papers/cie10.pdf
+  public export
   CartesianClosure : Cont -> Cont -> Cont
   CartesianClosure c d
     = (f : ((x : c.shp) -> (y : d.shp ** d.pos y -> Maybe (c.pos x))))
@@ -152,6 +167,13 @@ namespace ExtensionsOfMainContainerExamples
   ApplicativeRoseTree' : (c : ContA) -> Type -> Type
   ApplicativeRoseTree' c = Ext (ApplicativeRoseTree c)
 
+  ||| Isomorphic to Data.Tensor.TensorA
+  ||| todo
+  public export
+  Tensor' : List Cont -> Type -> Type
+  Tensor' cs = Ext (Tensor cs)
+
+
 namespace ConversionFunctions
   public export
   fromIdentity : a -> Scalar' a
@@ -160,6 +182,16 @@ namespace ConversionFunctions
   public export
   toIdentity : Scalar' a -> a
   toIdentity (() <| f) = f ()
+
+  public export
+  fromMaybe : Maybe a -> Maybe' a
+  fromMaybe Nothing = (False <| absurd)
+  fromMaybe (Just a) = (True <| \_ => a)
+
+  public export
+  toMaybe : Maybe' a -> Maybe a
+  toMaybe (False <| absurd) = Nothing
+  toMaybe (True <| f) = Just (f ())
 
   public export
   fromList : List x -> List' x
@@ -254,60 +286,19 @@ namespace ConversionFunctions
   mapIndexPreserve (x :: xs) FZ = Refl
   mapIndexPreserve (x :: xs) (FS j) = mapIndexPreserve xs j
 
-  -- public export
-  -- fromRoseTreeSame : RoseTreeSame a -> RoseTree' a
-  -- fromRoseTreeSame (Leaf a) = LeafS <| \DoneLeaf => a
-  -- fromRoseTreeSame (Node a rts) =
-  --   let t = fromRoseTreeSame <$> rts
-  --   in NodeS (shapeExt <$> t) <| \case
-  --     DoneNode => a
-  --     SubTree ps posSt => 
-  --        let rw1 = sym (lengthMap {f=shapeExt} t)
-  --            rw2 = mapIndexPreserve {f=shapeExt} t ps
-  --        in indexCont
-  --       (index' t (rewrite rw1 in ps))
-  --       (rewrite rw2 in posSt)
-
-  public export 
-  positionsList : (l : Nat) -> List (Fin l)
-  positionsList 0 = []
-  positionsList (S k) = FZ :: (FS <$> positionsList k)
-
-  -- public export
-  -- toRoseTreeSame : RoseTree' a -> RoseTreeSame a
-  -- toRoseTreeSame (LeafS <| contentAt) = Leaf (contentAt DoneLeaf)
-  -- toRoseTreeSame (NodeS ts <| contentAt)
-  --   = Node (contentAt DoneNode)
-  --          (    toRoseTreeSame
-  --           <$> (\i => index' ts i <| contentAt . SubTree i)
-  --           <$> positionsList (length ts))
-
-
-public export
-interface FromConcrete (cont : Cont) where
-  constructor MkConcrete
-  concreteType : Type -> Type
-  concreteFunctor : Functor concreteType
-  fromConcreteTy : concreteType a -> Ext cont a
-  toConcreteTy : Ext cont a -> concreteType a
-
--- public export
--- fromConcreteMap : {cont1, cont2 : Cont} ->
---   (fc1 : FromConcrete cont1) => (fc2 : FromConcrete cont2) =>
---   (concreteType @{fc1} a -> concreteType @{fc2} b) ->
---   cont1 `fullOf` a -> cont2 `fullOf` b
--- fromConcreteMap f = fromConcrete @{fc2} . f . toConcrete @{fc1}
-
-
-Functor Basics.id where
-  map = id
-
 public export
 FromConcrete Scalar where
   concreteType = id
-  concreteFunctor = %search
+  concreteFunctor = MkFunctor id
   fromConcreteTy = fromIdentity
   toConcreteTy = toIdentity
+
+public export
+FromConcrete Maybe where
+  concreteType = Maybe
+  concreteFunctor = %search
+  fromConcreteTy = fromMaybe
+  toConcreteTy = toMaybe
 
 public export
 FromConcrete List where
@@ -322,7 +313,6 @@ public export
   concreteFunctor = %search
   fromConcreteTy = fromVect
   toConcreteTy = toVect
-
 
 public export
 FromConcrete BinTree where
@@ -344,6 +334,85 @@ FromConcrete BinTreeLeaf where
   concreteFunctor = %search
   fromConcreteTy = fromBinTreeLeaf
   toConcreteTy = toBinTreeLeaf
+
+public export
+concreteTypeTensor : (shape : List Cont) ->
+  (allConcrete : AllConcrete shape) =>
+  Type -> Type
+concreteTypeTensor [] {allConcrete = []} = concreteType {cont=Scalar}
+concreteTypeTensor [c] {allConcrete = Cons} = concreteType {cont=c}
+concreteTypeTensor (c :: d :: cs) {allConcrete = Cons @{fc}}
+  = (concreteType @{fc}) . (concreteTypeTensor (d :: cs))
+
+
+public export
+concreteTypeFunctor : {shape : List Cont} ->
+  (allConcrete : AllConcrete shape) =>
+  Functor (concreteTypeTensor shape)
+concreteTypeFunctor {shape = []} {allConcrete = []}
+  = concreteFunctor {cont=Scalar}
+concreteTypeFunctor {shape = [_]} {allConcrete = Cons @{fc}}
+  = concreteFunctor @{fc}
+concreteTypeFunctor {shape = (c :: d :: cs)} {allConcrete = Cons @{fc}}
+  = Functor.Compose @{concreteFunctor @{fc} } @{concreteTypeFunctor}
+
+public export
+concreteToExtensions : {shape : List Cont} ->
+  (allConcrete : AllConcrete shape) =>
+  concreteTypeTensor shape a -> composeExtensions shape a
+concreteToExtensions {shape = []} {allConcrete = []} ct = fromConcreteTy ct
+concreteToExtensions {shape = [_]} {allConcrete = Cons} ct = fromConcreteTy ct
+concreteToExtensions {shape = (_ :: _ :: _)} {allConcrete = Cons} ct = 
+  concreteToExtensions <$> fromConcreteTy ct 
+
+public export
+extensionsToConcreteType : {shape : List Cont} ->
+  (allConcrete : AllConcrete shape) =>
+  composeExtensions shape a -> concreteTypeTensor shape a
+extensionsToConcreteType {shape = []} {allConcrete = []} ct = toConcreteTy ct
+extensionsToConcreteType {shape = [c]} {allConcrete = Cons} ct = toConcreteTy ct
+extensionsToConcreteType {shape = (_ :: _ :: _)} {allConcrete = Cons @{fc}} ct 
+  = (map @{concreteFunctor @{fc}} extensionsToConcreteType) (toConcreteTy ct)
+
+public export
+fromTensor : {shape : List Cont} ->
+  (allConcrete : AllConcrete shape) =>
+  concreteTypeTensor shape a -> Tensor' shape a
+fromTensor = toContainerComp . concreteToExtensions
+
+  
+public export
+toTensor : {shape : List Cont} ->
+  (allConcrete : AllConcrete shape) =>
+  Tensor' shape a -> concreteTypeTensor shape a
+toTensor = extensionsToConcreteType . fromContainerComp
+
+
+public export
+{shape : List Cont} ->
+(allConcrete : AllConcrete shape) => FromConcrete (Tensor shape) where
+  concreteType = concreteTypeTensor shape {allConcrete}
+  concreteFunctor = concreteTypeFunctor {shape} {allConcrete}
+  fromConcreteTy = fromTensor
+  toConcreteTy = toTensor
+
+baal : FromConcrete List
+baal = %search
+
+baa : FromConcrete Maybe
+baa = %search
+
+aa : AllConcrete [List, Maybe]
+aa = %search
+
+-- ca : FromConcrete (Tensor [List, List])
+-- ca = %search
+
+-- caa : FromConcrete (Tensor [List, Maybe])
+-- caa = %search
+
+--tt : Tensor' [List, Maybe] Int
+--- tt = fromConcreteTy ?aaaa
 
 
 
@@ -406,12 +475,6 @@ namespace ListInstances
 
 
 namespace BinTreeInstances
-  {- 
-     a           b 
-    / \         / \ 
-   lt  rt     lt'  rt'
-  -}
-  ||| TODO finish implementation
   public export
   liftA2BinTree' : BinTree' a -> BinTree' b -> BinTree' (a, b)
   liftA2BinTree' (LeafS <| i1) (LeafS <| i2) = LeafS <| \pos => (i1 pos, i2 pos)
@@ -455,7 +518,7 @@ namespace BinTreeLeafInstances
   public export
   Eq a => Eq (BinTreeLeaf' a) where
     (LeafS <| v) == (LeafS <| v') = v Done == v' Done
-    ((NodeS l r) <| v) == ((NodeS l' r') <| v') =
+    (NodeS l r <| v) == (NodeS l' r' <| v') =
       (l == l') && (r == r') && ?vnm -- Assuming Eq BinTreeShape is defined elsewhere
     _ == _ = False
 

@@ -22,6 +22,33 @@ and the corresponding container variants, when they exist.
 -----------------------------------------------------------}
 -----------------------------------------------------------}
 
+
+namespace CommonNames
+  public export
+  ScalarA : (dtype : Type) -> Type
+  ScalarA dtype = TensorA [] dtype
+
+  public export
+  VectorA : (c : ContA) -> (dtype : Type) -> Type
+  VectorA c dtype = TensorA [c] dtype
+  
+  public export
+  MatrixA : (row, col : ContA) -> (dtype : Type) -> Type
+  MatrixA row col dtype = TensorA [row, col] dtype
+
+  public export
+  Scalar : (dtype : Type) -> Type
+  Scalar dtype = Tensor [] dtype
+
+  public export
+  Vector : (n : Nat) -> (dtype : Type) -> Type
+  Vector n dtype = Tensor [n] dtype
+  
+  public export
+  Matrix : (row, col : Nat) -> (dtype : Type) -> Type
+  Matrix row col dtype = Tensor [row, col] dtype
+  
+
 namespace Zeros
   public export
   zerosA : Num a => {shape : List ContA} -> TensorA shape a
@@ -138,7 +165,6 @@ namespace OneHot
 
 
 namespace Triangular
-
   public export
   triABool : {c : ContA} -> (ip : InterfaceOnPositions MOrd (GetC c)) =>
     (sh : c.shp) -> TensorA [c, c] Bool
@@ -155,7 +181,6 @@ namespace Triangular
   public export
   triBool : {n : Nat} -> Tensor [n, n] Bool
   triBool = ToCubicalTensor $ triABool ()
-
 
   ||| A matrix with ones below the diagonal, and zeros elsewhere
   ||| Analogous to numpy.tri

@@ -2,6 +2,7 @@ module Data.Container.Definition
 
 import Data.Fin
 import Data.Vect
+import Data.DPair
 
 import Data.Tree
 import Data.Functor.Naperian
@@ -79,8 +80,20 @@ mapIndexCont : {0 f : a -> b} -> {c : Cont} ->
 mapIndexCont {c=shp !> pos} (sh <| contentAt) ps = Refl
 
 public export
-Functor (Ext c) => Functor (Ext d) => Functor ((Ext d) . (Ext c)) where
+Functor ((Ext d) . (Ext c)) where
   map f e = (map f) <$> e
+
+public export
+composeExtensions : List Cont -> Type -> Type
+composeExtensions [] a = Ext CUnit a
+composeExtensions [c] a = Ext c a
+composeExtensions (c :: d :: cs) a = Ext c (composeExtensions (d :: cs) a)
+
+public export
+[fe] {shape : List Cont} -> Functor (composeExtensions shape) where
+  map {shape = []} f = map f
+  map {shape = [s]} f = map f
+  map {shape = (s :: s' :: ss)} f = (map @{fe} f <$>)
 
 public export
 EmptyExt : Ext (Nap l) ()
@@ -110,11 +123,10 @@ public export
 
 ||| Generalisation of 'positions' from Data.Functor
 ||| Works for an arbitrary container, as long as we supply its shape
-||| Data.Functor.positions is this definition for Naperian containers
+||| The definition in Data.Functor.positions is for Naperian containers
 ||| i.e. containers with a unit shape
 public export
-positionsCont : {c : Cont} -> {sh : c.shp} ->
-  Ext c (c.pos sh)
+positionsCont : {sh : c.shp} -> Ext c (c.pos sh)
 positionsCont = sh <| id
 
 --ex1 : String
@@ -134,6 +146,36 @@ setExt : (e : Ext ((!>) sh ps) x) ->
 setExt (sh <| contentAt) i x
   = sh <| updateAt contentAt (i, x)
 
+
+||| Idris already has concrete implementations of many containers 
+||| we're interested in, and often for concrete instantiations of 
+||| various container types it's useful to be able to do it using 
+||| the Idris instance
+public export
+interface FromConcrete (cont : Cont) where
+  constructor MkConcrete
+  concreteType : Type -> Type
+  concreteFunctor : Functor concreteType
+  fromConcreteTy : concreteType a -> Ext cont a
+  toConcreteTy : Ext cont a -> concreteType a
+
+
+public export
+data AllConcrete : List Cont -> Type where
+  Nil : AllConcrete []
+  Cons : (firstConcrete : FromConcrete c) =>
+    (restConcrete : AllConcrete cs) =>
+    AllConcrete (c :: cs)
+
+
+-- public export
+-- fromConcreteMap : {cont1, cont2 : Cont} ->
+--   (fc1 : FromConcrete cont1) => (fc2 : FromConcrete cont2) =>
+--   (concreteType @{fc1} a -> concreteType @{fc2} b) ->
+--   cont1 `fullOf` a -> cont2 `fullOf` b
+-- fromConcreteMap f = fromConcrete @{fc2} . f . toConcrete @{fc1}
+
+
 ||| Convenience interface to denote that a container 
 ||| has a given interface on positions
 public export
@@ -142,8 +184,6 @@ data InterfaceOnPositions : (i : Type -> Type) -> (c : Cont) -> Type where
     InterfaceOnPositions i c
 
  
-
-
 ||| Derivative of a container
 Deriv : Cont -> Cont
 
@@ -164,13 +204,41 @@ public export
   Right s' => pos' s')
 
 
-public export infixr 0 >@<
-||| Composition of containers (polynomial composition)
-||| Non-symmetric in general
-||| Monoid with CUnit
-public export
-(>@<) : Cont -> Cont -> Cont
-c >@< d = ((sh <| ind) : Ext c (d.shp)) !> (cp : c.pos sh ** d.pos (ind cp))
+namespace ContainerComposition
+  public export infixr 0 >@<
+  ||| Composition of containers (polynomial composition)
+  ||| Non-symmetric in general
+  ||| Monoid with CUnit
+  public export
+  (>@<) : Cont -> Cont -> Cont
+  c >@< d = ((sh <| ind) : Ext c (d.shp)) !> (cp : c.pos sh ** d.pos (ind cp))
+  -- c >@< d = ((sh <| ind) : Ext c (d.shp)) !> (cp : c.pos sh ** d.pos (ind cp))
+  
+  ||| We pattern match on three cases to simplify resulting expressions
+  public export
+  composeContainers : List Cont -> Cont
+  composeContainers [] = CUnit
+  composeContainers [c] = c
+  composeContainers (c :: d :: cs) = c >@< composeContainers (d :: cs)
+
+  ||| This states a list version of 
+  ||| Ext c2 . Ext c1 = Ext (c2 . c1)
+  public export
+  toContainerComp : {shape : List Cont} ->
+    composeExtensions shape a -> Ext (composeContainers shape) a
+  toContainerComp {shape = []} ce = ce
+  toContainerComp {shape = [c]} ce = ce
+  toContainerComp {shape = (c :: d :: cs)} (shp <| idx) = 
+    let rst = (toContainerComp {shape=(d :: cs)}) . idx
+    in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
+
+  public export
+  fromContainerComp : {shape : List Cont} ->
+    Ext (composeContainers shape) a -> composeExtensions shape a
+  fromContainerComp {shape = []} ce = ce
+  fromContainerComp {shape = [c]} ce = ce
+  fromContainerComp {shape = (c :: d :: cs)} ((csh <| cpos) <| idx)
+    = csh <| \d => fromContainerComp (cpos d <| curry idx d)
 
 
 
