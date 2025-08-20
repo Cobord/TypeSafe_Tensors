@@ -271,6 +271,14 @@ namespace RoseTrees
       pure a = Leaf a
       fs <*> xs = map {f=RoseTreeSame} (uncurry ($)) $ liftA2RoseTreeSame fs xs
 
+
+    public export
+    {a : Type} -> Display a => Display (RoseTreeSame a) where
+      display (Leaf x) = display x
+      display (Node x rts)
+        = let (xh ** xw ** dx) = display x 
+          in ?whatt_1
+
   -- Idris' totality checker does not accept this as total
   -- public export
   -- Bifunctor RoseTree where

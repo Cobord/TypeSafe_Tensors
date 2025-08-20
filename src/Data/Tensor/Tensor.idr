@@ -114,7 +114,7 @@ Second isomorphism is the non-trivial one
 ----------------------------}
 ----------------------------}
 
-||| This states a frames a tensor as a 
+||| This frames a tensor as a 
 ||| composition of extensions of containers making its shape
 public export
 toExtComposition : {shape : List ContA} ->
@@ -130,24 +130,28 @@ fromExtComposition {shape = []} ce = TZ $ toIdentity ce
 fromExtComposition {shape = [_]} ce = TS $ TZ <$> ce
 fromExtComposition {shape = (_ :: _ :: _)} ce = TS $ fromExtComposition <$> ce
 
-||| TODO which composition product (name unclear)? Composition product of containers, or composition of extensions of containers
-public export
-toCompProduct : {shape : List ContA} ->
-  TensorA shape a -> Ext (composeContainersA shape) a
-toCompProduct = ToContainerComp . toExtComposition
-
-public export
-fromCompProduct : {shape : List ContA} ->
-  (composeContainersA shape) `fullOf` a -> TensorA shape a
-fromCompProduct = fromExtComposition . FromContainerComp
-
-||| General, dependent-lens based applicative tensor reshaping
-||| Should capture views, traversals, and other ops that don't touch content 
-public export
-reshapeTensorA : {oldShape, newShape : List ContA} ->
-  (composeContainersA oldShape =%> composeContainersA newShape) ->
-  TensorA oldShape a -> TensorA newShape a
-reshapeTensorA dLens = fromCompProduct . (contMapExt dLens) . toCompProduct
+-- TODO commented this out because I'm replacing ToContainerComp 
+-- TODO I'm experimenting with being able to use Tensor as a literal container, and that requires 
+-- getting rid of ToContainerComp as it requires composeExtensions to be public
+-- we already have that functionality in a different place
+-- ||| TODO which composition product (name unclear)? Composition product of containers, or composition of extensions of containers
+-- public export
+-- toCompProduct : {shape : List ContA} ->
+--   TensorA shape a -> Ext (composeContainersA shape) a
+-- toCompProduct = ToContainerComp . toExtComposition
+-- 
+-- public export
+-- fromCompProduct : {shape : List ContA} ->
+--   (composeContainersA shape) `fullOf` a -> TensorA shape a
+-- fromCompProduct = fromExtComposition . FromContainerComp
+-- 
+-- ||| General, dependent-lens based applicative tensor reshaping
+-- ||| Should capture views, traversals, and other ops that don't touch content 
+-- public export
+-- reshapeTensorA : {oldShape, newShape : List ContA} ->
+--   (composeContainersA oldShape =%> composeContainersA newShape) ->
+--   TensorA oldShape a -> TensorA newShape a
+-- reshapeTensorA dLens = fromCompProduct . (contMapExt dLens) . toCompProduct
 
 
 {----------------------------
@@ -211,6 +215,7 @@ namespace ConcreteTensorA
 
 
 namespace EqTensorA
+  -- Different notions of equality, including np.allclose TODO
   public export
   data AllEq : (shape : List ContA) -> (dtype : Type) -> Type where
     Nil : Eq dtype => AllEq [] dtype
@@ -224,9 +229,19 @@ namespace EqTensorA
   tensorEq {allEq = Cons} (TS xs) (TS xs') = xs == xs'
 
   public export
-  {shape : List ContA} -> (allEq : AllEq shape dtype) =>
-    Eq (TensorA shape dtype) where
-      (==) = tensorEq
+  {shape : List ContA} ->
+  (allEq : AllEq shape dtype) =>
+  Eq (TensorA shape dtype) where
+    (==) = tensorEq
+
+  -- -- For now, for simplicity, simply extending typechecker's notion
+  -- -- Is this the right notion? Have not seen a thing like this anywhere
+  -- DecEq (TensorA shape dtype) => Eq (TensorA shape dtype) where
+  --   t1 == t2 = case decEq t1 t2 of
+  --     Yes Refl => True
+  --     No _ => False
+  -- gheq : Eq (TensorA [List, BinTree] Int)
+  -- gheq = %search
 
 namespace ShowTensorA
   public export
@@ -381,7 +396,8 @@ namespace AlgebraTensorA
     Nil : AllAlgebra [] a
     (::) : {c : ContA} -> {cs : List ContA} ->
       (alg : Algebra (Ext (GetC c)) (TensorA cs a)) =>
-      (allAlg : AllAlgebra cs a) => AllAlgebra (c :: cs) a
+      (allAlg : AllAlgebra cs a) =>
+      AllAlgebra (c :: cs) a
 
   public export
   reduceTensorA : {shape : List ContA} ->
@@ -397,6 +413,15 @@ namespace AlgebraTensorA
   (allAlgebra : AllAlgebra shape a) =>
   Algebra (TensorA shape) a where
     reduce = reduceTensorA
+
+  agtest0 : Algebra BinTreeNode Int
+  agtest0 = %search
+
+  agt : AllAlgebra [BinTreeNode, Vect 7] Int
+  agt = %search
+
+  agtest : Algebra (TensorA [BinTreeNode, Vect 7]) Int
+  agtest = %search
 
   public export
   [appSumTensorA] {c : ContA} ->{shape : List ContA} ->
@@ -662,12 +687,13 @@ namespace CubicalTensor
     composeContainersA oldShape =%> composeContainersA newShape
   reshapeDLens = ?ff <%! ?bbbw
 
-  public export
-  reshape : {oldShape, newShape : List Nat} ->
-    Tensor oldShape a ->
-    {auto prf : prod oldShape = prod newShape} ->
-    Tensor newShape a
-  reshape t = ToCubicalTensorMap (reshapeTensorA reshapeDLens) t
+  -- TODO reshape commented out for the same reason as reshapeTensorA is
+  -- public export
+  -- reshape : {oldShape, newShape : List Nat} ->
+  --   Tensor oldShape a ->
+  --   {auto prf : prod oldShape = prod newShape} ->
+  --   Tensor newShape a
+  -- reshape t = ToCubicalTensorMap (reshapeTensorA reshapeDLens) t
   -- reshape t = ToCubicalTensorMap (reshapeTensorA (cubicalTensorToFlat %>>  %>> flatToCubicalTensor)) t
 
 

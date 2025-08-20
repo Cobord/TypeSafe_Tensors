@@ -39,24 +39,24 @@ public export
 composeExtensionsA : List ContA -> Type -> Type
 composeExtensionsA cs = composeExtensions (GetC <$> cs)
 
-||| This states a list version of 
-||| Ext c2 . Ext c1 = Ext (c2 . c1)
-public export
-ToContainerComp : {conts : List ContA} ->
-  composeExtensionsA conts a -> Ext (composeContainersA conts) a
-ToContainerComp {conts = []} ce = ce
-ToContainerComp {conts = [c]} ce = ce
-ToContainerComp {conts = (c :: d :: cs)} (shp <| idx) = 
-  let rst = (ToContainerComp {conts=(d :: cs)}) . idx
-  in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
+-- ||| This states a list version of 
+-- ||| Ext c2 . Ext c1 = Ext (c2 . c1)
+-- public export
+-- ToContainerComp : {conts : List ContA} ->
+--   composeExtensionsA conts a -> Ext (composeContainersA conts) a
+-- ToContainerComp {conts = []} ce = ce
+-- ToContainerComp {conts = [c]} ce = ce
+-- ToContainerComp {conts = (c :: d :: cs)} (shp <| idx) = 
+--   let rst = (ToContainerComp {conts=(d :: cs)}) . idx
+--   in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
 
-public export
-FromContainerComp : {conts : List ContA} ->
-  Ext (composeContainersA conts) a -> composeExtensionsA conts a
-FromContainerComp {conts = []} ce = ce
-FromContainerComp {conts = [c]} ce = ce
-FromContainerComp {conts = (c :: d :: cs)} ((csh <| cpos) <| idx)
-  = csh <| \dd => FromContainerComp {conts=(d::cs)} (cpos dd <| curry idx dd)
+-- public export
+-- FromContainerComp : {conts : List ContA} ->
+--   Ext (composeContainersA conts) a -> composeExtensionsA conts a
+-- FromContainerComp {conts = []} ce = ce
+-- FromContainerComp {conts = [c]} ce = ce
+-- FromContainerComp {conts = (c :: d :: cs)} ((csh <| cpos) <| idx)
+--   = csh <| \dd => FromContainerComp {conts=(d::cs)} (cpos dd <| curry idx dd)
 
 
 

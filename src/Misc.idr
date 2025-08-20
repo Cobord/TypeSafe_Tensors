@@ -116,6 +116,28 @@ unConcat {n = (S k)} xs = let (f, s) = splitAt m xs
                           in f :: unConcat s
 
 
+
+public export
+interface Display (a : Type) where
+  display : (x : a) -> (h : Nat ** w : Nat ** Vect h ((Vect w) Char))
+
+public export
+{a : Type} -> Display a => Show a where
+  show x = let (h ** w ** xs) = display x
+               ss = toList (intersperse "\n" (pack . toList <$> xs)) -- add intercalate here, and newline
+           in fastUnlines ss
+
+public export
+Display Char where
+  display x = (1 ** 1 ** [[x]])
+
+
+
+
+
+
+
+
 -- for reshaping a tensor
 rr : {n, x, y : Nat}
   -> Fin (S n)

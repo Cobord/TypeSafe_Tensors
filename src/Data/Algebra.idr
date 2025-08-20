@@ -13,11 +13,17 @@ interface Algebra (f : Type -> Type) a where
   constructor MkAlgebra
   reduce : f a -> a
 
+{-
+In a lot of the code below, we assume Num a defines a Rig structure on a, meaning the sum operation is both commutative and associative.
+This means that we can without any additional assumptions define it for trees, for instance
+-}
+
 public export
 Num a => Algebra List a where
   reduce = foldr (+) (fromInteger 0)
 
 -- Does this work for any Applicative? I think not, because in trees we have to choose an order of summation. But that might not impact things?
+-- if the sum operation is commutative, then it should not impact things
 public export
 {n : Nat} -> Num a => Algebra (Vect n) a where
   reduce = foldr (+) (fromInteger 0)
@@ -55,3 +61,10 @@ Num a => Algebra BinTreeNode a where
   reduce (Node node leftTree rightTree)
      = node + (reduce {f=BinTreeNode} leftTree)
             + (reduce {f=BinTreeNode} rightTree)
+
+
+public export
+Num a => Algebra RoseTreeSame a where
+  reduce (Leaf x) = x
+  reduce (Node x subTrees)
+    = x + reduce ((reduce {f=RoseTreeSame}) <$> subTrees)

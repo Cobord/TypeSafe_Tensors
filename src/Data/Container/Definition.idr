@@ -1,5 +1,6 @@
 module Data.Container.Definition
 
+import Decidable.Equality
 import Data.Fin
 import Data.Vect
 import Data.DPair
@@ -44,6 +45,18 @@ public export
 CUnit : Cont
 CUnit = Const Unit
 
+||| Convenience interface to denote that a container 
+||| has a given interface on positions
+public export
+data InterfaceOnPositions : (i : Type -> Type) -> (c : Cont) -> Type where
+  ||| For every shape we need to show that the interface is satisfied
+  PosInterface : (p : (s : c.shp) -> i (c.pos s)) =>
+    InterfaceOnPositions i c
+
+public export
+GetInterface : InterfaceOnPositions i c -> (s : c.shp) -> i (c.pos s)
+GetInterface (PosInterface @{j}) = j
+
 ||| Extension of a container
 ||| This allows us to talk about the content, or payload of a container
 public export
@@ -59,6 +72,34 @@ public export
 fullOf : Cont -> Type -> Type
 fullOf c x = Ext c x 
 
+||| Notably, Eq instance is not possible to write for a general Ext c a
+||| This is because Eq needs to be total, and some containers have an infinite number of positions, meaning they cannot be checked in finite time
+||| However, we can write ...
+||| TODO do I even need this? Computing equality for general extensions is hard, and at best this piece of code can sometmes be 
+namespace EqExt
+  ||| Structure needed to store the equality data for Ext
+  public export
+  record EqExt (e1, e2 : Ext c a) where
+    constructor MkEqExt
+    ||| The shapes must be equal
+    shapesEqual : e1.shapeExt = e2.shapeExt
+    ||| For each position in that shape, the values must be equal
+    ||| Relying on rewrite to get the correct type for the position
+    valuesEqual : (p : c.pos (e1.shapeExt)) ->
+      e1.indexCont p =
+      e2.indexCont (rewrite__impl (c.pos) (sym shapesEqual) p)
+    {-
+    Another alternative is to use DecEq, and a different explicit rewrite
+     -}
+
+  public export
+  decEqExt : (e1, e2 : Ext c a) ->
+    EqExt e1 e2 ->
+    Dec (e1 = e2)
+  decEqExt e1 e2 (MkEqExt shapesEqual valuesEqual)
+    = Yes ?decEqExt_rhs_0 -- complicated, but doable?
+
+  
 ||| Every extension is a functor : Type -> Type
 public export
 Functor (Ext c) where
@@ -147,25 +188,27 @@ setExt (sh <| contentAt) i x
   = sh <| updateAt contentAt (i, x)
 
 
-||| Idris already has concrete implementations of many containers 
-||| we're interested in, and often for concrete instantiations of 
-||| various container types it's useful to be able to do it using 
-||| the Idris instance
-public export
-interface FromConcrete (cont : Cont) where
-  constructor MkConcrete
-  concreteType : Type -> Type
-  concreteFunctor : Functor concreteType
-  fromConcreteTy : concreteType a -> Ext cont a
-  toConcreteTy : Ext cont a -> concreteType a
-
-
-public export
-data AllConcrete : List Cont -> Type where
-  Nil : AllConcrete []
-  Cons : (firstConcrete : FromConcrete c) =>
-    (restConcrete : AllConcrete cs) =>
-    AllConcrete (c :: cs)
+namespace ConcreteContainer
+  ||| Idris already has concrete implementations of many containers 
+  ||| we're interested in, and often for concrete instantiations of 
+  ||| various container types it's useful to be able to do it using 
+  ||| the Idris instance
+  public export
+  interface FromConcrete (cont : Cont) where
+    constructor MkConcrete
+    concreteType : Type -> Type
+    concreteFunctor : Functor concreteType
+    fromConcreteTy : concreteType a -> Ext cont a
+    toConcreteTy : Ext cont a -> concreteType a
+  
+  
+  public export
+  data AllConcrete : List Cont -> Type where
+    Nil : AllConcrete []
+    Cons : {c : Cont} -> {cs : List Cont} ->
+      (firstConcrete : FromConcrete c) =>
+      (restConcrete : AllConcrete cs) =>
+      AllConcrete (c :: cs)
 
 
 -- public export
@@ -175,13 +218,6 @@ data AllConcrete : List Cont -> Type where
 --   cont1 `fullOf` a -> cont2 `fullOf` b
 -- fromConcreteMap f = fromConcrete @{fc2} . f . toConcrete @{fc1}
 
-
-||| Convenience interface to denote that a container 
-||| has a given interface on positions
-public export
-data InterfaceOnPositions : (i : Type -> Type) -> (c : Cont) -> Type where
-  PosInterface : (p : (s : c.shp) -> i (c.pos s)) =>
-    InterfaceOnPositions i c
 
  
 ||| Derivative of a container
@@ -215,6 +251,7 @@ namespace ContainerComposition
   -- c >@< d = ((sh <| ind) : Ext c (d.shp)) !> (cp : c.pos sh ** d.pos (ind cp))
   
   ||| We pattern match on three cases to simplify resulting expressions
+  ||| This isn't 'public', not sure if that's a good idea, but it prevents the typechecker from reducing this composition at callsites when trying to create tensors from concrete ones
   public export
   composeContainers : List Cont -> Cont
   composeContainers [] = CUnit

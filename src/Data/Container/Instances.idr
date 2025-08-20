@@ -14,12 +14,11 @@ import Data.Algebra
 import Data.Tree
 import public Data.Container.TreeUtils -- rexport all the stuff inside
 
-
 %hide Data.Vect.fromList
 
 
 ||| Examples that do not require any additional constraints such as Applicative
-namespace MainContainerExamples
+namespace MainExamples
   ||| Empty container, isomorphic to Void
   public export
   Empty : Cont
@@ -111,7 +110,7 @@ namespace MainContainerExamples
     = (f : ((x : c.shp) -> (y : d.shp ** d.pos y -> Maybe (c.pos x))))
       !> (xx : c.shp ** yy' : d.pos (fst (f xx)) ** ?hh)
 
-namespace ExtensionsOfMainContainerExamples
+namespace ExtensionsOfMainExamples
   ||| Isomorphic to the Identity
   public export
   Scalar' : Type -> Type
@@ -194,23 +193,23 @@ namespace ConversionFunctions
   toMaybe (True <| f) = Just (f ())
 
   public export
-  fromList : List x -> List' x
+  fromList : List a -> List' a
   fromList [] = (0 <| absurd)
-  fromList (x :: xs) = let (l <| c) = fromList xs
+  fromList (x :: xs) = let (l <| c) : List' a := fromList xs
                        in (S l <| addBeginning x c)
 
   public export
-  toList : List' x -> List x
+  toList : List' a -> List a
   toList (0 <| _) = []
   toList ((S k) <| ind) = let (x, c) = removeBeginning ind
                           in x :: toList (k <| c)
   
   public export
-  fromVect : Vect n x -> Vect' n x
+  fromVect : Vect n a -> Vect' n a
   fromVect v = () <| \i => index i v
   
   public export
-  toVect : {n : Nat} -> Vect' n x -> Vect n x
+  toVect : {n : Nat} -> Vect' n a -> Vect n a
   toVect (_ <| indexCont) = vectTabulate indexCont
 
   public export
@@ -390,22 +389,24 @@ toTensor = extensionsToConcreteType . fromContainerComp
 
 public export
 {shape : List Cont} ->
-(allConcrete : AllConcrete shape) => FromConcrete (Tensor shape) where
+(allConcrete : AllConcrete shape) =>
+FromConcrete (Tensor shape) where
   concreteType = concreteTypeTensor shape {allConcrete}
   concreteFunctor = concreteTypeFunctor {shape} {allConcrete}
   fromConcreteTy = fromTensor
   toConcreteTy = toTensor
 
-baal : FromConcrete List
+
+baal : FromConcrete Scalar
 baal = %search
 
 baa : FromConcrete Maybe
 baa = %search
 
-aa : AllConcrete [List, Maybe]
+aa : AllConcrete [List, List]
 aa = %search
 
--- ca : FromConcrete (Tensor [List, List])
+ca : FromConcrete (Tensor [List, List])
 -- ca = %search
 
 -- caa : FromConcrete (Tensor [List, Maybe])
@@ -415,7 +416,8 @@ aa = %search
 --- tt = fromConcreteTy ?aaaa
 
 
-
+-- TODO should all of these instances be defined in terms of their concrete ones?
+-- i.e. simply via translation functions to concreteTypes we defined above?
 namespace VectInstances
   public export
   {n : Nat} -> Eq x => Eq (Ext (Vect n) x) where
@@ -593,3 +595,31 @@ namespace BinTreeNodeInstances
       reduce {f=BinTreeNode'} (r <| v . GoRight)
 
 
+
+data AllAlgebra : (shape : List Cont) -> (dtype : Type) -> Type where
+  Nil : AllAlgebra [] a
+  Cons : (alg : Algebra (Ext c) (Tensor' cs a)) =>
+    (allAlg : AllAlgebra cs a) =>
+    AllAlgebra (c :: cs) a
+
+
+public export
+reduceTensor : {shape : List Cont} ->
+  (allAlgebra : AllAlgebra shape a) =>
+  Tensor' shape a -> a
+reduceTensor {shape = []} {allAlgebra = []} t = toIdentity t
+reduceTensor {shape = [c]} {allAlgebra = Cons {alg}} t = ?reduceTensor_rhs_1
+reduceTensor {shape = (c :: cs)} {allAlgebra = Cons {alg} {allAlg}} t
+  = let tt = fromContainerComp t
+    in ?reduceTensor_rhs_2
+
+public export
+{shape : List Cont} ->
+(allAlgebra : AllAlgebra shape a) =>
+Algebra (Tensor' shape) a where
+  reduce = reduceTensor
+
+
+  --reduceTensorA {allAlg = []} (TZ val) = val
+  --reduceTensorA {allAlg = ((::) {allAlg=cs})} (TS xs)
+  --  = reduceTensorA $ reduce xs
