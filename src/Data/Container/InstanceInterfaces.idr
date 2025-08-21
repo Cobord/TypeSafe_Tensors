@@ -7,6 +7,8 @@ import Data.Container.Object.Definition
 import Data.Container.Object.Instances
 import Data.Container.Concrete.Definition
 import Data.Container.Concrete.Instances
+import Data.Container.Extension.Definition
+import Data.Container.Extension.Instances
 
 import Data.Algebra
 import Misc

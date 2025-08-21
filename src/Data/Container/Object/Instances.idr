@@ -3,10 +3,9 @@ module Data.Container.Object.Instances
 import Data.Vect
 
 import Data.Container.Object.Definition
+import Data.Container.Products
 import public Data.Container.TreeUtils -- rexport all the stuff inside
 import Misc
-
-%hide Data.Vect.fromList
 
 ||| Examples that do not require any additional constraints such as Applicative
 namespace MainExamples
@@ -69,12 +68,16 @@ namespace MainExamples
   public export
   BinTreeLeaf : Cont
   BinTreeLeaf = (b : BinTreeShape) !> BinTreePosLeaf b
-  
+
   ||| Tensors are containers
   ||| TODO not used yet, new finding
   public export
   Tensor : List Cont -> Cont
-  Tensor cs = composeContainers cs
+  Tensor [] = Scalar
+  Tensor (c :: cs) = c >@ Tensor cs
+
+  -- TODO what is "Tensor" with hancock product? with cartesian product?
+  -- with hancock product there is a duoidal structure?
   
   ||| Every lens gives rise to a container
   ||| The set of shapes is the lens itself
@@ -93,59 +96,21 @@ namespace MainExamples
     = (f : ((x : c.shp) -> (y : d.shp ** d.pos y -> Maybe (c.pos x))))
       !> (xx : c.shp ** yy' : d.pos (fst (f xx)) ** ?hh)
 
-namespace ExtensionsOfMainExamples
-  ||| Isomorphic to the Identity
-  public export
-  Scalar' : Type -> Type
-  Scalar' = Ext Scalar
 
-  ||| Isomorphic to Pair
+  ||| Constant container with a fixed set of shapes and a fixed set of positions
+  ||| for each shape
+  ||| Generalisation of what we see for Scalar
   public export
-  Pair' : Type -> Type
-  Pair' = Ext Pair
-  
-  ||| Isomorphic to Either
-  public export
-  Either' : Type -> Type
-  Either' = Ext Either
+  Const2 : Type -> Type -> Cont
+  Const2 x y = (_ : x) !> y
 
-  ||| Isomorphic to Maybe
+  ||| Constant container with a single shape  
+  ||| Naperian container
   public export
-  Maybe' : Type -> Type
-  Maybe' = Ext Maybe
-  
-  ||| Isomorphic to List
-  public export
-  List' : Type -> Type
-  List' = Ext List
+  Nap : Type -> Cont
+  Nap x = Const2 Builtin.Unit x
 
-  ||| Isomorphic to Vect
+  ||| Constant container with the same set of shapes and positions 
   public export
-  Vect' : (n : Nat) -> Type -> Type
-  Vect' n = Ext (Vect n)
-
-  ||| Isomorphic to Stream
-  public export
-  Stream' : Type -> Type
-  Stream' = Ext Stream
-
-  ||| Isomorphic to Data.Tree.BinTreeSame
-  public export
-  BinTree' : Type -> Type
-  BinTree' = Ext BinTree
-
-  ||| Isomorphic to Data.Tree.BinTreeNode
-  public export
-  BinTreeNode' : Type -> Type
-  BinTreeNode' = Ext BinTreeNode
-  
-  ||| Isomorphic to Data.Tree.BinTreeLeaf
-  public export
-  BinTreeLeaf' : Type -> Type
-  BinTreeLeaf' = Ext BinTreeLeaf
-
-  ||| Isomorphic to Data.Tensor.TensorA
-  ||| todo
-  public export
-  Tensor' : List Cont -> Type -> Type
-  Tensor' cs = Ext (Tensor cs)
+  Const : Type -> Cont
+  Const x = Const2 x x

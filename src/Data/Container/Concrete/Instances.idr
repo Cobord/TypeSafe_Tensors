@@ -8,6 +8,11 @@ import Data.DPair
 import Data.Container.Object.Definition
 import Data.Container.Object.Instances
 import Data.Container.Concrete.Definition
+import Data.Container.Extension.Definition
+import Data.Container.Extension.Instances
+
+import Data.Container.Products
+
 
 import Data.Functor.Naperian
 import Data.Tree
@@ -209,7 +214,7 @@ concreteTypeComposition (c :: cs) {allConcrete = Cons}
 public export
 ffInterf : {shape : List Cont} ->
 (allConcrete : AllConcrete shape) =>
-FromConcrete (composeContainers shape)
+FromConcrete (Tensor shape)
 ffInterf = ?todooo
   -- concreteType = concreteTypeComposition shape
   -- concreteFunctor = ?two

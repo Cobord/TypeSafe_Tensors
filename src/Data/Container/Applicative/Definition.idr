@@ -1,10 +1,11 @@
 module Data.Container.Applicative.Definition
 
 import Data.Container.Object.Definition
+import Data.Container.Extension.Definition
+import Data.Container.Products
 import Misc
 
 %hide Builtin.infixr.(#)
-%hide Prelude.(<|)
 
 ||| Applicative Container
 ||| Consists of a container and a proof that its extension is an applicative functor
@@ -26,14 +27,6 @@ public export
 public export
 (.pos) : (c : ContA) -> c.shp -> Type
 (.pos) c sh = (GetC c) .pos sh
-
-public export
-composeContainersA : List ContA -> Cont
-composeContainersA cs = composeContainers (GetC <$> cs)
-
-public export
-composeExtensionsA : List ContA -> Type -> Type
-composeExtensionsA cs = composeExtensions (GetC <$> cs)
 
 -- ||| This states a list version of 
 -- ||| Ext c2 . Ext c1 = Ext (c2 . c1)

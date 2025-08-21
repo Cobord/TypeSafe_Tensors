@@ -7,6 +7,8 @@ import Data.Container.SubTerm
 import Data.Container.Object.Definition
 import Data.Container.Applicative.Definition
 
+import Data.Container.Extension.Definition
+
 %language ElabReflection
 
 {-----------------------------------------------------------

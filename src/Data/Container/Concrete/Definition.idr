@@ -1,6 +1,7 @@
 module Data.Container.Concrete.Definition
 
 import Data.Container.Object.Definition
+import Data.Container.Extension.Definition
 
 ||| Idris already has concrete implementations of many containers 
 ||| we're interested in, and often for concrete instantiations of 

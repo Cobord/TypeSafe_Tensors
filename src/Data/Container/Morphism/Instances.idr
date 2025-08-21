@@ -5,6 +5,8 @@ import Data.Fin
 import Data.Container.Object.Definition
 import Data.Container.Object.Instances
 import Data.Container.Morphism.Definition
+import Data.Container.Extension.Definition
+import Data.Container.Products
 import Misc
 
 -- Need to do some rewriting for preorder
@@ -42,6 +44,18 @@ reshapeVects :
   Vect (n * m) `fullOf` a
 reshapeVects (((), ()) <| indexCont)
   = () <| ?reshapeVects_rhs_4
+
+
+||| Ext itself is a functor: Cont -> [Type, Type]
+||| On morphisms, it maps every dLens to a natural transformation
+||| Can be used to reshape tensors, among others
+public export
+contMapExt : {c1, c2 : Cont} ->
+  (c1 =%> c2) ->
+  (Ext c1 a -> Ext c2 a)
+contMapExt (fwd <%! bwd) (sh <| index) = fwd sh <| (\y' => index (bwd sh y'))
+
+
 
 
 -- public export

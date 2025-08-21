@@ -5,9 +5,12 @@ import Data.DPair
 
 import Data.Container.Object.Definition
 import Data.Container.Object.Instances
+import Data.Container.Extension.Definition
+import Data.Container.Extension.Instances
 import Data.Container.Concrete.Definition
 import Data.Container.Concrete.Instances
 import Data.Container.Applicative.Definition
+
 
 import Data.Tree
 import Misc
@@ -172,6 +175,18 @@ namespace ApplicativeInstances
   public export
   BinTreeLeaf : ContA
   BinTreeLeaf = (#) BinTreeLeaf
+
+
+  public export
+  TensorA : List ContA -> Cont
+  TensorA cs = Tensor (GetC <$> cs)
+  
+  public export
+  composeExtensionsA : List ContA -> Type -> Type
+  composeExtensionsA cs = composeExtensions (GetC <$> cs)
+
+
+
 
   ||| Generalisation of Rose trees with a container
   ||| of subtrees (container whose extension is applicative)

@@ -54,16 +54,6 @@ valContMap : {c1, c2 : Cont} -> {r : Type}
 valContMap {c1=(shp !> pos)} {c2=(shp' !> pos')} (fwd <&! fwd')
   = fwd <%! (\x, k, x' => k (fwd' x x'))
 
-||| Ext itself is a functor: Cont -> [Type, Type]
-||| On morphisms, it maps every dLens to a natural transformation
-||| Can be used to reshape tensors, among others
-public export
-contMapExt : {c1, c2 : Cont} ->
-  (c1 =%> c2) ->
-  (Ext c1 a -> Ext c2 a)
-contMapExt (fwd <%! bwd) (sh <| index) = fwd sh <| (\y' => index (bwd sh y'))
-
-
 -- ||| A container morphism
 -- public export
 -- record (~%>) (c1, c2 : ContF R) where

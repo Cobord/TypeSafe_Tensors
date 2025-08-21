@@ -12,6 +12,7 @@ import public Misc
 import public Data.Functor.Naperian
 
 %hide Builtin.infixr.(#)
+%hide Data.Container.Applicative.Instances.ApplicativeInstances.TensorA
 
 {-----------------------------------------------------------
 {-----------------------------------------------------------
@@ -675,10 +676,10 @@ namespace CubicalTensor
   toConcrete : {shape : List Nat} -> Tensor shape a -> Array shape a
   toConcrete = toArrayHelper . FromCubicalTensor
 
-  public export
-  reshapeDLens : {oldShape, newShape : List ContA} ->
-    composeContainersA oldShape =%> composeContainersA newShape
-  reshapeDLens = ?ff <%! ?bbbw
+  -- public export
+  -- reshapeDLens : {oldShape, newShape : List ContA} ->
+  --   composeContainersA oldShape =%> composeContainersA newShape
+  -- reshapeDLens = ?ff <%! ?bbbw
 
   -- TODO reshape commented out for the same reason as reshapeTensorA is
   -- public export

@@ -4,6 +4,7 @@ module Data.Container.Instances
 -- todo what happens with definition imports?
 
 import public Data.Container.Object.Instances
+import public Data.Container.Extension.Instances
 import public Data.Container.Morphism.Instances
 import public Data.Container.Applicative.Instances
 import public Data.Container.Concrete.Instances
