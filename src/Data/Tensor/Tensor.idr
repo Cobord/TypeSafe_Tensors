@@ -1,13 +1,9 @@
 module Data.Tensor.Tensor
 
-import public Data.Vect
-
-import public Data.Container.Definitions
-import public Data.Container.Instances
+import public Data.Container
 import public Data.Container.SubTerm
 
 import public Data.Algebra
-import public Data.Tree
 import public Misc
 import public Data.Functor.Naperian
 

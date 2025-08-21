@@ -176,7 +176,6 @@ namespace ApplicativeInstances
   BinTreeLeaf : ContA
   BinTreeLeaf = (#) BinTreeLeaf
 
-
   public export
   TensorA : List ContA -> Cont
   TensorA cs = Tensor (GetC <$> cs)

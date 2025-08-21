@@ -12,12 +12,12 @@ namespace MainExamples
   ||| Empty container, isomorphic to Void
   public export
   Empty : Cont
-  Empty = (x : Void) !> absurd x
+  Empty = (_ : Void) !> Void
 
   ||| Container with a single shape, but no positions, isomorphic to Unit : Type
   public export
   Unit : Cont
-  Unit = (_ : Unit) !> Void 
+  Unit = (_ : Unit) !> Void
 
   ||| Container of a single thing
   public export
@@ -96,21 +96,16 @@ namespace MainExamples
     = (f : ((x : c.shp) -> (y : d.shp ** d.pos y -> Maybe (c.pos x))))
       !> (xx : c.shp ** yy' : d.pos (fst (f xx)) ** ?hh)
 
-
-  ||| Constant container with a fixed set of shapes and a fixed set of positions
-  ||| for each shape
-  ||| Generalisation of what we see for Scalar
+  ||| Constant container, positions do not depend on shapes
+  ||| Some of the above containers can be refactored in terms of these
+  ||| But it's more illuminating to keep them in their raw form for now
   public export
-  Const2 : Type -> Type -> Cont
-  Const2 x y = (_ : x) !> y
+  Const : Type -> Type -> Cont
+  Const x y = (_ : x) !> y
 
   ||| Constant container with a single shape  
   ||| Naperian container
   public export
   Nap : Type -> Cont
-  Nap x = Const2 Builtin.Unit x
+  Nap x = Const Unit x
 
-  ||| Constant container with the same set of shapes and positions 
-  public export
-  Const : Type -> Cont
-  Const x = Const2 x x

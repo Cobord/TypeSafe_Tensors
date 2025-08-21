@@ -1,8 +1,6 @@
 module Data.Container.Instances
 
 -- vertical slice of the library at instances
--- todo what happens with definition imports?
-
 import public Data.Container.Object.Instances
 import public Data.Container.Extension.Instances
 import public Data.Container.Morphism.Instances

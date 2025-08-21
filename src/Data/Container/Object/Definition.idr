@@ -1,7 +1,5 @@
 module Data.Container.Object.Definition
 
--- Inspired by Andre's code: https://gitlab.com/avidela/types-laboratory/-/tree/main/src/Data/Container?ref_type=heads
-
 ||| A container is a pair: a shape and a set of positions indexed by that shape
 ||| They can be used to describe various data types
 public export

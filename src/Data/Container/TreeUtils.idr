@@ -3,11 +3,11 @@ module Data.Container.TreeUtils
 import Language.Reflection
 import Derive.Prelude
 
-import Data.Container.SubTerm
 import Data.Container.Object.Definition
 import Data.Container.Applicative.Definition
-
 import Data.Container.Extension.Definition
+
+import Data.Container.SubTerm
 
 %language ElabReflection
 

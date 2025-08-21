@@ -16,7 +16,8 @@ authors = "Bruno Gavranovic"
 depends = contrib, hashmap, elab-util
 
 -- modules to install
-modules = Data.Container.Object.Definition,
+modules = Data.Container,
+          Data.Container.Object.Definition,
           Data.Container.Object.Instances,
           Data.Container.Extension.Definition,
           Data.Container.Extension.Instances,
