@@ -493,3 +493,7 @@ filter'' p (x :: xs) with (filter' p xs)
 Prelude.absurd : Uninhabited t => t -> a
 
  -}
+
+
+gg : Functor (Maybe . Maybe)
+gg = let t = Functor.Compose in ?gg_rhs

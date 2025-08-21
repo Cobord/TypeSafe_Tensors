@@ -1,15 +1,10 @@
-module Data.Container.Definition
+module Data.Container.Object.Definition
 
-import Decidable.Equality
-import Data.Fin
-import Data.Vect
-import Data.DPair
+import Data.DPair -- for dependent currying
 
-import Data.Tree
 import Data.Functor.Naperian
 import Misc
 
-%hide Data.Vect.fromList
 %hide Builtin.fst
 
 -- Inspired by Andre's code: https://gitlab.com/avidela/types-laboratory/-/tree/main/src/Data/Container?ref_type=heads
@@ -127,14 +122,12 @@ Functor ((Ext d) . (Ext c)) where
 public export
 composeExtensions : List Cont -> Type -> Type
 composeExtensions [] a = Ext CUnit a
-composeExtensions [c] a = Ext c a
-composeExtensions (c :: d :: cs) a = Ext c (composeExtensions (d :: cs) a)
+composeExtensions (c :: cs) a = Ext c (composeExtensions cs a)
 
 public export
 [fe] {shape : List Cont} -> Functor (composeExtensions shape) where
   map {shape = []} f = map f
-  map {shape = [s]} f = map f
-  map {shape = (s :: s' :: ss)} f = (map @{fe} f <$>)
+  map {shape = (s :: ss)} f = (map @{fe} f <$>)
 
 public export
 EmptyExt : Ext (Nap l) ()
@@ -188,38 +181,6 @@ setExt (sh <| contentAt) i x
   = sh <| updateAt contentAt (i, x)
 
 
-namespace ConcreteContainer
-  ||| Idris already has concrete implementations of many containers 
-  ||| we're interested in, and often for concrete instantiations of 
-  ||| various container types it's useful to be able to do it using 
-  ||| the Idris instance
-  public export
-  interface FromConcrete (cont : Cont) where
-    constructor MkConcrete
-    concreteType : Type -> Type
-    concreteFunctor : Functor concreteType
-    fromConcreteTy : concreteType a -> Ext cont a
-    toConcreteTy : Ext cont a -> concreteType a
-  
-  
-  public export
-  data AllConcrete : List Cont -> Type where
-    Nil : AllConcrete []
-    Cons : {c : Cont} -> {cs : List Cont} ->
-      (firstConcrete : FromConcrete c) =>
-      (restConcrete : AllConcrete cs) =>
-      AllConcrete (c :: cs)
-
-
--- public export
--- fromConcreteMap : {cont1, cont2 : Cont} ->
---   (fc1 : FromConcrete cont1) => (fc2 : FromConcrete cont2) =>
---   (concreteType @{fc1} a -> concreteType @{fc2} b) ->
---   cont1 `fullOf` a -> cont2 `fullOf` b
--- fromConcreteMap f = fromConcrete @{fc2} . f . toConcrete @{fc1}
-
-
- 
 ||| Derivative of a container
 Deriv : Cont -> Cont
 
@@ -241,22 +202,21 @@ public export
 
 
 namespace ContainerComposition
-  public export infixr 0 >@<
+  public export infixr 0 >@
   ||| Composition of containers (polynomial composition)
-  ||| Non-symmetric in general
+  ||| Non-symmetric in general (hence why the symbol is non-symmetric too)
   ||| Monoid with CUnit
   public export
-  (>@<) : Cont -> Cont -> Cont
-  c >@< d = ((sh <| ind) : Ext c (d.shp)) !> (cp : c.pos sh ** d.pos (ind cp))
+  (>@) : Cont -> Cont -> Cont
+  c >@ d = ((sh <| ind) : Ext c (d.shp)) !> (cp : c.pos sh ** d.pos (ind cp))
   -- c >@< d = ((sh <| ind) : Ext c (d.shp)) !> (cp : c.pos sh ** d.pos (ind cp))
-  
+
   ||| We pattern match on three cases to simplify resulting expressions
   ||| This isn't 'public', not sure if that's a good idea, but it prevents the typechecker from reducing this composition at callsites when trying to create tensors from concrete ones
   public export
   composeContainers : List Cont -> Cont
   composeContainers [] = CUnit
-  composeContainers [c] = c
-  composeContainers (c :: d :: cs) = c >@< composeContainers (d :: cs)
+  composeContainers (c :: cs) = c >@ composeContainers cs
 
   ||| This states a list version of 
   ||| Ext c2 . Ext c1 = Ext (c2 . c1)
@@ -264,17 +224,15 @@ namespace ContainerComposition
   toContainerComp : {shape : List Cont} ->
     composeExtensions shape a -> Ext (composeContainers shape) a
   toContainerComp {shape = []} ce = ce
-  toContainerComp {shape = [c]} ce = ce
-  toContainerComp {shape = (c :: d :: cs)} (shp <| idx) = 
-    let rst = (toContainerComp {shape=(d :: cs)}) . idx
+  toContainerComp {shape = (c :: cs)} (shp <| idx) = 
+    let rst = (toContainerComp {shape=cs}) . idx
     in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
 
   public export
   fromContainerComp : {shape : List Cont} ->
     Ext (composeContainers shape) a -> composeExtensions shape a
   fromContainerComp {shape = []} ce = ce
-  fromContainerComp {shape = [c]} ce = ce
-  fromContainerComp {shape = (c :: d :: cs)} ((csh <| cpos) <| idx)
+  fromContainerComp {shape = (c :: cs)} ((csh <| cpos) <| idx)
     = csh <| \d => fromContainerComp (cpos d <| curry idx d)
 
 
@@ -286,4 +244,3 @@ prodConts : List Cont -> Cont
 prodConts = foldr (><) CUnit
 -- prodConts [] = CUnit
 -- prodConts (c :: cs) = c >< prodConts cs
-

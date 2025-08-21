@@ -16,13 +16,17 @@ authors = "Bruno Gavranovic"
 depends = contrib, hashmap, elab-util
 
 -- modules to install
-modules = Data.Container.Definition,
-          Data.Container.Instances,
+modules = Data.Container.Object.Definition,
+          Data.Container.Object.Instances,
           Data.Container.Morphism.Definition,
           Data.Container.Morphism.Instances,
-          Data.Container.Applicative,
+          Data.Container.Concrete.Definition,
+          Data.Container.Concrete.Instances,
           Data.Container.Applicative.Definition,
           Data.Container.Applicative.Instances,
+          Data.Container.Definitions,
+          Data.Container.Instances,
+          Data.Container.InstanceInterfaces,
           Data.Container.TreeUtils,
           Data.Container.SubTerm,
           Data.Tensor,

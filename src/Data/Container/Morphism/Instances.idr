@@ -2,11 +2,9 @@ module Data.Container.Morphism.Instances
 
 import Data.Fin
 
-import Data.Container.Definition
-import Data.Container.Applicative
+import Data.Container.Object.Definition
+import Data.Container.Object.Instances
 import Data.Container.Morphism.Definition
-import Data.Container.Instances
-import Data.Container.TreeUtils
 import Misc
 
 -- Need to do some rewriting for preorder

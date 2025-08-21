@@ -3,13 +3,121 @@ module Data.Container.Applicative.Instances
 import Data.Fin
 import Data.DPair
 
-import Data.Container.Definition
-import Data.Container.Instances
+import Data.Container.Object.Definition
+import Data.Container.Object.Instances
+import Data.Container.Concrete.Definition
+import Data.Container.Concrete.Instances
 import Data.Container.Applicative.Definition
+
 import Data.Tree
 import Misc
 
 %hide Prelude.(<|)
+
+-- Can now implement by converting to and from concrete instances?
+namespace ListApplicative
+  ||| This arises out of the Prelude.Types List applicative 
+  ||| Effectively it behaves like a cartesian product
+  public export 
+  [cartProdInstance] Applicative List' where
+    pure = fromList . pure
+    fs <*> vs = fromList $ toList fs <*> toList vs
+
+  public export
+  listZip' : List' a -> List' b -> List' (a, b)
+  listZip' l1 l2 = fromList $ listZip (toList l1) (toList l2)
+
+  ||| This another List applicative, behaving like the usual zip one
+  ||| It appears that List doesn't have the concrete Zippable instance written
+  ||| Only one in Data.Zippable that follows from Applicative, which isn't the one we want
+  ||| This is the one we use by default, as it's more useful for linear algebra
+  public export
+  Applicative List' where
+    pure = fromList . pure
+    fs <*> vs = fromList $ uncurry ($) <$> listZip (toList fs) (toList vs)
+
+
+namespace BinTreeLeafApplicative
+  public export
+  liftA2BBinTreeLeaf' : BinTreeLeaf' a -> BinTreeLeaf' b -> BinTreeLeaf' (a, b)
+  liftA2BBinTreeLeaf' (LeafS <| v) (LeafS <| v') = LeafS <| (\x => (v x, v' x))
+  liftA2BBinTreeLeaf' (LeafS <| v) (NodeS l' r' <| v') =
+    NodeS l' r' <| \case
+        GoLeft posL' => (v Done, v' (GoLeft posL'))
+        GoRight posR' => (v Done, v' (GoRight posR'))
+  liftA2BBinTreeLeaf' (NodeS l r <| v) (LeafS <| v') =
+    NodeS l r <| \case
+        GoLeft posL => (v (GoLeft posL), v' Done)
+        GoRight posR => (v (GoRight posR), v' Done)
+  liftA2BBinTreeLeaf' (NodeS l r <| v) (NodeS l' r' <| v') =
+    let (ls <| fl) = liftA2BBinTreeLeaf' (l <| v . GoLeft) (l' <| v' . GoLeft)
+        (rs <| fr) = liftA2BBinTreeLeaf' (r <| v . GoRight) (r' <| v' . GoRight)
+    in (NodeS ls rs <| \case
+          GoLeft posL => fl posL
+          GoRight posR => fr posR)
+
+  public export
+  Applicative BinTreeLeaf' where
+    pure a = LeafS <| \_ => a
+    fs <*> vs = uncurry ($) <$> liftA2BBinTreeLeaf' fs vs 
+
+
+namespace BinTreeNodeApplicative
+  -- TODO missing Eq instance for trees
+
+  impossibleCase : BinTreePosNode LeafS -> (a, b)
+  impossibleCase Done impossible
+  impossibleCase (GoLeft x) impossible
+  impossibleCase (GoRight x) impossible
+
+  ||| Combine two BinTreeNode' structures, pairing values at corresponding nodes.
+  ||| The resulting shape is the intersection of the input shapes.
+  public export
+  liftA2BinTreeNode' : BinTreeNode' a -> BinTreeNode' b -> BinTreeNode' (a, b)
+  liftA2BinTreeNode' (NodeS l1 r1 <| f1) (NodeS l2 r2 <| f2) =
+    let (ls <| fl) = liftA2BinTreeNode' (l1 <| f1 . GoLeft) (l2 <| f2 . GoLeft)
+        (rs <| fr) = liftA2BinTreeNode' (r1 <| f1 . GoRight) (r2 <| f2 . GoRight)
+
+        resultFunc : BinTreePosNode (NodeS ls rs) -> (a, b)
+        resultFunc Done = (f1 Done, f2 Done)
+        resultFunc (GoLeft posL) = fl posL
+        resultFunc (GoRight posR) = fr posR
+    in (NodeS ls rs <| resultFunc)
+  liftA2BinTreeNode' _ _ = LeafS <| impossibleCase
+
+  public export
+  Applicative BinTreeNode' where
+    pure a = NodeS LeafS LeafS <| \_ => a
+    fs <*> vs = uncurry ($) <$> liftA2BinTreeNode' fs vs 
+
+
+
+namespace BinTreeApplicative
+  public export
+  liftA2BinTree' : BinTree' a -> BinTree' b -> BinTree' (a, b)
+  liftA2BinTree' (LeafS <| i1) (LeafS <| i2) = LeafS <| \pos => (i1 pos, i2 pos)
+  liftA2BinTree' (LeafS <| i1) ((NodeS lt2 rt2) <| i2) = NodeS lt2 rt2 <| \case
+    DoneNode => (i1 DoneLeaf, i2 DoneNode)
+    GoLeft posL => (i1 DoneLeaf, i2 (GoLeft posL)) 
+    GoRight posR => (i1 DoneLeaf, i2 (GoRight posR))
+  liftA2BinTree' ((NodeS lt1 rt1) <| i1) (LeafS <| i2) = NodeS lt1 rt1 <| \case
+    DoneNode => (i1 DoneNode, i2 DoneLeaf)
+    GoLeft posL => (i1 (GoLeft posL), i2 DoneLeaf)
+    GoRight posR => (i1 (GoRight posR), i2 DoneLeaf)
+  liftA2BinTree' ((NodeS lt1 rt1) <| i1) ((NodeS lt2 rt2) <| i2) =
+    let (ls <| fl) = liftA2BinTree' (lt1 <| i1 . GoLeft) (lt2 <| i2 . GoLeft)
+        (rs <| fr) = liftA2BinTree' (rt1 <| i1 . GoRight) (rt2 <| i2 . GoRight)
+    in NodeS ls rs <| \case
+        DoneNode => (i1 DoneNode, i2 DoneNode)
+        GoLeft posL => fl posL
+        GoRight posR => fr posR
+  -- Is the above correct? I think so
+
+  public export
+  Applicative BinTree' where
+    pure a = LeafS <| \_ => a
+    fs <*> vs = uncurry ($) <$> liftA2BinTree' fs vs
+
 
 
 namespace ApplicativeInstances
@@ -65,34 +173,57 @@ namespace ApplicativeInstances
   BinTreeLeaf : ContA
   BinTreeLeaf = (#) BinTreeLeaf
 
+  ||| Generalisation of Rose trees with a container
+  ||| of subtrees (container whose extension is applicative)
+  ||| instead of a list of a subtrees
+  public export
+  ApplicativeRoseTree : ContA -> Cont
+  ApplicativeRoseTree c = (t : RoseTreeShape c) !> RoseTreePos c t
+
+  ||| Same as above, but with data stored at nodes
+  public export
+  ApplicativeRoseTreeNode : ContA -> Cont
+  ApplicativeRoseTreeNode c = (t : RoseTreeShape c) !> RoseTreePosNode c t
+
+  ||| Same as above, but with data stored at leaf
+  public export
+  ApplicativeRoseTreeLeaf : ContA -> Cont
+  ApplicativeRoseTreeLeaf c = (t : RoseTreeShape c) !> RoseTreePosNode c t
+
+
+  ||| Rose tree here means ApplicativeRoseTree List
   namespace ContDefs
     ||| Rose trees with data stored at both nodes and leaves
     public export
     RoseTree : Cont
-    RoseTree = (t : RoseTreeShape List) !> RoseTreePos List t
+    RoseTree = ApplicativeRoseTree List
   
     ||| Rose trees with data stored at nodes
     public export
     RoseTreeNode : Cont
-    RoseTreeNode = (t : RoseTreeShape List) !> RoseTreePosNode List t
+    RoseTreeNode = ApplicativeRoseTreeNode List
   
     ||| Rose trees with data stored at leaves
     public export
     RoseTreeLeaf : Cont
-    RoseTreeLeaf = (t : RoseTreeShape List) !> RoseTreePosLeaf List t
-
-  -- TODO
-  public export
-  Applicative (Ext (ApplicativeRoseTree c)) where
-    pure a = ?one
-    fs <*> xs = ?two
-
-  public export
-  ApplicativeRoseTree : ContA -> ContA
-  ApplicativeRoseTree c = (#) (ApplicativeRoseTree c)
+    RoseTreeLeaf = ApplicativeRoseTreeLeaf List
 
 
 namespace ExtensionsOfApplicativeExamples
+  ||| Isomorphic to Data.Tree.ApplicativeRoseTree (TODO)
+  public export
+  ApplicativeRoseTree' : (c : ContA) -> Type -> Type
+  ApplicativeRoseTree' c = Ext (ApplicativeRoseTree c)
+
+  public export
+  ApplicativeRoseTreeNode' : (c : ContA) -> Type -> Type
+  ApplicativeRoseTreeNode' c = Ext (ApplicativeRoseTreeNode c)
+
+  public export
+  ApplicativeRoseTreeLeaf' : (c : ContA) -> Type -> Type
+  ApplicativeRoseTreeLeaf' c = Ext (ApplicativeRoseTreeLeaf c)
+
+
   ||| Isomorphic to Data.Tree.RoseTree
   public export
   RoseTree' : Type -> Type
@@ -107,6 +238,18 @@ namespace ExtensionsOfApplicativeExamples
   public export
   RoseTreeLeaf' : Type -> Type
   RoseTreeLeaf' = Ext RoseTreeLeaf
+
+
+  -- TODO
+  public export
+  Applicative (Ext (ApplicativeRoseTree c)) where
+    pure a = ?one
+    fs <*> xs = ?two
+
+  public export
+  ApplicativeRoseTree : ContA -> ContA
+  ApplicativeRoseTree c = (#) (ApplicativeRoseTree c)
+
 
 
 namespace ConversionFunctions

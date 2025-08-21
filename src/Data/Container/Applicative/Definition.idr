@@ -1,10 +1,6 @@
 module Data.Container.Applicative.Definition
 
-import Data.Fin
-import Data.DPair
-
-import Data.Container.Definition
-import Data.Container.Morphism.Definition
+import Data.Container.Object.Definition
 import Misc
 
 %hide Builtin.infixr.(#)

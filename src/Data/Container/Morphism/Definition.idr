@@ -2,7 +2,7 @@ module Data.Container.Morphism.Definition
 
 import Data.DPair
 
-import Data.Container.Definition
+import Data.Container.Object.Definition
 
 ||| Dependent lenses
 ||| Forward-backward container morphisms

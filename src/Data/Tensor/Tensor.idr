@@ -1,19 +1,11 @@
 module Data.Tensor.Tensor
 
-import Data.DPair
-import public Data.Fin
 import public Data.Vect
-import public Data.List
-import Data.Fin.Arith
-import public Data.List.Quantifiers
 
-import public Data.Container.Definition
+import public Data.Container.Definitions
 import public Data.Container.Instances
-import public Data.Container.Morphism.Definition
-import public Data.Container.Morphism.Instances
-import public Data.Container.Applicative
-import public Data.Container.TreeUtils
 import public Data.Container.SubTerm
+
 import public Data.Algebra
 import public Data.Tree
 import public Misc
@@ -120,15 +112,13 @@ public export
 toExtComposition : {shape : List ContA} ->
   TensorA shape a -> composeExtensionsA shape a
 toExtComposition {shape = []} (TZ val) = fromIdentity val
-toExtComposition {shape = [_]} (TS xs) = extract <$> xs
-toExtComposition {shape = (_ :: _ :: _)} (TS xs) = toExtComposition <$> xs
+toExtComposition {shape = (_ :: _)} (TS xs) = toExtComposition <$> xs
 
 public export
 fromExtComposition : {shape : List ContA} ->
   composeExtensionsA shape a -> TensorA shape a
 fromExtComposition {shape = []} ce = TZ $ toIdentity ce
-fromExtComposition {shape = [_]} ce = TS $ TZ <$> ce
-fromExtComposition {shape = (_ :: _ :: _)} ce = TS $ fromExtComposition <$> ce
+fromExtComposition {shape = (_ :: _)} ce = TS $ fromExtComposition <$> ce
 
 -- TODO commented this out because I'm replacing ToContainerComp 
 -- TODO I'm experimenting with being able to use Tensor as a literal container, and that requires 
@@ -299,7 +289,7 @@ namespace ApplicativeTensorA
   {shape : List ContA} -> Applicative (TensorA shape) where
     pure = tensorReplicateA 
     fs <*> xs = uncurry ($) <$> liftA2TensorA fs xs 
-
+  
 namespace NumericTensorA
   public export
   {shape : List ContA} -> Num a => Num (TensorA shape a) where
@@ -417,7 +407,10 @@ namespace AlgebraTensorA
   agtest0 : Algebra BinTreeNode Int
   agtest0 = %search
 
-  agt : AllAlgebra [BinTreeNode, Vect 7] Int
+  agt0 : AllAlgebra [BinTreeNode] Int
+  agt0 = %search
+
+  agt : AlgebraTensorA.AllAlgebra [BinTreeNode, Vect 7] Int
   agt = %search
 
   agtest : Algebra (TensorA [BinTreeNode, Vect 7]) Int
@@ -588,7 +581,7 @@ namespace CubicalTensor
 
     public export
     {shape : List Nat} ->
-    AllAlgebra (Vect <$> shape) a =>
+    AlgebraTensorA.AllAlgebra (Vect <$> shape) a =>
     Algebra (Tensor shape) a where
         reduce (ToCubicalTensor t) = reduce t
 

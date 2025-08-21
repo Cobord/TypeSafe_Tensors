@@ -4,7 +4,7 @@ import Language.Reflection
 import Derive.Prelude
 
 import Data.Container.SubTerm
-import Data.Container.Definition
+import Data.Container.Object.Definition
 import Data.Container.Applicative.Definition
 
 %language ElabReflection
@@ -75,7 +75,9 @@ namespace BinaryTrees
     mcompare (GoRight _) (GoLeft _) = Nothing -- they diverge
     -- for quantitave version of MOrd the last two should map to BinTreePos b extende with a negative direction
 
-
+  data Dir : (a : Type) -> Type where
+    Pos : a -> Dir a
+    Neg : a -> Dir a
 
   Tr : BinTreeShape
   Tr = NodeS (NodeS LeafS LeafS) LeafS
@@ -113,6 +115,59 @@ namespace BinaryTrees
     %runElab deriveIndexed "BinTreePosLeaf" [Eq, Show]
 
 
+namespace ApplicativeRoseTree
+  public export
+  data RoseTreeShape : (c : ContA) -> Type where
+    LeafS : RoseTreeShape c
+    NodeS : (GetC c) `fullOf` (RoseTreeShape c) -> RoseTreeShape c
+
+  -- %runElab derive "RoseTreeShape" [Eq, Show]
+
+  public export
+  numLeaves : Foldable (Ext (GetC c)) => RoseTreeShape c -> Nat
+  numLeaves LeafS = 1
+  numLeaves (NodeS exts) = sum (numLeaves <$> exts)
+
+  public export
+  numNodes : Foldable (Ext (GetC c)) => RoseTreeShape c -> Nat
+  numNodes LeafS = 0
+  numNodes (NodeS exts) = 1 + sum (numNodes <$> exts)
+
+  namespace NodesAndLeaves
+    ||| Positions corresponding to both nodes and leaves within a RoseTreeShape
+    public export
+    data RoseTreePos : (c : ContA) -> (t : RoseTreeShape c) -> Type where
+      DoneLeaf : RoseTreePos c LeafS
+      DoneNode : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
+        RoseTreePos c (NodeS ts)
+      SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
+        (ps : c.pos (shapeExt ts)) -> -- position in a given list
+        RoseTreePos c (indexCont ts ps) -> -- position in the shape of RoseTree at a location specified by ps
+        RoseTreePos c (NodeS ts)
+  
+  namespace Nodes
+    public export
+    data RoseTreePosNode : (c : ContA) -> (t : RoseTreeShape c) -> Type where
+      DoneNode : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
+        RoseTreePosNode c (NodeS ts)
+      SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
+        (ps : c.pos (shapeExt ts)) -> -- position in a given list
+        RoseTreePosNode c (indexCont ts ps) -> -- position in the sub-tree at the above defined position
+        RoseTreePosNode c (NodeS ts)
+
+  namespace Leaves
+    public export
+    data RoseTreePosLeaf : (c : ContA) -> (t : RoseTreeShape c) -> Type where
+      DoneLeaf : RoseTreePosLeaf c LeafS
+      SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
+        (ps : c.pos (shapeExt ts)) -> -- position in a given list
+        RoseTreePosLeaf c (indexCont ts ps) -> -- position in the sub-tree at the above defined position
+        RoseTreePosLeaf c (NodeS ts)
+    
+
+
+{-
+old rose tree implementation
 namespace RoseTrees
   ||| Rose tree, a tree with a variable number of children.
   ||| This can likely be generalised to other Applicatives than List
@@ -171,67 +226,4 @@ namespace RoseTrees
         RoseTreePosLeaf (NodeS ts)
   
     -- %runElab deriveIndexed "RoseTreePosLeaf" [Eq, Show]
-
-
-
-{-
-Where did I leave this off?
-Wanted to implement a RoseTree container, so that I understand the positions there a bit better
-Realised I need to implement the FromConcrete instance for it
-Realised that to do that, I need to implement the `to` and `from` functions
-To do that, I need to reuse certain functionality about indexing into it
-It became clear that it's better to extract the functionality of indexing into a list of its subchildren
-As a matter of fact, it became clear that we can replace List with anything else that's applicative
-That might make it easier to understand how the original datatype should've been changed
-So here I've started implementing the Applicative Rose tree
  -}
-namespace ApplicativeRoseTree
-  public export
-  data RoseTreeShape : (c : ContA) -> Type where
-    LeafS : RoseTreeShape c
-    NodeS : (GetC c) `fullOf` (RoseTreeShape c) -> RoseTreeShape c
-
-  -- %runElab derive "RoseTreeShape" [Eq, Show]
-
-  public export
-  numLeaves : Foldable (Ext (GetC c)) => RoseTreeShape c -> Nat
-  numLeaves LeafS = 1
-  numLeaves (NodeS exts) = sum (numLeaves <$> exts)
-
-  public export
-  numNodes : Foldable (Ext (GetC c)) => RoseTreeShape c -> Nat
-  numNodes LeafS = 0
-  numNodes (NodeS exts) = 1 + sum (numNodes <$> exts)
-
-  namespace NodesAndLeaves
-    ||| Positions corresponding to both nodes and leaves within a RoseTreeShape
-    public export
-    data RoseTreePos : (c : ContA) -> (t : RoseTreeShape c) -> Type where
-      DoneLeaf : RoseTreePos c LeafS
-      DoneNode : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
-        RoseTreePos c (NodeS ts)
-      SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
-        (ps : c.pos (shapeExt ts)) -> -- position in a given list
-        RoseTreePos c (indexCont ts ps) -> -- position in the shape of RoseTree at a location specified by ps
-        RoseTreePos c (NodeS ts)
-  
-  namespace Nodes
-    public export
-    data RoseTreePosNode : (c : ContA) -> (t : RoseTreeShape c) -> Type where
-      DoneNode : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
-        RoseTreePosNode c (NodeS ts)
-      SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
-        (ps : c.pos (shapeExt ts)) -> -- position in a given list
-        RoseTreePosNode c (indexCont ts ps) -> -- position in the sub-tree at the above defined position
-        RoseTreePosNode c (NodeS ts)
-
-  namespace Leaves
-    public export
-    data RoseTreePosLeaf : (c : ContA) -> (t : RoseTreeShape c) -> Type where
-      DoneLeaf : RoseTreePosLeaf c LeafS
-      SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
-        (ps : c.pos (shapeExt ts)) -> -- position in a given list
-        RoseTreePosLeaf c (indexCont ts ps) -> -- position in the sub-tree at the above defined position
-        RoseTreePosLeaf c (NodeS ts)
-    
-
