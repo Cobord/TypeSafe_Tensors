@@ -70,7 +70,6 @@ namespace MainExamples
   BinTreeLeaf = (b : BinTreeShape) !> BinTreePosLeaf b
 
   ||| Tensors are containers
-  ||| TODO not used yet, new finding
   public export
   Tensor : List Cont -> Cont
   Tensor [] = Scalar

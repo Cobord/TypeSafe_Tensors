@@ -20,15 +20,6 @@ import Data.Tree
 import Misc
 
 
-public export
-{c, d : Cont} -> FromConcrete c => FromConcrete d => FromConcrete (c >@ d) where
-  concreteType = ?oone
-  concreteFunctor = ?twoo
-  fromConcreteTy = ?threee
-  toConcreteTy = ?fourr
-
-
-
 namespace ConversionFunctions
   public export
   fromIdentity : a -> Scalar' a
@@ -191,66 +182,14 @@ FromConcrete BinTreeLeaf where
   fromConcreteTy = fromBinTreeLeaf
   toConcreteTy = toBinTreeLeaf
 
--- public export
--- concreteTypeTensor : (shape : List Cont) ->
---   (allConcrete : AllConcrete shape) =>
---   Type -> Type
--- concreteTypeTensor [] {allConcrete = []} = concreteType {cont=Scalar}
--- concreteTypeTensor (c :: cs) {allConcrete = Cons @{fc}}
---   = (concreteType @{fc}) . (concreteTypeTensor cs)
-
-gq : Vect' 9 Char
-gq = fromConcreteTy ?tuuuumnu
-
 public export
-concreteTypeComposition : (shape : List Cont) ->
+concreteTypeTensor : (shape : List Cont) ->
   (allConcrete : AllConcrete shape) =>
   Type -> Type
-concreteTypeComposition [] = concreteType {cont=Scalar}
-concreteTypeComposition (c :: cs) {allConcrete = Cons}
-  = concreteType {cont=c} . concreteTypeComposition cs
+concreteTypeTensor [] {allConcrete = []} = concreteType {cont=Scalar}
+concreteTypeTensor (c :: cs) {allConcrete = Cons @{fc}}
+  = (concreteType @{fc}) . (concreteTypeTensor cs)
 
-%hint
-public export
-ffInterf : {shape : List Cont} ->
-(allConcrete : AllConcrete shape) =>
-FromConcrete (Tensor shape)
-ffInterf = ?todooo
-  -- concreteType = concreteTypeComposition shape
-  -- concreteFunctor = ?two
-  -- fromConcreteTy = ?three
-  -- toConcreteTy = ?four
-
-
-baal : FromConcrete Scalar
-baal = %search
-
-baa : FromConcrete Maybe
-baa = %search
-
-vv : FromConcrete (Vect 3)
-vv = %search
-
-aa : AllConcrete [Vect 3, List]
-aa = %search
-
--- aab : FromConcrete (composeContainers [Vect 3, List])
--- aab = %search
-
-%hint
-aabt : FromConcrete (List >@ List)
-aabt = ?tuuu
-
-
-aabt2 : FromConcrete (List >@ List)
-aabt2 = %search
-  
--- 
--- ca : FromConcrete (Tensor [List, List])
--- ca = %search
-
-
-{-
 public export
 concreteTypeFunctor : {shape : List Cont} ->
   (allConcrete : AllConcrete shape) =>
@@ -259,6 +198,7 @@ concreteTypeFunctor {shape = []} {allConcrete = []}
   = concreteFunctor {cont=Scalar}
 concreteTypeFunctor {shape = (c :: cs)} {allConcrete = Cons @{fc}}
   = Functor.Compose @{concreteFunctor @{fc} } @{concreteTypeFunctor}
+
 
 public export
 concreteToExtensions : {shape : List Cont} ->
@@ -280,14 +220,113 @@ public export
 fromTensor : {shape : List Cont} ->
   (allConcrete : AllConcrete shape) =>
   concreteTypeTensor shape a -> Tensor' shape a
-fromTensor = toContainerComp . concreteToExtensions
+fromTensor = fromExtensionComposition . concreteToExtensions
 
-  
 public export
 toTensor : {shape : List Cont} ->
   (allConcrete : AllConcrete shape) =>
   Tensor' shape a -> concreteTypeTensor shape a
-toTensor = extensionsToConcreteType . fromContainerComp
+toTensor = extensionsToConcreteType . toExtensionComposition
+
+public export
+{shape : List Cont} -> FromConcrete (Tensor shape) where
+  concreteType = ?onee
+  concreteFunctor = ?two
+  fromConcreteTy = ?three
+  toConcreteTy = ?four
+
+
+public export
+{c, d : Cont} -> FromConcrete c => FromConcrete d => FromConcrete (c >@ d) where
+  concreteType = ?oone
+  concreteFunctor = ?twoooo
+  fromConcreteTy = ?threeeee
+  toConcreteTy = ?fourrerrr
+
+-- public export
+-- {c : Cont} -> FromConcrete c => FromConcrete (c >@ Scalar) where
+--   concreteType = ?oneees
+--   concreteFunctor = ?twooos
+--   fromConcreteTy = ?threeees
+--   toConcreteTy = ?fourrees
+
+public export
+{shape : List Cont} -> {c : Cont} -> FromConcrete c => FromConcrete (Tensor shape) => FromConcrete (c >@ Tensor shape) where
+  concreteType = ?oones
+  concreteFunctor = ?twoooos
+  fromConcreteTy = ?threeeees
+  toConcreteTy = ?fourrerrrs
+
+aa : AllConcrete [Vect 3, List]
+aa = ?vii -- %search
+
+
+%hint
+public export
+makeConcreteFromList : {shape : List Cont} ->
+  FromConcrete (Tensor shape)
+makeConcreteFromList = ?todooo
+
+%hint
+makeConcreteNil : {c : Cont} -> FromConcrete c =>
+  FromConcrete (c >@ Scalar)
+
+%hint
+makeConcreteCons : (v : FromConcrete c) =>   
+  (ts : FromConcrete (Tensor cs)) =>
+  FromConcrete (Tensor (c :: cs))
+  -- concreteType = concreteTypeComposition shape
+  -- concreteFunctor = ?two
+  -- fromConcreteTy = ?three
+  -- toConcreteTy = ?four
+
+{-
+Because of problems with Idris' interface and inference, need to 
+write our own `fromConcreteTy` and `toConcreteTy` functions for tensor
+ -}
+
+
+
+
+-- at0 : FromConcrete (Tensor [])
+-- at0 = %search
+-- 
+-- at10 : FromConcrete (Vect 4)
+-- at10 = %search
+-- 
+-- at1 : FromConcrete (Tensor [List])
+-- at1 = %search
+-- 
+-- atFinal : FromConcrete (Tensor [Vect 4, List])
+-- atFinal = %search
+
+-- record XRec (shape : List Cont) (a : Type) where
+--   constructor MkXRec
+--   stuff : Tensor' shape a
+-- 
+-- 
+-- XTy : (shape : List Cont) -> Type -> Type
+-- XTy shape = Tensor' shape
+-- 
+-- interface ITest (a : Type) where
+-- 
+-- {shape : List Cont} -> ITest (XTy shape a) where
+
+
+%hint
+aabt : FromConcrete (List >@ List)
+aabt = ?tuuu
+
+
+aabt2 : FromConcrete (List >@ List)
+aabt2 = %search
+  
+-- 
+-- ca : FromConcrete (Tensor [List, List])
+-- ca = %search
+
+
+{-
 
 
 public export

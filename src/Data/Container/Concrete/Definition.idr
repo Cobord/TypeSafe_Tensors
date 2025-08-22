@@ -3,10 +3,9 @@ module Data.Container.Concrete.Definition
 import Data.Container.Object.Definition
 import Data.Container.Extension.Definition
 
-||| Idris already has concrete implementations of many containers 
-||| we're interested in, and often for concrete instantiations of 
-||| various container types it's useful to be able to do it using 
-||| the Idris instance
+||| Many Idris' datatypes are already concrete, inductive
+||| representations of particular containers
+||| It is useful to be easily able to convert between them
 public export
 interface FromConcrete (cont : Cont) where
   constructor MkConcrete

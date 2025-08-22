@@ -1,8 +1,12 @@
 module Data.Container.Extension.Instances
 
+import Data.DPair
+
 import Data.Container.Object.Definition
 import Data.Container.Object.Instances
 import Data.Container.Extension.Definition
+
+import Data.Container.Products
 
 import Data.Functor.Naperian
 
@@ -60,11 +64,14 @@ namespace ExtensionsOfMainExamples
   BinTreeLeaf' : Type -> Type
   BinTreeLeaf' = Ext BinTreeLeaf
 
-  ||| Isomorphic to Data.Tensor.TensorA
-  ||| todo
+  -- public export
+  -- Tensor' : List Cont -> Type -> Type
+  -- Tensor' cs = Ext (Tensor cs)
+
   public export
-  Tensor' : List Cont -> Type -> Type
-  Tensor' cs = Ext (Tensor cs)
+  record Tensor' (shape : List Cont) (a : Type) where
+    constructor MkT
+    GetT : Ext (Tensor shape) a
 
 
 public export
@@ -117,19 +124,19 @@ positionsCont = sh <| id
 --          h = toConcreteTy $ Definition.positions {c=List} 4
 --      in show gg
 
--- ||| This states a list version of 
--- ||| Ext c2 . Ext c1 = Ext (c2 . c1)
--- public export
--- toContainerComp : {shape : List Cont} ->
---   composeExtensions shape a -> Tensor' shape a
--- toContainerComp {shape = []} ce = ce
--- toContainerComp {shape = (c :: cs)} (shp <| idx) = 
---   let rst = (toContainerComp {shape=cs}) . idx
---   in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
--- 
--- public export
--- fromContainerComp : {shape : List Cont} ->
---   Tensor' shape a -> composeExtensions shape a
--- fromContainerComp {shape = []} ce = ce
--- fromContainerComp {shape = (c :: cs)} ((csh <| cpos) <| idx)
---   = csh <| \d => fromContainerComp (cpos d <| curry idx d)
+||| This states a list version of 
+||| Ext c . Ext d = Ext (c . d)
+public export
+fromExtensionComposition : {shape : List Cont} ->
+  composeExtensions shape a -> Tensor' shape a
+fromExtensionComposition {shape = []} ce = MkT ce
+fromExtensionComposition {shape = (c :: cs)} (sh <| contentAt) = MkT $
+  let rest = GetT . fromExtensionComposition {shape=cs} . contentAt
+  in (sh <| shapeExt . rest) <| \(cp ** fsh) => indexCont (rest cp) fsh
+
+public export
+toExtensionComposition : {shape : List Cont} ->
+  Tensor' shape a -> composeExtensions shape a
+toExtensionComposition {shape = []} (MkT t) = t
+toExtensionComposition {shape = (c :: cs)} (MkT ((csh <| cpos) <| idx))
+  = csh <| \d => toExtensionComposition (MkT (cpos d <| curry idx d))

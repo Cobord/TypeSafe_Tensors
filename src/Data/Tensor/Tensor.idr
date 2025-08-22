@@ -1,7 +1,6 @@
 module Data.Tensor.Tensor
 
 import public Data.Container
-import public Data.Container.SubTerm
 
 import public Data.Algebra
 import public Misc
