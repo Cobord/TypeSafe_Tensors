@@ -12,7 +12,7 @@ public export
 record Ext (c : Cont) (x : Type) where
   constructor (<|)
   shapeExt : c.shp
-  indexCont : c.pos shapeExt -> x
+  index : c.pos shapeExt -> x
 
 ||| Container c can be said to be "full off" a type x
 ||| `fullOf` is sometimes used as infix operator to aid readability
@@ -25,40 +25,40 @@ public export
 Functor (Ext c) where
   map {c=shp !> pos} f (s <| v) = s <| f . v
 
-||| Map preserves the shape of the extension
-public export
-mapShapeExt : {c : Cont} ->
-  (l : c `fullOf` a) ->
-  shapeExt (f <$> l) = shapeExt l
-mapShapeExt {c=shp !> pos} (sh <| _) = Refl
-
-public export
-mapIndexCont : {0 f : a -> b} -> {c : Cont} ->
-  (l : c `fullOf` a) ->
-  (ps : c.pos (shapeExt (f <$> l))) ->
-  f (indexCont l (rewrite sym (mapShapeExt {f=f} l) in ps))
-    = indexCont (f <$> l) ps
-mapIndexCont {c=shp !> pos} (sh <| contentAt) ps = Refl
-
+||| Composition of extensions is a functor
 public export
 Functor ((Ext d) . (Ext c)) where
   map f e = (map f) <$> e
 
-
 ||| Container setter
 public export
-setExt : (e : Ext ((!>) sh ps) x) ->
-  ((s : sh) -> Eq (ps s)) =>
-  (i : ps (shapeExt e)) ->
-  x ->
-  Ext ((!>) sh ps) x
-setExt (sh <| contentAt) i x
+set : {c : Cont} -> InterfaceOnPositions c Eq =>
+  (e : Ext c x) -> c.pos (shapeExt e) -> x -> Ext c x
+set {c=(s !> p)} @{MkI} (sh <| contentAt) i x
   = sh <| updateAt contentAt (i, x)
 
+namespace ExtProofs
+  ||| Map preserves the shape of the extension
+  public export
+  mapShapeExt : {c : Cont} ->
+    (l : c `fullOf` a) ->
+    shapeExt (f <$> l) = shapeExt l
+  mapShapeExt {c=shp !> pos} (sh <| _) = Refl
+  
+  public export
+  mapIndexCont : {0 f : a -> b} -> {c : Cont} ->
+    (l : c `fullOf` a) ->
+    (ps : c.pos (shapeExt (f <$> l))) ->
+    f (index l (rewrite sym (mapShapeExt {f=f} l) in ps))
+      = index (f <$> l) ps
+  mapIndexCont {c=shp !> pos} (sh <| contentAt) ps = Refl
+
+
 ||| Notably, Eq instance is not possible to write for a general Ext c a
-||| This is because Eq needs to be total, and some containers have an infinite number of positions, meaning they cannot be checked in finite time
-||| However, we can write ...
-||| TODO do I even need this? Computing equality for general extensions is hard, and at best this piece of code can sometmes be 
+||| This is because Eq needs to be total, and some containers have an infinite number of positions, meaning they cannot be checked for equality in finite time.
+||| Meaning, the decidability works when the user provides a function to perform that check (perhaps by higher-order symbolic manipulation, as opposed to brute-force)
+||| The trick of using DecEq to create an Eq instance is used in DPair?
+||| TODO do we need this? 
 namespace EqExt
   ||| Structure needed to store the equality data for Ext
   public export
@@ -69,8 +69,8 @@ namespace EqExt
     ||| For each position in that shape, the values must be equal
     ||| Relying on rewrite to get the correct type for the position
     valuesEqual : (p : c.pos (e1.shapeExt)) ->
-      e1.indexCont p =
-      e2.indexCont (rewrite__impl (c.pos) (sym shapesEqual) p)
+      e1.index p =
+      e2.index (rewrite__impl (c.pos) (sym shapesEqual) p)
     {-
     Another alternative is to use DecEq, and a different explicit rewrite
      -}

@@ -2,12 +2,26 @@ module Data.Container.Morphism.Instances
 
 import Data.Fin
 
-import Data.Container.Object.Definition
 import Data.Container.Object.Instances
 import Data.Container.Morphism.Definition
 import Data.Container.Extension.Definition
-import Data.Container.Products
+
 import Misc
+
+-- need to organise this
+
+||| Ext is a functor of type Cont -> [Type, Type]
+||| On objects it maps a container to a polynomial functor
+||| On morphisms it maps a dependent lens to a natural transformation
+||| Can be used to reshape tensors, among others
+public export
+restructure : {c1, c2 : Cont} ->
+  (c1 =%> c2) ->
+  Ext c1 a -> Ext c2 a
+restructure (fwd <%! bwd) (sh <| index) = fwd sh <| (\y' => index (bwd sh y'))
+
+
+
 
 -- Need to do some rewriting for preorder
 public export
@@ -42,19 +56,8 @@ reshapeVectIndexes = (\_ => ()) <%! (\((), ()) => ?reshapeVects_rhs2)
 reshapeVects :
   (Vect n >< Vect m) `fullOf` a -> 
   Vect (n * m) `fullOf` a
-reshapeVects (((), ()) <| indexCont)
+reshapeVects (((), ()) <| index)
   = () <| ?reshapeVects_rhs_4
-
-
-||| Ext itself is a functor: Cont -> [Type, Type]
-||| On morphisms, it maps every dLens to a natural transformation
-||| Can be used to reshape tensors, among others
-public export
-contMapExt : {c1, c2 : Cont} ->
-  (c1 =%> c2) ->
-  (Ext c1 a -> Ext c2 a)
-contMapExt (fwd <%! bwd) (sh <| index) = fwd sh <| (\y' => index (bwd sh y'))
-
 
 
 

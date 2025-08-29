@@ -155,3 +155,7 @@ tree1 = fromConcreteA $ Node' (Leaf [4, 5]) (Leaf [-12, 25])
 ||| Example output for tree self-attention
 SAOutputTree : TensorA [BinTreeLeaf, Vect 2] Double
 SAOutputTree = (Run SelfAttentionTree) tree1 params
+
+
+-- gh : Bool
+-- gh = Attention.tree1 == Attention.tree1

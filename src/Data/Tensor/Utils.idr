@@ -166,15 +166,15 @@ namespace OneHot
 
 namespace Triangular
   public export
-  triABool : {c : ContA} -> (ip : InterfaceOnPositions MOrd (GetC c)) =>
+  triABool : {c : ContA} -> (ip : InterfaceOnPositions (GetC c) MOrd) =>
     (sh : c.shp) -> TensorA [c, c] Bool
-  triABool {ip = PosInterface {p}} sh
+  triABool {ip = MkI {p}} sh
     = let cPositions = positions {sh=sh}
           pp : MOrd (c.pos sh) := p sh
       in outerAWithFn (flip isSubTerm) cPositions cPositions
 
   public export
-  triA : Num a => {c : ContA} -> (ip : InterfaceOnPositions MOrd (GetC c)) =>
+  triA : Num a => {c : ContA} -> (ip : InterfaceOnPositions (GetC c) MOrd) =>
     (sh : c.shp) -> TensorA [c, c] a
   triA sh = fromBool <$> triABool sh
 

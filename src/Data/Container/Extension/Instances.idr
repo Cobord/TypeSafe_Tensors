@@ -6,8 +6,6 @@ import Data.Container.Object.Definition
 import Data.Container.Object.Instances
 import Data.Container.Extension.Definition
 
-import Data.Container.Products
-
 import Data.Functor.Naperian
 
 %hide Prelude.(<|)
@@ -64,20 +62,25 @@ namespace ExtensionsOfMainExamples
   BinTreeLeaf' : Type -> Type
   BinTreeLeaf' = Ext BinTreeLeaf
 
-  -- public export
-  -- Tensor' : List Cont -> Type -> Type
-  -- Tensor' cs = Ext (Tensor cs)
+  public export
+  Tensor' : List Cont -> Type -> Type
+  Tensor' cs = Ext (Tensor cs)
 
   public export
-  record Tensor' (shape : List Cont) (a : Type) where
-    constructor MkT
-    GetT : Ext (Tensor shape) a
+  TensorC' : List Nat -> Type -> Type
+  TensorC' xs = Ext (TensorC xs)
+
+  -- public export
+  -- record Tensor' (shape : List Cont) (a : Type) where
+  --   constructor MkT
+  --   GetT : Ext (Tensor shape) a
 
 
 public export
 composeExtensions : List Cont -> Type -> Type
-composeExtensions [] a = Ext Scalar a
-composeExtensions (c :: cs) a = Ext c (composeExtensions cs a)
+composeExtensions = foldr (\c, f => (Ext c) . f) (Ext Scalar)
+-- composeExtensions [] a = Ext Scalar a
+-- composeExtensions (c :: cs) a = Ext c (composeExtensions cs a)
 
 public export
 [fe] {shape : List Cont} -> Functor (composeExtensions shape) where
@@ -107,7 +110,7 @@ Applicative (Ext (Nap l)) where
 public export
 {l : Type} -> Naperian (Ext (Nap l)) where
   Log = l
-  lookup = indexCont
+  lookup = index
   tabulate t = () <| t
 
 ||| Generalisation of 'positions' from Data.Functor
@@ -118,25 +121,78 @@ public export
 positionsCont : {sh : c.shp} -> Ext c (c.pos sh)
 positionsCont = sh <| id
 
---ex1 : String
---ex1 = let g = toConcreteTy $ Definition.positions {c=Vect 3} ()
---          gg = toConcreteTy $ Definition.positions {c=BinTree} (NodeS LeafS LeafS)
---          h = toConcreteTy $ Definition.positions {c=List} 4
---      in show gg
-
 ||| This states a list version of 
 ||| Ext c . Ext d = Ext (c . d)
 public export
 fromExtensionComposition : {shape : List Cont} ->
   composeExtensions shape a -> Tensor' shape a
-fromExtensionComposition {shape = []} ce = MkT ce
-fromExtensionComposition {shape = (c :: cs)} (sh <| contentAt) = MkT $
-  let rest = GetT . fromExtensionComposition {shape=cs} . contentAt
-  in (sh <| shapeExt . rest) <| \(cp ** fsh) => indexCont (rest cp) fsh
+fromExtensionComposition {shape = []} ce = ce
+fromExtensionComposition {shape = (c :: cs)} (sh <| contentAt) =
+  let rest = fromExtensionComposition {shape=cs} . contentAt
+  in (sh <| shapeExt . rest) <| \(cp ** fsh) => index (rest cp) fsh
 
 public export
 toExtensionComposition : {shape : List Cont} ->
   Tensor' shape a -> composeExtensions shape a
-toExtensionComposition {shape = []} (MkT t) = t
-toExtensionComposition {shape = (c :: cs)} (MkT ((csh <| cpos) <| idx))
-  = csh <| \d => toExtensionComposition (MkT (cpos d <| curry idx d))
+toExtensionComposition {shape = []} t = t
+toExtensionComposition {shape = (c :: cs)} ((csh <| cpos) <| idx)
+  = csh <| \d => toExtensionComposition (cpos d <| curry idx d)
+
+
+public export
+extToTensor : Ext c a -> Tensor' [c] a
+extToTensor e = (shapeExt e <| \_ => ()) <| \(cp ** ()) => index e cp
+ 
+public export
+tensorToExt : Tensor' [c] a -> Ext c a
+tensorToExt t = shapeExt (shapeExt t) <| \cp => index t (cp ** ())
+
+namespace NestedTensor
+  public export
+  extractExt : {c : Cont} -> {cs : List Cont} ->
+    Tensor' (c :: cs) a -> Ext c (Tensor' cs a)
+  extractExt t = fromExtensionComposition <$> toExtensionComposition {shape=(c::cs)} t
+
+  public export
+  embedExt : {c : Cont} -> {cs : List Cont} ->
+    Ext c (Tensor' cs a) -> Tensor' (c :: cs) a
+  embedExt e = fromExtensionComposition {shape=(c :: cs)} $ toExtensionComposition <$> e
+
+
+  -- todo this should in principle be possible with erased `c` and `cs`?
+  public export
+  toNestedTensor : {c : Cont} -> {cs : List Cont} ->
+    Tensor' (c :: cs) a -> Tensor' [c] (Tensor' cs a)
+  toNestedTensor = extToTensor . extractExt
+
+  public export
+  fromNestedTensor : {c : Cont} -> {cs : List Cont} ->
+    Tensor' [c] (Tensor' cs a) -> Tensor' (c :: cs) a
+  fromNestedTensor = embedExt . tensorToExt 
+
+  public export
+  tensorMapFirstAxis : {c : Cont} -> {cs, ds : List Cont} ->
+    (f : Tensor' cs a -> Tensor' ds a) ->
+    Tensor' (c :: cs) a -> Tensor' (c :: ds) a
+  tensorMapFirstAxis f = fromNestedTensor . map f . toNestedTensor
+
+
+
+
+-- This is with GetT and MkT constructors added
+-- ||| This states a list version of 
+-- ||| Ext c . Ext d = Ext (c . d)
+-- public export
+-- fromExtensionComposition : {shape : List Cont} ->
+--   composeExtensions shape a -> Tensor' shape a
+-- fromExtensionComposition {shape = []} ce = MkT ce
+-- fromExtensionComposition {shape = (c :: cs)} (sh <| contentAt) = MkT $
+--   let rest = GetT . fromExtensionComposition {shape=cs} . contentAt
+--   in (sh <| shapeExt . rest) <| \(cp ** fsh) => index (rest cp) fsh
+-- 
+-- public export
+-- toExtensionComposition : {shape : List Cont} ->
+--   Tensor' shape a -> composeExtensions shape a
+-- toExtensionComposition {shape = []} (MkT t) = t
+-- toExtensionComposition {shape = (c :: cs)} (MkT ((csh <| cpos) <| idx))
+--   = csh <| \d => toExtensionComposition (MkT (cpos d <| curry idx d))

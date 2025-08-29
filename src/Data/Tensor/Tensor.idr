@@ -8,6 +8,9 @@ import public Data.Functor.Naperian
 
 %hide Builtin.infixr.(#)
 %hide Data.Container.Applicative.Instances.ApplicativeInstances.TensorA
+%hide Data.Container.InstanceInterfaces.TensorInstances.ShowInstance.AllShow
+%hide Data.Container.InstanceInterfaces.TensorInstances.EqInstance.AllEq
+%hide Data.Container.Object.Instances.MainExamples.Tensor
 
 {-----------------------------------------------------------
 {-----------------------------------------------------------
@@ -107,13 +110,13 @@ Second isomorphism is the non-trivial one
 public export
 toExtComposition : {shape : List ContA} ->
   TensorA shape a -> composeExtensionsA shape a
-toExtComposition {shape = []} (TZ val) = fromIdentity val
+toExtComposition {shape = []} (TZ val) = pure val
 toExtComposition {shape = (_ :: _)} (TS xs) = toExtComposition <$> xs
 
 public export
 fromExtComposition : {shape : List ContA} ->
   composeExtensionsA shape a -> TensorA shape a
-fromExtComposition {shape = []} ce = TZ $ toIdentity ce
+fromExtComposition {shape = []} ce = TZ $ extract ce
 fromExtComposition {shape = (_ :: _)} ce = TS $ fromExtComposition <$> ce
 
 -- TODO commented this out because I'm replacing ToContainerComp 
@@ -137,7 +140,7 @@ fromExtComposition {shape = (_ :: _)} ce = TS $ fromExtComposition <$> ce
 -- reshapeTensorA : {oldShape, newShape : List ContA} ->
 --   (composeContainersA oldShape =%> composeContainersA newShape) ->
 --   TensorA oldShape a -> TensorA newShape a
--- reshapeTensorA dLens = fromCompProduct . (contMapExt dLens) . toCompProduct
+-- reshapeTensorA dLens = fromCompProduct . (restructure dLens) . toCompProduct
 
 
 {----------------------------
@@ -403,14 +406,14 @@ namespace AlgebraTensorA
   agtest0 : Algebra BinTreeNode Int
   agtest0 = %search
 
-  agt0 : AllAlgebra [BinTreeNode] Int
-  agt0 = %search
+  -- agt0 : AllAlgebra [BinTree] Int
+  -- agt0 = %search
 
-  agt : AlgebraTensorA.AllAlgebra [BinTreeNode, Vect 7] Int
-  agt = %search
+  -- agt : AlgebraTensorA.AllAlgebra [BinTreeNode, Vect 7] Int
+  -- agt = %search
 
-  agtest : Algebra (TensorA [BinTreeNode, Vect 7]) Int
-  agtest = %search
+  -- agtest : Algebra (TensorA [BinTreeNode, Vect 7]) Int
+  -- agtest = %search
 
   public export
   [appSumTensorA] {c : ContA} ->{shape : List ContA} ->
@@ -699,13 +702,13 @@ namespace IndexTensor
     (::) :  {e : ((!>) sh ps) `fullOf` (TensorA cs dtype)} -> 
       Applicative (Ext ((!>) sh ps)) =>
       (p : ps (shapeExt e)) ->
-      IndexTA cs (indexCont e p) -> 
+      IndexTA cs (index e p) -> 
       IndexTA ((# ((!>) sh ps)) :: cs) (TS e)
 
   public export
   indexTensorA : (t : TensorA shape a) -> (index : IndexTA shape t) -> a
   indexTensorA (TZ val) [] = val
-  indexTensorA (TS xs) (i :: is) = indexTensorA (indexCont xs i) is 
+  indexTensorA (TS xs) (i :: is) = indexTensorA (index xs i) is 
 
   public export infixr 9 @@ -- Why can't I use @ here?
   public export
@@ -743,7 +746,7 @@ namespace IndexTensor
     (t : TensorA shape a) -> IndexTA shape t -> a -> TensorA shape a
   (.~) {allPosEq = []} (TZ _) [] val = TZ val
   (.~) {allPosEq = (ConsPosEq)} (TS xs) (i :: is) val
-    = TS $ setExt xs i ((.~) (indexCont xs i) is val)
+    = TS $ set xs i ((.~) (index xs i) is val)
 
 
   namespace CubicalIndex

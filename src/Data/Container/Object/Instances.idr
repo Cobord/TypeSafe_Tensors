@@ -1,11 +1,10 @@
 module Data.Container.Object.Instances
 
-import Data.Vect
+import Data.Fin
 
-import Data.Container.Object.Definition
-import Data.Container.Products
-import public Data.Container.TreeUtils -- rexport all the stuff inside
-import Misc
+import public Data.Container.Object.Definition
+import public Data.Container.Products
+import public Data.Container.TreeUtils
 
 ||| Examples that do not require any additional constraints such as Applicative
 namespace MainExamples
@@ -16,8 +15,8 @@ namespace MainExamples
 
   ||| Container with a single shape, but no positions, isomorphic to Unit : Type
   public export
-  Unit : Cont
-  Unit = (_ : Unit) !> Void
+  UnitCont : Cont
+  UnitCont = (_ : Unit) !> Void
 
   ||| Container of a single thing
   public export
@@ -72,8 +71,12 @@ namespace MainExamples
   ||| Tensors are containers
   public export
   Tensor : List Cont -> Cont
-  Tensor [] = Scalar
-  Tensor (c :: cs) = c >@ Tensor cs
+  Tensor = foldr (>@) Scalar
+
+  ||| Cubical tensors are containers
+  public export
+  TensorC : List Nat -> Cont
+  TensorC xs = Tensor (Vect <$> xs)
 
   -- TODO what is "Tensor" with hancock product? with cartesian product?
   -- with hancock product there is a duoidal structure?

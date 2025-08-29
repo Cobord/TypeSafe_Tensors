@@ -1,10 +1,12 @@
 module Data.Container.Products
 
 import Data.DPair
+import Decidable.Equality
 
 import Data.Container.Object.Definition
 import Data.Container.Extension.Definition
 
+import Misc
 
 public export infixr 0 ><
 public export infixr 0 >+<
@@ -23,15 +25,20 @@ public export
   Left s => pos s
   Right s' => pos' s')
 
-
 ||| Composition of containers (polynomial composition)
 ||| Non-symmetric in general (hence why the symbol is non-symmetric too)
 ||| Monoid with Scalar
 public export
 (>@) : Cont -> Cont -> Cont
-c >@ d = ((sh <| ind) : Ext c (d.shp)) !> (cp : c.pos sh ** d.pos (ind cp))
+c >@ d = (ex : Ext c d.shp) !> (cp : c.pos (shapeExt ex) ** d.pos (index ex cp))
 
 
 ||| Derivative of a container
-Deriv : Cont -> Cont
-
+||| Given c=(shp !> pos) the derivative can be thought of as 
+||| a shape s : shp, a distinguished position p : pos s, and the set of *all other positions*
+public export
+Deriv : (c : Cont) ->
+  InterfaceOnPositions c DecEq =>
+  Cont
+Deriv (shp !> pos) @{MkI}
+  = ((s ** p) : DPair shp pos) !> (p' : pos s ** IsNo (decEq p p'))

@@ -32,20 +32,10 @@ transpose : Naperian f => Naperian g => f (g a) -> g (f a)
 transpose {f} {g} x = tabulate <$> tabulate (flip (lookup . (lookup x)))
 
 public export
-vectTabulate : {n : Nat} -> (Fin n -> a) -> Vect n a
-vectTabulate {n = 0} f = []
-vectTabulate {n = (S k)} f = f FZ :: vectTabulate {n=k} (\i => f (FS i))
-
-public export
-vectPositions : {n : Nat} -> Vect n (Fin n)
-vectPositions {n = 0} = []
-vectPositions {n = (S k)} = FZ :: (FS <$> vectPositions)
-
-public export
 {n : Nat} -> Naperian (Vect n) where
     Log = Fin n
     lookup = flip index
-    tabulate = vectTabulate
+    tabulate = Vect.Fin.tabulate
 
 public export
 Naperian f => Naperian g => Naperian (g . f) using Applicative.Compose where

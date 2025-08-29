@@ -14,14 +14,10 @@ export typebind infixr 0 !>
 
 %name Cont c, c', c''
 
-||| Convenience interface to denote that a container 
-||| has a given interface on positions
+||| Convenience datatype storing the property that
+||| a container `c` has an interface `i` on its positions
 public export
-data InterfaceOnPositions : (i : Type -> Type) -> (c : Cont) -> Type where
-  ||| For every shape we need to show that the interface is satisfied
-  PosInterface : (p : (s : c.shp) -> i (c.pos s)) =>
-    InterfaceOnPositions i c
-
-public export
-GetInterface : InterfaceOnPositions i c -> (s : c.shp) -> i (c.pos s)
-GetInterface (PosInterface @{j}) = j
+data InterfaceOnPositions : (c : Cont) -> (i : Type -> Type) -> Type where
+  ||| For every shape s the set of positions c.pos s has that interface
+  MkI : (p : (s : c.shp) -> i (c.pos s)) =>
+    InterfaceOnPositions c i

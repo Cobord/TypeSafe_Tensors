@@ -4,44 +4,78 @@ import Data.DPair
 
 import Data.Container.Object.Definition
 
-||| Dependent lenses
-||| Forward-backward container morphisms
-public export
-record (=%>) (c1, c2 : Cont) where
-  constructor (<%!)
-  fwd : c1.shp -> c2.shp
-  bwd : (x : c1.shp) -> c2.pos (fwd x) -> c1.pos x
 
-export infixr 1 =%>
-export infix 1 <%!
+{-------------------------------------------------------------------------------
+Two different types of morphisms:
+dependent lenses, and dependent charts
+-------------------------------------------------------------------------------}
 
-export prefix 0 !%
+export infixr 1 =%> -- dependent lens
+export infixr 1 =&> -- dependent chart
+export infix 1 <%! -- constructor for dependent lens
+export infix 1 <&! -- constructor for dependent chart
+export prefix 0 !% -- constructor for closed dependent lens
+export prefix 0 !& -- constructor for closed dependent chart
+export infixl 5 %>> -- composition of dependent lenses
 
-public export 
-(!%) : {c1, c2 : Cont} ->
-  ((x : c1.shp) -> (y : c2.shp ** (c2.pos y -> c1.pos x))) ->
-  c1 =%> c2
-(!%) f = (\x => fst (f x)) <%! (\x => snd (f x))
+namespace DependentLenses
+  ||| Dependent lenses
+  ||| Forward-backward container morphisms
+  public export
+  record (=%>) (c1, c2 : Cont) where
+    constructor (<%!)
+    fwd : c1.shp -> c2.shp
+    bwd : (x : c1.shp) -> c2.pos (fwd x) -> c1.pos x
+  
+  
+  ||| Constructor for closed dependent lens
+  public export 
+  (!%) : {c1, c2 : Cont} ->
+    ((x : c1.shp) -> (y : c2.shp ** (c2.pos y -> c1.pos x))) ->
+    c1 =%> c2
+  (!%) f = (\x => fst (f x)) <%! (\x => snd (f x))
+  
+  ||| Composition of dependent lenses
+  public export
+  compDepLens : a =%> b -> b =%> c -> a =%> c
+  compDepLens f g =
+      (g.fwd . f.fwd) <%!
+      (\x => f.bwd x . g.bwd (f.fwd x))
+  
+  public export
+  (%>>) : a =%> b -> b =%> c -> a =%> c
+  (%>>) = compDepLens
 
-||| Dependent charts
-||| Forward-forward container morphisms
-public export
-record (=&>) (c1, c2 : Cont) where
-  constructor (<&!)
-  fwd : c1.shp -> c2.shp
-  fwd' : (x : c1.shp) -> c1.pos x -> c2.pos (fwd x)
+namespace DependentCharts
+  ||| Dependent charts
+  ||| Forward-forward container morphisms
+  public export
+  record (=&>) (c1, c2 : Cont) where
+    constructor (<&!)
+    fwd : c1.shp -> c2.shp
+    fwd' : (x : c1.shp) -> c1.pos x -> c2.pos (fwd x)
+  
+  
+  ||| Constructor for closed dependent chart
+  public export
+  (!&) : {c1, c2 : Cont} ->
+    ((x : c1.shp) -> (y : c2.shp ** (c1.pos x -> c2.pos y))) ->
+    c1 =&> c2
+  (!&) f = (\x => fst (f x)) <&! (\x => snd (f x))
 
-export infixr 1 =&>
-export infix 1 <&!
 
-export prefix 0 !&
+  public export
+  compDepChart : a =&> b -> b =&> c -> a =&> c
+  compDepChart f g =
+      (g.fwd . f.fwd) <&!
+      (\x => g.fwd' (f.fwd x) . f.fwd' x)
 
-public export
-(!&) : {c1, c2 : Cont} ->
-  ((x : c1.shp) -> (y : c2.shp ** (c1.pos x -> c2.pos y))) ->
-  c1 =&> c2
-(!&) f = (\x => fst (f x)) <&! (\x => snd (f x))
+  public export
+  (&>>) : a =&> b -> b =&> c -> a =&> c
+  (&>>) = compDepChart
 
+
+-- experimental stuff below
 ||| TODO is this the extension of a container?
 val : Cont -> Type -> Cont
 val (shp !> pos) r = (s : shp) !> (pos s -> r)
@@ -64,16 +98,3 @@ valContMap {c1=(shp !> pos)} {c2=(shp' !> pos')} (fwd <&! fwd')
 -- upd : c1 ~%> c2 -> 
 -- %pair (=%>) fwd bwd
 
-
-||| Composition of dependent lenses
-public export
-compDepLens : a =%> b -> b =%> c -> a =%> c
-compDepLens x y =
-    (y.fwd . x.fwd) <%!
-    (\z => x.bwd z . y.bwd (x.fwd z))
-
-public export
-(%>>) : a =%> b -> b =%> c -> a =%> c
-(%>>) = compDepLens
-
-public export infixl 5 %>>

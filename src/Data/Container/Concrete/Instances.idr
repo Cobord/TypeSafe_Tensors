@@ -11,23 +11,19 @@ import Data.Container.Concrete.Definition
 import Data.Container.Extension.Definition
 import Data.Container.Extension.Instances
 
-import Data.Container.Products
-
-
-import Data.Functor.Naperian
-import Data.Tree
+import public Data.Functor.Naperian
+import public Data.Tree
 
 import Misc
 
-
 namespace ConversionFunctions
   public export
-  fromIdentity : a -> Scalar' a
-  fromIdentity a = () <| (\_ => a)
+  toScalar : a -> Scalar' a
+  toScalar a = () <| (\_ => a)
 
   public export
-  toIdentity : Scalar' a -> a
-  toIdentity (() <| f) = f ()
+  extract : Scalar' a -> a
+  extract (() <| f) = f ()
 
   public export
   fromMaybe : Maybe a -> Maybe' a
@@ -57,7 +53,7 @@ namespace ConversionFunctions
   
   public export
   toVect : {n : Nat} -> Vect' n a -> Vect n a
-  toVect (_ <| indexCont) = vectTabulate indexCont
+  toVect (_ <| index) = Vect.Fin.tabulate index
 
   public export
   fromBinTreeSame : BinTreeSame a -> BinTree' a
@@ -72,11 +68,11 @@ namespace ConversionFunctions
 
   public export
   toBinTreeSame : BinTree' a -> BinTreeSame a
-  toBinTreeSame (LeafS <| indexCont) = Leaf (indexCont DoneLeaf)
-  toBinTreeSame (NodeS lt rt <| indexCont) =
-    Node (indexCont DoneNode)
-         (toBinTreeSame (lt <| indexCont . GoLeft))
-         (toBinTreeSame (rt <| indexCont . GoRight))
+  toBinTreeSame (LeafS <| index) = Leaf (index DoneLeaf)
+  toBinTreeSame (NodeS lt rt <| index) =
+    Node (index DoneNode)
+         (toBinTreeSame (lt <| index . GoLeft))
+         (toBinTreeSame (rt <| index . GoRight))
   
   
   public export
@@ -98,11 +94,11 @@ namespace ConversionFunctions
 
   public export
   toBinTreeNode : BinTreeNode' a -> BinTreeNode a
-  toBinTreeNode (LeafS <| indexCont) = Leaf ()
-  toBinTreeNode (NodeS lt rt <| indexCont) = 
-    Node (indexCont Done)
-         (toBinTreeNode (lt <| indexCont . GoLeft))
-         (toBinTreeNode (rt <| indexCont . GoRight))
+  toBinTreeNode (LeafS <| index) = Leaf ()
+  toBinTreeNode (NodeS lt rt <| index) = 
+    Node (index Done)
+         (toBinTreeNode (lt <| index . GoLeft))
+         (toBinTreeNode (rt <| index . GoRight))
   
   public export
   fromBinTreeLeaf : BinTreeLeaf a -> BinTreeLeaf' a
@@ -137,8 +133,8 @@ public export
 FromConcrete Scalar where
   concreteType = id
   concreteFunctor = MkFunctor id
-  fromConcreteTy = fromIdentity
-  toConcreteTy = toIdentity
+  fromConcreteTy = pure
+  toConcreteTy = extract
 
 public export
 FromConcrete Maybe where
@@ -182,52 +178,115 @@ FromConcrete BinTreeLeaf where
   fromConcreteTy = fromBinTreeLeaf
   toConcreteTy = toBinTreeLeaf
 
+
+namespace TensorFromConcrete
+  public export
+  concreteTypeTensor : (shape : List Cont) ->
+    (allConcrete : AllConcrete shape) =>
+    Type -> Type
+  concreteTypeTensor [] {allConcrete = []} = concreteType {cont=Scalar}
+  concreteTypeTensor (c :: cs) {allConcrete = Cons @{fc}}
+    = (concreteType @{fc}) . (concreteTypeTensor cs)
+  
+  public export
+  concreteTypeFunctor : {shape : List Cont} ->
+    (allConcrete : AllConcrete shape) =>
+    Functor (concreteTypeTensor shape)
+  concreteTypeFunctor {shape = []} {allConcrete = []}
+    = concreteFunctor {cont=Scalar}
+  concreteTypeFunctor {shape = (c :: cs)} {allConcrete = Cons @{fc}}
+    = Functor.Compose @{concreteFunctor @{fc} } @{concreteTypeFunctor}
+  
+  
+  public export
+  concreteToExtensions : {shape : List Cont} ->
+    (allConcrete : AllConcrete shape) =>
+    concreteTypeTensor shape a -> composeExtensions shape a
+  concreteToExtensions {shape = []} {allConcrete = []} ct = fromConcreteTy ct
+  concreteToExtensions {shape = (_ :: _)} {allConcrete = Cons} ct = 
+    concreteToExtensions <$> fromConcreteTy ct 
+  
+  public export
+  extensionsToConcreteType : {shape : List Cont} ->
+    (allConcrete : AllConcrete shape) =>
+    composeExtensions shape a -> concreteTypeTensor shape a
+  extensionsToConcreteType {shape = []} {allConcrete = []} ct = toConcreteTy ct
+  extensionsToConcreteType {shape = (_ :: _)} {allConcrete = Cons @{fc}} ct 
+    = (map @{concreteFunctor @{fc}} extensionsToConcreteType) (toConcreteTy ct)
+  
+  public export
+  toTensor : {shape : List Cont} ->
+    (allConcrete : AllConcrete shape) =>
+    concreteTypeTensor shape a -> Tensor' shape a
+  toTensor = fromExtensionComposition . concreteToExtensions
+  
+  public export
+  fromTensor : {shape : List Cont} ->
+    (allConcrete : AllConcrete shape) =>
+    Tensor' shape a -> concreteTypeTensor shape a
+  fromTensor = extensionsToConcreteType . toExtensionComposition
+
+-- Not sure how to do it other than for a fixed number of axes
+-- all general solutions break when trying to be used with Idris interfaces
 public export
-concreteTypeTensor : (shape : List Cont) ->
-  (allConcrete : AllConcrete shape) =>
-  Type -> Type
-concreteTypeTensor [] {allConcrete = []} = concreteType {cont=Scalar}
-concreteTypeTensor (c :: cs) {allConcrete = Cons @{fc}}
-  = (concreteType @{fc}) . (concreteTypeTensor cs)
+{c : Cont} -> AllConcrete [c] =>
+  FromConcrete (Tensor [c]) where
+  concreteType = concreteTypeTensor [c]
+  concreteFunctor = concreteTypeFunctor {shape = [c]}
+  fromConcreteTy = toTensor
+  toConcreteTy = fromTensor
 
 public export
-concreteTypeFunctor : {shape : List Cont} ->
-  (allConcrete : AllConcrete shape) =>
-  Functor (concreteTypeTensor shape)
-concreteTypeFunctor {shape = []} {allConcrete = []}
-  = concreteFunctor {cont=Scalar}
-concreteTypeFunctor {shape = (c :: cs)} {allConcrete = Cons @{fc}}
-  = Functor.Compose @{concreteFunctor @{fc} } @{concreteTypeFunctor}
-
+{c, d : Cont} -> AllConcrete [c, d] =>
+  FromConcrete (Tensor ([c, d])) where
+  concreteType = concreteTypeTensor [c, d]
+  concreteFunctor = concreteTypeFunctor {shape = [c, d]}
+  fromConcreteTy = toTensor
+  toConcreteTy = fromTensor
 
 public export
-concreteToExtensions : {shape : List Cont} ->
-  (allConcrete : AllConcrete shape) =>
-  concreteTypeTensor shape a -> composeExtensions shape a
-concreteToExtensions {shape = []} {allConcrete = []} ct = fromConcreteTy ct
-concreteToExtensions {shape = (_ :: _)} {allConcrete = Cons} ct = 
-  concreteToExtensions <$> fromConcreteTy ct 
+{c, d, e : Cont} -> AllConcrete [c, d, e] =>
+  FromConcrete (Tensor ([c, d, e])) where
+  concreteType = concreteTypeTensor [c, d, e]
+  concreteFunctor = concreteTypeFunctor {shape = [c, d, e]}
+  fromConcreteTy = toTensor
+  toConcreteTy = fromTensor
 
 public export
-extensionsToConcreteType : {shape : List Cont} ->
-  (allConcrete : AllConcrete shape) =>
-  composeExtensions shape a -> concreteTypeTensor shape a
-extensionsToConcreteType {shape = []} {allConcrete = []} ct = toConcreteTy ct
-extensionsToConcreteType {shape = (_ :: _)} {allConcrete = Cons @{fc}} ct 
-  = (map @{concreteFunctor @{fc}} extensionsToConcreteType) (toConcreteTy ct)
+{c, d, e, f : Cont} -> AllConcrete [c, d, e, f] =>
+  FromConcrete (Tensor ([c, d, e, f])) where
+  concreteType = concreteTypeTensor [c, d, e, f]
+  concreteFunctor = concreteTypeFunctor {shape = [c, d, e, f]}
+  fromConcreteTy = toTensor
+  toConcreteTy = fromTensor
 
 public export
-fromTensor : {shape : List Cont} ->
-  (allConcrete : AllConcrete shape) =>
-  concreteTypeTensor shape a -> Tensor' shape a
-fromTensor = fromExtensionComposition . concreteToExtensions
+{c, d, e, f, g : Cont} -> AllConcrete [c, d, e, f, g] =>
+  FromConcrete (Tensor ([c, d, e, f, g])) where
+  concreteType = concreteTypeTensor [c, d, e, f, g]
+  concreteFunctor = concreteTypeFunctor {shape = [c, d, e, f, g]}
+  fromConcreteTy = toTensor
+  toConcreteTy = fromTensor
 
-public export
-toTensor : {shape : List Cont} ->
-  (allConcrete : AllConcrete shape) =>
-  Tensor' shape a -> concreteTypeTensor shape a
-toTensor = extensionsToConcreteType . toExtensionComposition
+at0 : FromConcrete (Tensor [])
+at0 = %search
 
+at1 : FromConcrete (Tensor [List])
+at1 = %search
+
+at10 : FromConcrete (Vect 4)
+at10 = %search
+
+atFinal : FromConcrete (Tensor [Vect 4, List])
+atFinal = %search
+
+atFinal2 : Tensor' [List, Maybe, Vect 2] Char
+atFinal2 = fromConcreteTy ?huuu
+
+oneMore : Tensor' [List] Int
+oneMore = fromConcreteTy [1,2,3,4,5]
+
+{-
 public export
 {shape : List Cont} -> FromConcrete (Tensor shape) where
   concreteType = ?onee
@@ -345,3 +404,10 @@ FromConcrete (Tensor shape) where
 
 --tt : Tensor' [List, Maybe] Int
 --- tt = fromConcreteTy ?aaaa
+-}
+
+
+
+-- public export
+-- index : (t : Tensor' shape a) -> (Tensor shape).pos (shapeExt (GetT t)) -> a
+-- index t = Ext.index (GetT t)

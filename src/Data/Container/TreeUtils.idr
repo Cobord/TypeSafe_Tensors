@@ -1,5 +1,6 @@
 module Data.Container.TreeUtils
 
+import Decidable.Equality
 import Language.Reflection
 import Derive.Prelude
 
@@ -59,7 +60,18 @@ namespace BinaryTrees
       GoLeft : {l, r : BinTreeShape} -> BinTreePos l -> BinTreePos (NodeS l r)
       GoRight : {l, r : BinTreeShape} -> BinTreePos r -> BinTreePos (NodeS l r)
 
+    -- look for deceq in the tutorial
     %runElab deriveIndexed "BinTreePos" [Eq, Show]
+
+    -- TODO finish this
+    public export
+    {b : BinTreeShape} -> DecEq (BinTreePos b) where
+      decEq DoneLeaf DoneLeaf = Yes Refl
+      decEq DoneNode DoneNode = Yes Refl
+      decEq DoneNode (GoLeft x) = No ?ghh_5
+      decEq DoneNode (GoRight x) = No ?ghh_6
+      decEq (GoLeft x) t2 = No ?ghh_2
+      decEq (GoRight x) t2 = No ?ghh_3
 
   ||| Check if a term is a subterm of another term
   ||| t1 < t2 means that t2 > t1
@@ -94,7 +106,7 @@ namespace BinaryTrees
   Path3 = GoRight DoneLeaf
 
   fh : (mcompare Path1 Path2) = Just LT
-  fh = ?asdf
+  fh = ?aaaaasdf
   
   namespace Nodes
     ||| Positions corresponding to nodes within a BinTreeNode shape.
@@ -144,7 +156,7 @@ namespace ApplicativeRoseTree
         RoseTreePos c (NodeS ts)
       SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
         (ps : c.pos (shapeExt ts)) -> -- position in a given list
-        RoseTreePos c (indexCont ts ps) -> -- position in the shape of RoseTree at a location specified by ps
+        RoseTreePos c (index ts ps) -> -- position in the shape of RoseTree at a location specified by ps
         RoseTreePos c (NodeS ts)
   
   namespace Nodes
@@ -154,7 +166,7 @@ namespace ApplicativeRoseTree
         RoseTreePosNode c (NodeS ts)
       SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
         (ps : c.pos (shapeExt ts)) -> -- position in a given list
-        RoseTreePosNode c (indexCont ts ps) -> -- position in the sub-tree at the above defined position
+        RoseTreePosNode c (index ts ps) -> -- position in the sub-tree at the above defined position
         RoseTreePosNode c (NodeS ts)
 
   namespace Leaves
@@ -163,7 +175,7 @@ namespace ApplicativeRoseTree
       DoneLeaf : RoseTreePosLeaf c LeafS
       SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
         (ps : c.pos (shapeExt ts)) -> -- position in a given list
-        RoseTreePosLeaf c (indexCont ts ps) -> -- position in the sub-tree at the above defined position
+        RoseTreePosLeaf c (index ts ps) -> -- position in the sub-tree at the above defined position
         RoseTreePosLeaf c (NodeS ts)
     
 

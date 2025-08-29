@@ -1,5 +1,6 @@
 # Bruno stuff
 .env
+/scratchpad/
 
 # Idris build artifacts
 *.ibc

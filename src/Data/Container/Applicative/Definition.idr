@@ -2,7 +2,6 @@ module Data.Container.Applicative.Definition
 
 import Data.Container.Object.Definition
 import Data.Container.Extension.Definition
-import Data.Container.Products
 import Misc
 
 %hide Builtin.infixr.(#)
@@ -28,6 +27,15 @@ public export
 (.pos) : (c : ContA) -> c.shp -> Type
 (.pos) c sh = (GetC c) .pos sh
 
+-- alternative method of using applicative instances, not sure yet if this is better
+public export
+data AllApplicative : List Cont -> Type where
+  Nil : AllApplicative []
+  Cons : (firstAppl : Applicative (Ext c)) =>
+    (restAppl : AllApplicative cs) =>
+    AllApplicative (c :: cs)
+
+
 -- ||| This states a list version of 
 -- ||| Ext c2 . Ext c1 = Ext (c2 . c1)
 -- public export
@@ -37,7 +45,7 @@ public export
 -- ToContainerComp {conts = [c]} ce = ce
 -- ToContainerComp {conts = (c :: d :: cs)} (shp <| idx) = 
 --   let rst = (ToContainerComp {conts=(d :: cs)}) . idx
---   in (shp <| shapeExt . rst) <| (\(cp ** fsh) => indexCont (rst cp) fsh)
+--   in (shp <| shapeExt . rst) <| (\(cp ** fsh) => index (rst cp) fsh)
 
 -- public export
 -- FromContainerComp : {conts : List ContA} ->
@@ -66,7 +74,7 @@ public export
 -- public export
 -- compExtReplicate : {conts : List ContA} ->
 --   a -> composeExtensionsA conts a
--- compExtReplicate {conts = []} a = fromIdentity a
+-- compExtReplicate {conts = []} a = pure a
 -- compExtReplicate {conts = ((#) _ {applPrf} :: _)} a
 --   = compExtReplicate <$> pure a
 -- 
@@ -75,7 +83,7 @@ public export
 --   composeExtensionsA conts a ->
 --   composeExtensionsA conts b ->
 --   composeExtensionsA conts (a, b)
--- compExtLiftA2 {conts = []} ca cb = fromIdentity (toIdentity ca, toIdentity cb)
+-- compExtLiftA2 {conts = []} ca cb = pure (extract ca, extract cb)
 -- compExtLiftA2 {conts = ((#) c {applPrf} :: cs)} ca cb
 --   = uncurry compExtLiftA2 <$> liftA2 ca cb
 
@@ -89,15 +97,15 @@ public export
 -- public export
 -- compReplicate : {conts : List ContA} ->
 --   a -> Ext (composeContainersA conts) a
--- compReplicate {conts = []} x = fromIdentity x
+-- compReplicate {conts = []} x = pure x
 -- compReplicate {conts = (c :: cs)} x
 --   = ?ff <| ?bb
 
--- compReplicate {conts = []} a = fromIdentity a
+-- compReplicate {conts = []} a = pure a
 -- compReplicate {conts = (c :: cs)} a
 --   = let (sh <| ind) = compReplicate {conts=cs} a
 --     in (?ff <| ?vmm) <| ?bb
---compReplicate {conts = []} a = fromIdentity a
+--compReplicate {conts = []} a = pure a
 --compReplicate {conts = ((# c) :: cs)} a
 --  = pure {f=Ext c} $ compReplicate {conts=cs} a
 

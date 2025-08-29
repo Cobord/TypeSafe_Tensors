@@ -11,13 +11,10 @@ import Data.Container.Concrete.Definition
 import Data.Container.Concrete.Instances
 import Data.Container.Applicative.Definition
 
-
-import Data.Tree
 import Misc
 
 %hide Prelude.(<|)
 
--- Can now implement by converting to and from concrete instances?
 namespace ListApplicative
   ||| This arises out of the Prelude.Types List applicative 
   ||| Effectively it behaves like a cartesian product
@@ -43,82 +40,27 @@ namespace ListApplicative
 namespace BinTreeLeafApplicative
   public export
   liftA2BBinTreeLeaf' : BinTreeLeaf' a -> BinTreeLeaf' b -> BinTreeLeaf' (a, b)
-  liftA2BBinTreeLeaf' (LeafS <| v) (LeafS <| v') = LeafS <| (\x => (v x, v' x))
-  liftA2BBinTreeLeaf' (LeafS <| v) (NodeS l' r' <| v') =
-    NodeS l' r' <| \case
-        GoLeft posL' => (v Done, v' (GoLeft posL'))
-        GoRight posR' => (v Done, v' (GoRight posR'))
-  liftA2BBinTreeLeaf' (NodeS l r <| v) (LeafS <| v') =
-    NodeS l r <| \case
-        GoLeft posL => (v (GoLeft posL), v' Done)
-        GoRight posR => (v (GoRight posR), v' Done)
-  liftA2BBinTreeLeaf' (NodeS l r <| v) (NodeS l' r' <| v') =
-    let (ls <| fl) = liftA2BBinTreeLeaf' (l <| v . GoLeft) (l' <| v' . GoLeft)
-        (rs <| fr) = liftA2BBinTreeLeaf' (r <| v . GoRight) (r' <| v' . GoRight)
-    in (NodeS ls rs <| \case
-          GoLeft posL => fl posL
-          GoRight posR => fr posR)
+  liftA2BBinTreeLeaf' t1 t2 = fromBinTreeLeaf $
+    liftA2BinTreeLeaf (toBinTreeLeaf t1) (toBinTreeLeaf t2)
 
   public export
   Applicative BinTreeLeaf' where
-    pure a = LeafS <| \_ => a
+    pure a = fromBinTreeLeaf (Leaf a)
     fs <*> vs = uncurry ($) <$> liftA2BBinTreeLeaf' fs vs 
 
 
-namespace BinTreeNodeApplicative
-  -- TODO missing Eq instance for trees
-
-  impossibleCase : BinTreePosNode LeafS -> (a, b)
-  impossibleCase Done impossible
-  impossibleCase (GoLeft x) impossible
-  impossibleCase (GoRight x) impossible
-
-  ||| Combine two BinTreeNode' structures, pairing values at corresponding nodes.
-  ||| The resulting shape is the intersection of the input shapes.
-  public export
-  liftA2BinTreeNode' : BinTreeNode' a -> BinTreeNode' b -> BinTreeNode' (a, b)
-  liftA2BinTreeNode' (NodeS l1 r1 <| f1) (NodeS l2 r2 <| f2) =
-    let (ls <| fl) = liftA2BinTreeNode' (l1 <| f1 . GoLeft) (l2 <| f2 . GoLeft)
-        (rs <| fr) = liftA2BinTreeNode' (r1 <| f1 . GoRight) (r2 <| f2 . GoRight)
-
-        resultFunc : BinTreePosNode (NodeS ls rs) -> (a, b)
-        resultFunc Done = (f1 Done, f2 Done)
-        resultFunc (GoLeft posL) = fl posL
-        resultFunc (GoRight posR) = fr posR
-    in (NodeS ls rs <| resultFunc)
-  liftA2BinTreeNode' _ _ = LeafS <| impossibleCase
-
-  public export
-  Applicative BinTreeNode' where
-    pure a = NodeS LeafS LeafS <| \_ => a
-    fs <*> vs = uncurry ($) <$> liftA2BinTreeNode' fs vs 
-
-
+-- no applicative instance for BinTreeNode
+-- there is one for infinite trees
 
 namespace BinTreeApplicative
   public export
   liftA2BinTree' : BinTree' a -> BinTree' b -> BinTree' (a, b)
-  liftA2BinTree' (LeafS <| i1) (LeafS <| i2) = LeafS <| \pos => (i1 pos, i2 pos)
-  liftA2BinTree' (LeafS <| i1) ((NodeS lt2 rt2) <| i2) = NodeS lt2 rt2 <| \case
-    DoneNode => (i1 DoneLeaf, i2 DoneNode)
-    GoLeft posL => (i1 DoneLeaf, i2 (GoLeft posL)) 
-    GoRight posR => (i1 DoneLeaf, i2 (GoRight posR))
-  liftA2BinTree' ((NodeS lt1 rt1) <| i1) (LeafS <| i2) = NodeS lt1 rt1 <| \case
-    DoneNode => (i1 DoneNode, i2 DoneLeaf)
-    GoLeft posL => (i1 (GoLeft posL), i2 DoneLeaf)
-    GoRight posR => (i1 (GoRight posR), i2 DoneLeaf)
-  liftA2BinTree' ((NodeS lt1 rt1) <| i1) ((NodeS lt2 rt2) <| i2) =
-    let (ls <| fl) = liftA2BinTree' (lt1 <| i1 . GoLeft) (lt2 <| i2 . GoLeft)
-        (rs <| fr) = liftA2BinTree' (rt1 <| i1 . GoRight) (rt2 <| i2 . GoRight)
-    in NodeS ls rs <| \case
-        DoneNode => (i1 DoneNode, i2 DoneNode)
-        GoLeft posL => fl posL
-        GoRight posR => fr posR
-  -- Is the above correct? I think so
+  liftA2BinTree' t1 t2 = fromBinTreeSame $
+    liftA2BinTreeSame (toBinTreeSame t1) (toBinTreeSame t2)
 
   public export
   Applicative BinTree' where
-    pure a = LeafS <| \_ => a
+    pure a = fromBinTreeSame (Leaf a)
     fs <*> vs = uncurry ($) <$> liftA2BinTree' fs vs
 
 
@@ -165,11 +107,6 @@ namespace ApplicativeInstances
   public export
   BinTree : ContA
   BinTree = (#) BinTree
-  
-  ||| Binary trees with data stored at nodes
-  public export
-  BinTreeNode : ContA
-  BinTreeNode = (#) BinTreeNode
   
   ||| Binary trees with data stored at leaves
   public export
@@ -276,9 +213,9 @@ namespace ConversionFunctions
       DoneNode => a
       SubTree ps posSt =>
         let rw1 : (shapeExt t = shapeExt (shapeExt <$> t)) := sym (mapShapeExt t)
-            rw2 : (shapeExt (indexCont t (rewrite sym (mapShapeExt {f=shapeExt} t) in ps)) = indexCont (shapeExt <$> t) ps) := mapIndexCont {c=List} {f=shapeExt} t ps
-        in indexCont
-        (indexCont t (rewrite rw1 in ps))
+            rw2 : (shapeExt (index t (rewrite sym (mapShapeExt {f=shapeExt} t) in ps)) = index (shapeExt <$> t) ps) := mapIndexCont {c=List} {f=shapeExt} t ps
+        in index
+        (index t (rewrite rw1 in ps))
         (rewrite rw2 in posSt)
         -- for some reason all the explicit type annotations above are needed
         -- to convince the typechecker
@@ -311,3 +248,53 @@ namespace RoseTreeInstances
   Applicative RoseTree' where
     pure a = LeafS <| \_ => a
     fs <*> vs = uncurry ($) <$> liftA2RoseTree' fs vs
+
+
+
+namespace TensorApplicativeInstances
+  public export
+  tensorReplicate : {shape : List Cont} ->
+    (allAppl : AllApplicative shape) =>
+    (x : a) -> Tensor' shape a
+  tensorReplicate {shape = []} x = toScalar x
+  tensorReplicate {shape = (c :: cs)} {allAppl = Cons @{fst} @{rest}} x
+    = fromExtensionComposition {shape=(c::cs)}
+      (pure (toExtensionComposition (tensorReplicate x)))
+
+  public export
+  liftA2Tensor : {shape : List Cont} ->
+    (allAppl : AllApplicative shape) =>
+    Tensor' shape a -> Tensor' shape b -> Tensor' shape (a, b)
+  liftA2Tensor {shape = []} t t' = () <| \() => (index t (), index t' ())
+  liftA2Tensor {shape = (c :: cs)} {allAppl = Cons @{fr} @{rst} } t t'
+    = embedExt $ uncurry liftA2Tensor <$> liftA2 (extractExt t) (extractExt t')
+
+  public export
+  {c : Cont} -> (allAppl : AllApplicative [c]) =>
+  Applicative (Tensor' [c]) where
+    pure = tensorReplicate {allAppl = allAppl}
+    fs <*> xs = uncurry ($) <$> liftA2Tensor {allAppl = allAppl} fs xs
+
+  public export
+  {c, d : Cont} -> (allAppl : AllApplicative [c, d]) =>
+  Applicative (Tensor' [c, d]) where
+    pure = tensorReplicate {allAppl = allAppl}
+    fs <*> xs = uncurry ($) <$> liftA2Tensor {allAppl = allAppl} fs xs
+
+  public export
+  {c, d, e : Cont} -> (allAppl : AllApplicative [c, d, e]) =>
+  Applicative (Tensor' [c, d, e]) where
+    pure = tensorReplicate {allAppl = allAppl}
+    fs <*> xs = uncurry ($) <$> liftA2Tensor {allAppl = allAppl} fs xs
+
+  public export
+  {c, d, e, f : Cont} -> (allAppl : AllApplicative [c, d, e, f]) =>
+  Applicative (Tensor' [c, d, e, f]) where
+    pure = tensorReplicate {allAppl = allAppl}
+    fs <*> xs = uncurry ($) <$> liftA2Tensor {allAppl = allAppl} fs xs
+
+  public export
+  {c, d, e, f, g : Cont} -> (allAppl : AllApplicative [c, d, e, f, g]) =>
+  Applicative (Tensor' [c, d, e, f, g]) where
+    pure = tensorReplicate {allAppl = allAppl}
+    fs <*> xs = uncurry ($) <$> liftA2Tensor {allAppl = allAppl} fs xs

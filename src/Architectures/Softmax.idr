@@ -19,16 +19,21 @@ softmax : {i : Nat} -> {a : Type} -> Fractional a => Exp a =>
   Tensor [i] a -> Tensor [i] a
 softmax {temperature} = ToCubicalTensorMap (softmaxA {temperature=temperature})
 
+-- agt0a : AllAlgebra [BinTree] Int
+-- agt0a = %search
+
+-- TODO fix
+-- public export
+-- softmaxBinTree : {a : Type} -> Fractional a => Exp a =>
+--   TensorA [BinTree] a -> TensorA [BinTree] a
+-- softmaxBinTree = softmaxA
+
 
 public export
 softmaxBinTreeLeaf : {a : Type} -> Fractional a => Exp a =>
   TensorA [BinTreeLeaf] a -> TensorA [BinTreeLeaf] a
 softmaxBinTreeLeaf = softmaxA
 
-public export
-softmaxBinTreeNode : {a : Type} -> Fractional a => Exp a =>
-  TensorA [BinTreeNode] a -> TensorA [BinTreeNode] a
-softmaxBinTreeNode = softmaxA
 
 
 -- public export

@@ -2,6 +2,7 @@ module Data.Tree
 
 import Language.Reflection
 import Derive.Prelude
+
 import Misc
 
 %language ElabReflection
@@ -35,12 +36,6 @@ namespace BinaryTrees
       bimap f g (Leaf x) = Leaf (f x)
       bimap f g (Node n leftTree rightTree)
         = Node (g n) (bimap f g leftTree) (bimap f g rightTree)
-
-  -- {leafType : Type} -> Applicative (\n => BinTree leafType n) where
-  -- (Leaf f) <*> (Leaf x) = Leaf (f x)
-  -- (Leaf f) <*> (Node n leftTree rightTree) = Node n (f <*> leftTree) (f <*> rightTree)
-  -- (Node n leftTree rightTree) <*> (Leaf x) = Node n (leftTree <*> (Leaf x)) (rightTree <*> (Leaf x))
-  -- (Node n leftTree rightTree) <*> (Node m v s) = Node n (leftTree <*> v) (rightTree <*> s)
 
   namespace BinTreeSame
     ||| Binary trees with the same type of value on both leaves and nodes
@@ -139,21 +134,14 @@ namespace BinaryTrees
   
     public export
     Functor BinTreeNode where
-      map f (Leaf leaf) = Leaf leaf -- only one element
+      map f (Leaf leaf) = Leaf leaf
       map f (Node node leftTree rightTree)
         = Node (f node) (map {f=BinTreeNode} f leftTree) (map {f=BinTreeNode} f rightTree) 
-  
-    -- Does this work only when the shapes match fully?
-    public export
-    liftA2BinTreeNode : BinTreeNode n -> BinTreeNode m -> BinTreeNode (n, m)
-    liftA2BinTreeNode (Node n lt rt) (Node m lt' rt') = Node (n, m) (liftA2BinTreeNode lt lt') (liftA2BinTreeNode rt rt')
-    liftA2BinTreeNode _ _ = Leaf ()
-  
-    public export
-    Applicative BinTreeNode where
-      pure a = Leaf () -- Is this correct?
-      fs <*> xs = map {f=BinTreeNode} (uncurry ($)) $ liftA2BinTreeNode fs xs 
 
+    {--
+    In general no applicative instance for a tree with values only on nodes.
+    See https://www.reddit.com/r/haskell/comments/cb1j40/comment/etct1xk/
+    --} 
   
   namespace Traversals
     {- 
@@ -278,6 +266,9 @@ namespace RoseTrees
       display (Node x rts)
         = let (xh ** xw ** dx) = display x 
           in ?whatt_1
+
+
+  -- TODO RoseTreeLeaf, RoseTreeNode?
 
   -- Idris' totality checker does not accept this as total
   -- public export
