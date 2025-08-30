@@ -100,8 +100,6 @@ namespace NestedTensorUtils
   vectorToExt : CTensor [c] a -> Ext c a
   vectorToExt (MkT t) = shapeExt (shapeExt t) <| \cp => index t (cp ** ())
 
-  -- todo this should in principle be possible with erased `c` and `cs`?
-  -- had it before
   public export
   toNestedTensor : CTensor (c :: cs) a -> CTensor [c] (CTensor cs a)
   toNestedTensor = extToVector . extractTopExt
@@ -162,8 +160,14 @@ namespace TensorFromConcrete
     CTensor shape a -> concreteTypeTensor shape a
   fromTensor = extensionsToConcreteType . toExtensionComposition
 
-  -- not an instance of 'fromconcrete', just a function with the same name
-  -- trusting Idris' name resolution to pick it up
+  ||| Many containers have a `FromConcrete` instance, allowing them to easily
+  ||| be converted to and from a (usually familiar) Idris type
+  ||| This works with tensors defined as a fold over contianers, but it requires
+  ||| burdensome shape annotations everywhere
+  ||| The decision was made to wrap that fold in `CTensor` as above, and then
+  ||| (as this isn't a container anymore) provide equally named functions like
+  ||| the ones `FromConcrete` provides. Idris' name resolution should be able to
+  ||| detect which one needs to be used at call sites seamlessly
   public export
   fromConcreteTy : {shape : List Cont} ->
     (allConcrete : AllConcrete shape) =>
@@ -258,7 +262,24 @@ namespace TensorInstances
       reduce = reduceTensor 
 
   namespace FoldableInstance
-    -- TODO
+    public export
+    data AllFoldable : (shape : List Cont) -> Type where
+        Nil : AllFoldable []
+        Cons : Foldable (Ext c) =>
+          AllFoldable cs =>
+          AllFoldable (c :: cs)
+
+    public export
+    tensorFoldr : (allFoldable : AllFoldable shape) =>
+      (a -> acc -> acc) -> acc -> CTensor shape a -> acc
+    tensorFoldr {allFoldable = []} f val t = f (extract t) val
+    tensorFoldr {allFoldable = Cons} f val t = foldr
+      (\ct, acc => tensorFoldr f acc ct) val (extractTopExt t)
+
+    public export
+    {shape : List Cont} -> (allFoldable : AllFoldable shape) =>
+    Foldable (CTensor shape) where
+      foldr = tensorFoldr
 
   namespace NaperianInstance
     public export
