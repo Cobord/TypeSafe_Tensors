@@ -23,7 +23,7 @@ Functionality such as
 * Slicing for cubical tensors (TODO)
 
 
-setters/getters and slicing is implemented, finishing UtilsCont is possible
+after setters/getters and slicing is implemented, finishing UtilsCont is possible
 
 And then architectures can be tested?
 
@@ -167,7 +167,7 @@ namespace TensorFromConcrete
   ||| The decision was made to wrap that fold in `CTensor` as above, and then
   ||| (as this isn't a container anymore) provide equally named functions like
   ||| the ones `FromConcrete` provides. Idris' name resolution should be able to
-  ||| detect which one needs to be used at call sites seamlessly
+  ||| detect which one needs to be used at call sites
   public export
   fromConcreteTy : {shape : List Cont} ->
     (allConcrete : AllConcrete shape) =>
@@ -187,19 +187,19 @@ namespace TensorInstances
     tensorReplicate : {shape : List Cont} ->
       (allAppl : AllApplicative shape) =>
       (x : a) -> CTensor shape a
-    tensorReplicate {shape = []} x = embed x
-    tensorReplicate {shape = (_ :: _)} {allAppl = Cons} x
+    tensorReplicate {shape = []} = embed
+    tensorReplicate {shape = (_ :: _)} {allAppl = Cons}
       = fromExtensionComposition
-      $ pure
-      $ toExtensionComposition
-      $ tensorReplicate x
+      . pure
+      . toExtensionComposition
+      . tensorReplicate
   
     public export
     liftA2Tensor : {shape : List Cont} ->
       (allAppl : AllApplicative shape) =>
       CTensor shape a -> CTensor shape b -> CTensor shape (a, b)
-    liftA2Tensor {shape = []} (MkT t) (MkT t') = embed (index t (), index t' ())
-    liftA2Tensor {shape = (_ :: _)} {allAppl = Cons} t t' = embedTopExt $
+    liftA2Tensor {allAppl=[]} (MkT t) (MkT t') = embed (index t (), index t' ())
+    liftA2Tensor {allAppl=Cons} t t' = embedTopExt $
       uncurry liftA2Tensor <$> liftA2 (extractTopExt t) (extractTopExt t')
   
     public export
@@ -474,52 +474,24 @@ rt = fromConcreteTy (Node 'c' [Leaf 'c', Leaf 'd'])
 
 
 namespace SetterGetter
-  -- hh : CTensor [List, BinTree] a -> Double
-  -- hh (MkT (shapeExt <| index)) = ?qoooo_1
-  -- public export
-  hh : {shape : List Cont} -> CTensor shape a -> List Type
-  hh {shape = []} t = []
-  hh {shape = [c]} (MkT (sh <| _)) = [c.pos (shapeExt sh)]
-  hh {shape = (c :: d :: cs)} (MkT (sh <| index)) = c.pos (shapeExt sh) ::
-    (hh {shape=d::cs} $ let tt = index in ?ooooo)
-
-  -- hhg : {shape : List Cont} -> CTensor shape a -> Double
-  -- hhg (MkT t) = let tt = (Tensor shape).pos (shapeExt t) in ?qooo_0
-
-  -- namespace II
-  --   data Index2 : (shape : List Cont) -> (t : CTensor shape a) -> Type where
-  --     Nil : {val : a} -> Index2 [] (embed val)
-  --     (::) : 
-
-
-  -- ||| Machinery for indexing into a TensorA
-  -- ||| It depends on shape, but also on the tensor t itself
-  -- ||| Provides a compile-time guarantee that we won't be out of bounds
-  -- ||| This dependency is not needed for cubical tensors
-  -- ||| TODO remove this dependence for cubical tensors
-  -- public export
-  -- data Index : (shape : List Cont) -> (t : CTensor shape dtype) -> Type where
-  --   Nil : {val : dtype} -> Index [] (embed val)
-  --   (::) :  {e : ((!>) sh ps) `fullOf` (CTensor cs dtype)} -> 
-  --     (p : ps (shapeExt e)) ->
-  --     Index cs (index e p) -> 
-  --     Index (((!>) sh ps) :: cs) (embedTopExt e)
-
-  --public export
-  --index : {shape : List Cont} ->
-  --  (t : CTensor shape a) -> (is : Index shape t) -> a
-  --index {shape = []} (embed val) [] = val
-  --index {shape = (_ :: _)} (embedTopExt e) (sh :: ind)
-  --  = index (index e sh) ind
-
-  -- data Index : (shape : List Cont) -> (t : CTensor shape a) -> Type where
-  --   Nil : {val : a} -> Index [] (embed val)
-  --   (::) : 
+  ||| Machinery for indexing into a CTensor
+  ||| It depends on shape, but also on the tensor t itself
+  ||| Provides a compile-time guarantee that we won't be out of bounds
+  ||| This dependency is not needed for cubical tensors
+  public export
+  data Index : (shape : List Cont) -> (t : CTensor shape dtype) -> Type where
+    Nil : {val : dtype} -> Index [] (embed val)
+    (::) : {t : CTensor (c :: cs) dtype} ->
+      (p : c.pos (shapeExt (extractTopExt t))) ->
+      Index cs (index (extractTopExt t) p) ->
+      Index (c :: cs) t
 
   public export
   index : {shape : List Cont} ->
-    (t : CTensor shape a) -> (Tensor shape).pos (shapeExt (GetT t)) -> a
-  index t = Ext.index (GetT t)
+    (t : CTensor shape a) -> (is : Index shape t) -> a
+  index {shape = []} (embed val) [] = val
+  index {shape = (c :: cs)} t (i :: is) =
+    index (index (extractTopExt t) i) is
 
   public export
   t00 : CTensor [Maybe, List] Int
@@ -535,12 +507,16 @@ namespace SetterGetter
 
   t33 : CTensor [BinTree] Int
   t33 = fromConcreteTy (Node 1 (Leaf 2) (Leaf 3))
+
+  t333 : CTensor [Vect 2] Int
+  t333 = fromConcreteTy [1, 2]
   
   t44 : CTensor [] Int
   t44 = fromConcreteTy 13
 
+  public export
   jj : Int
-  jj = index t44 ?tuulu
+  jj = index t11 [1, 1]
 
 
 namespace CubicalSetterGetter
@@ -562,9 +538,6 @@ namespace CubicalSetterGetter
     let tNested : Tensor [s] (Tensor ss a) := toNestedTensor t
         ts : Tensor ss a := setC (indexC tNested [i]) is x
     in fromNestedTensor $ MkT $ set (GetT tNested) (i ** ()) ts
-
-i : Int
-i = indexC t11 [1, 1]
 
 s : Tensor [2, 3] Int
 s = setC t11 [1, 1] 100
