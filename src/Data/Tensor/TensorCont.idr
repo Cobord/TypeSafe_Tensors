@@ -12,8 +12,8 @@ This file re-exports the Tensor container constructions and provides utilities
 for working with them.
 
 Includes instances such as:
-Functor, Applicative, Naperian, Algebra, Eq, Show, Num, Neg, Abs, Fractional,
-Exp, Foldable (TODO)
+Functor, Applicative, Foldable, Naperian, Algebra, Eq, Show, Num, Neg, Abs,
+Fractional, Exp
 
 Functionality such as
 * Converting to and from nested tensors
@@ -23,7 +23,7 @@ Functionality such as
 * Slicing for cubical tensors (TODO)
 
 
-Once foldable, setters/getters and slicing is implemented, finishing UtilsCont is possible
+setters/getters and slicing is implemented, finishing UtilsCont is possible
 
 And then architectures can be tested?
 
