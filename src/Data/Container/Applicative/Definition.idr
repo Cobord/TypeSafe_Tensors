@@ -6,6 +6,10 @@ import Misc
 
 %hide Builtin.infixr.(#)
 
+-- this file and the applicative directory is a relic of the old implementation
+-- not all of this is used, and likely can be simplified
+
+
 ||| Applicative Container
 ||| Consists of a container and a proof that its extension is an applicative functor
 ||| Defined using Idris' auto as we'd like to avoid directly providing this

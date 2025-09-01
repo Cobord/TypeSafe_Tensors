@@ -8,8 +8,8 @@ import Data.Container.SubTerm
 import Misc
 
 
-{-----------------------------------------------------------
-{-----------------------------------------------------------
+{-------------------------------------------------------------------------------
+{-------------------------------------------------------------------------------
 This file defines common tensor utility functions
 Mirrors those found in numpy/pytorch, and includes:
 * zeros
@@ -19,22 +19,22 @@ Mirrors those found in numpy/pytorch, and includes:
 * flatten
 * oneHot
 and the corresponding container variants, when they exist.
------------------------------------------------------------}
------------------------------------------------------------}
 
+-------------------------------------------------------------------------------}
+-------------------------------------------------------------------------------}
 
 namespace CommonNames
   public export
-  ScalarA : (dtype : Type) -> Type
-  ScalarA dtype = TensorA [] dtype
+  CScalar : (dtype : Type) -> Type
+  CScalar dtype = CTensor [] dtype
 
   public export
-  VectorA : (c : ContA) -> (dtype : Type) -> Type
-  VectorA c dtype = TensorA [c] dtype
+  CVector : (c : Cont) -> (dtype : Type) -> Type
+  CVector c dtype = CTensor [c] dtype
   
   public export
-  MatrixA : (row, col : ContA) -> (dtype : Type) -> Type
-  MatrixA row col dtype = TensorA [row, col] dtype
+  CMatrix : (row, col : Cont) -> (dtype : Type) -> Type
+  CMatrix row col dtype = CTensor [row, col] dtype
 
   public export
   Scalar : (dtype : Type) -> Type
@@ -47,26 +47,18 @@ namespace CommonNames
   public export
   Matrix : (row, col : Nat) -> (dtype : Type) -> Type
   Matrix row col dtype = Tensor [row, col] dtype
-  
 
-namespace Zeros
+namespace ZerosOnes
   public export
-  zerosA : Num a => {shape : List ContA} -> TensorA shape a
-  zerosA = tensorReplicateA (fromInteger 0)
-  
-  public export
-  zeros : Num a => {shape : List Nat} -> Tensor shape a
-  zeros = ToCubicalTensor zerosA
-
-namespace Ones
-  public export
-  onesA : Num a => {shape : List ContA} -> TensorA shape a
-  onesA = tensorReplicateA (fromInteger 1)
+  zeros : Num a => {shape : List Cont} -> AllApplicative shape => 
+    CTensor shape a
+  zeros = tensorReplicate (fromInteger 0)
   
   public export
-  ones : Num a => {shape : List Nat} -> Tensor shape a
-  ones = ToCubicalTensor onesA
-
+  ones : Num a => {shape : List Cont} -> AllApplicative shape => 
+    CTensor shape a
+  ones = tensorReplicate (fromInteger 1)
+  
 namespace Range
   {----- 
   This one is interesting, as in the cubical case it's effectively a version of 'tabulate' from Naperian functors.
@@ -82,7 +74,7 @@ namespace Range
     public export
     arange : {stop : Nat} ->
       Cast Nat a => Tensor [stop] a
-    arange {stop} = fromConcrete $
+    arange {stop} = fromConcreteTy $
       (cast . finToNat) <$> positions {f=Vect (stop)}
 
   namespace TwoArgs
@@ -90,11 +82,11 @@ namespace Range
     public export
     arange : {default 0 start : Nat} -> {stop : Nat} ->
       Cast Nat a => Tensor [minus stop start] a
-    arange {start} {stop} = fromConcrete $
+    arange {start} {stop} = fromConcreteTy $
       (cast . (+start) . finToNat) <$> positions {f=Vect (minus stop start)}
 
   ||| Here the type 'a' has to somehow be dependent on the shape?
-  rangeA : TensorA ?whatShape ?whatType
+  rangeA : CTensor ?whatShape ?whatType
 
 namespace Flip
   ||| Reverse a tensor along a given axis
@@ -108,7 +100,7 @@ namespace Size
   -----}
   ||| Number of elements in a non-cubical tensor
   public export
-  sizeA : {shape : List ContA} -> TensorA shape a -> Nat
+  cSize : {shape : List Cont} -> CTensor shape a -> Nat
   
   ||| Number of elements in a cubical tensor
   public export
@@ -120,8 +112,8 @@ namespace Flatten
   ||| Requires that we have Foldable on all the components
   ||| In general we won't know the number of elements of a non-cubical tensor at compile time
   public export
-  flattenA : Foldable (TensorA shape) => TensorA shape a -> List a
-  flattenA = toList
+  cFlatten : Foldable (CTensor shape) => CTensor shape a -> List a
+  cFlatten = toList
   
   ||| Flatten a cubical tensor into a vector
   ||| Number of elements is known at compile time
@@ -138,17 +130,10 @@ namespace Flatten
 namespace Max
   ||| Maximum value in a tensor
   ||| Returns Nothing if the tensor is empty
-  maxA : Foldable (TensorA shape) => Ord a =>
-    TensorA shape a -> Maybe a
-  maxA = maxInList . flattenA
+  max : Foldable (CTensor shape) => Ord a =>
+    CTensor shape a -> Maybe a
+  max = maxInList . cFlatten
   
-  ||| Maximum value in a cubical tensor
-  ||| Not sure why I can't use 'FromCubicalTensor . maxA'?
-  max : {shape : List Nat} -> Ord a =>
-    Tensor shape a -> Maybe a
-  max t = maxInList (tensorFoldr (::) [] (FromCubicalTensor t))
--- max t = let tt = maxA (FromCubicalTensor t) in ?max_rhs_1
-
   -- TODO Fix for strided
   -- max {shape = []} t = maxA (FromCubicalTensor t)
   -- max {shape = (s :: ss)} t = let tt = maxA (FromCubicalTensor t) in ?max_rhs_1
@@ -156,31 +141,35 @@ namespace Max
   --maxA . FromCubicalTensor
 
 namespace OneHot
-  -- oneHotA : Num a => {c : Cont} -> (i : c .shp) -> TensorA [c] a
+  -- oneHotA : Num a => {c : Cont} -> (i : c .shp) -> CTensor [c] a
 
   public export
   oneHot : Num a => {n : Nat} ->
     (i : Fin n) -> Tensor [n] a
-  oneHot i = (.~) (zeros {shape=[n]}) [i] 1 
+  oneHot i = set (zeros {shape=[Vect n]}) [i] 1 
 
 
 namespace Triangular
   public export
-  triABool : {c : ContA} -> (ip : InterfaceOnPositions (GetC c) MOrd) =>
-    (sh : c.shp) -> TensorA [c, c] Bool
-  triABool {ip = MkI {p}} sh
+  cTriBool : {c : Cont} ->
+    (ip : InterfaceOnPositions c MOrd) =>
+    AllApplicative [c, c] => -- TODO 'All' pattern does not handle repeated indices well
+    (sh : c.shp) -> CTensor [c, c] Bool
+  cTriBool {ip = MkI {p}} sh
     = let cPositions = positions {sh=sh}
           pp : MOrd (c.pos sh) := p sh
-      in outerAWithFn (flip isSubTerm) cPositions cPositions
+      in outerWith (flip isSubTerm) cPositions cPositions
 
   public export
-  triA : Num a => {c : ContA} -> (ip : InterfaceOnPositions (GetC c) MOrd) =>
-    (sh : c.shp) -> TensorA [c, c] a
-  triA sh = fromBool <$> triABool sh
+  triA : Num a => {c : Cont} ->
+    (ip : InterfaceOnPositions c MOrd) =>
+    AllApplicative [c, c] =>
+    (sh : c.shp) -> CTensor [c, c] a
+  triA sh = fromBool <$> cTriBool sh
 
   public export
   triBool : {n : Nat} -> Tensor [n, n] Bool
-  triBool = ToCubicalTensor $ triABool ()
+  triBool = cTriBool ()
 
   ||| A matrix with ones below the diagonal, and zeros elsewhere
   ||| Analogous to numpy.tri
@@ -211,5 +200,5 @@ namespace Random
 -- random shape = randomIO
 
 -- public export
--- eye : Num a => TensorA [n, n] a
+-- eye : Num a => CTensor [n, n] a
 -- eye = ?eye_rhs

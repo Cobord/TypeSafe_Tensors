@@ -62,25 +62,21 @@ namespace ExtensionsOfMainExamples
   BinTreeLeaf' : Type -> Type
   BinTreeLeaf' = Ext BinTreeLeaf
 
-  public export
-  Tensor' : List Cont -> Type -> Type
-  Tensor' cs = Ext (Tensor cs)
-
-  public export
-  TensorC' : List Nat -> Type -> Type
-  TensorC' xs = Ext (TensorC xs)
-
+  {-
+  Technically it is possible to a) use the alias that is below, and b) define Tensor' here, but a decision was made not to do any of these.
+  Rather, Tensor' was defined as a record, and this was done in Data.Tensor as
+  in most linear algebra operations explicit and cumbersome shape annotations 
+  would have been otherwise necessary. Likewise, the definition of usual 
+  interfaces the datatype Tensor' are often involved, making it much simpler
+  to create a separate file for it.
+  -}
   -- public export
-  -- record Tensor' (shape : List Cont) (a : Type) where
-  --   constructor MkT
-  --   GetT : Ext (Tensor shape) a
-
+  -- Tensor' : List Cont -> Type -> Type
+  -- Tensor' cs = Ext (Tensor cs)
 
 public export
 composeExtensions : List Cont -> Type -> Type
 composeExtensions = foldr (\c, f => (Ext c) . f) (Ext Scalar)
--- composeExtensions [] a = Ext Scalar a
--- composeExtensions (c :: cs) a = Ext c (composeExtensions cs a)
 
 public export
 [fe] {shape : List Cont} -> Functor (composeExtensions shape) where
@@ -120,79 +116,3 @@ public export
 public export
 positionsCont : {sh : c.shp} -> Ext c (c.pos sh)
 positionsCont = sh <| id
-
-||| This states a list version of 
-||| Ext c . Ext d = Ext (c . d)
-public export
-fromExtensionComposition : {shape : List Cont} ->
-  composeExtensions shape a -> Tensor' shape a
-fromExtensionComposition {shape = []} ce = ce
-fromExtensionComposition {shape = (c :: cs)} (sh <| contentAt) =
-  let rest = fromExtensionComposition {shape=cs} . contentAt
-  in (sh <| shapeExt . rest) <| \(cp ** fsh) => index (rest cp) fsh
-
-public export
-toExtensionComposition : {shape : List Cont} ->
-  Tensor' shape a -> composeExtensions shape a
-toExtensionComposition {shape = []} t = t
-toExtensionComposition {shape = (c :: cs)} ((csh <| cpos) <| idx)
-  = csh <| \d => toExtensionComposition (cpos d <| curry idx d)
-
-
-public export
-extToTensor : Ext c a -> Tensor' [c] a
-extToTensor e = (shapeExt e <| \_ => ()) <| \(cp ** ()) => index e cp
- 
-public export
-tensorToExt : Tensor' [c] a -> Ext c a
-tensorToExt t = shapeExt (shapeExt t) <| \cp => index t (cp ** ())
-
-namespace NestedTensor
-  public export
-  extractExt : {c : Cont} -> {cs : List Cont} ->
-    Tensor' (c :: cs) a -> Ext c (Tensor' cs a)
-  extractExt t = fromExtensionComposition <$> toExtensionComposition {shape=(c::cs)} t
-
-  public export
-  embedExt : {c : Cont} -> {cs : List Cont} ->
-    Ext c (Tensor' cs a) -> Tensor' (c :: cs) a
-  embedExt e = fromExtensionComposition {shape=(c :: cs)} $ toExtensionComposition <$> e
-
-
-  -- todo this should in principle be possible with erased `c` and `cs`?
-  public export
-  toNestedTensor : {c : Cont} -> {cs : List Cont} ->
-    Tensor' (c :: cs) a -> Tensor' [c] (Tensor' cs a)
-  toNestedTensor = extToTensor . extractExt
-
-  public export
-  fromNestedTensor : {c : Cont} -> {cs : List Cont} ->
-    Tensor' [c] (Tensor' cs a) -> Tensor' (c :: cs) a
-  fromNestedTensor = embedExt . tensorToExt 
-
-  public export
-  tensorMapFirstAxis : {c : Cont} -> {cs, ds : List Cont} ->
-    (f : Tensor' cs a -> Tensor' ds a) ->
-    Tensor' (c :: cs) a -> Tensor' (c :: ds) a
-  tensorMapFirstAxis f = fromNestedTensor . map f . toNestedTensor
-
-
-
-
--- This is with GetT and MkT constructors added
--- ||| This states a list version of 
--- ||| Ext c . Ext d = Ext (c . d)
--- public export
--- fromExtensionComposition : {shape : List Cont} ->
---   composeExtensions shape a -> Tensor' shape a
--- fromExtensionComposition {shape = []} ce = MkT ce
--- fromExtensionComposition {shape = (c :: cs)} (sh <| contentAt) = MkT $
---   let rest = GetT . fromExtensionComposition {shape=cs} . contentAt
---   in (sh <| shapeExt . rest) <| \(cp ** fsh) => index (rest cp) fsh
--- 
--- public export
--- toExtensionComposition : {shape : List Cont} ->
---   Tensor' shape a -> composeExtensions shape a
--- toExtensionComposition {shape = []} (MkT t) = t
--- toExtensionComposition {shape = (c :: cs)} (MkT ((csh <| cpos) <| idx))
---   = csh <| \d => toExtensionComposition (MkT (cpos d <| curry idx d))

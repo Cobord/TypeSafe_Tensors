@@ -5,7 +5,6 @@ import Data.Vect
 import Data.Tree
 import Misc
 
-
 ||| Generalised sum operation
 ||| Categorically, an F-Algebra
 public export
@@ -13,12 +12,11 @@ interface Algebra (f : Type -> Type) a where
   constructor MkAlgebra
   reduce : f a -> a
 
+||| In many instances below, we assume Num a defines a Rig structure on a
+||| This means we assume the sum operation is both commutative and associative,
+||| allowing us to define the Algebra instance for trees without any additional
+||| assumptions, for instance (TODO unpack why)
 namespace Instances
-  {-
-  In a lot of the code below, we assume Num a defines a Rig structure on a, meaning the sum operation is both commutative and associative.
-  This means that we can without any additional assumptions define it for trees, for instance
-  -}
-  
   public export
   Num a => Algebra List a where
     reduce = foldr (+) (fromInteger 0)
@@ -29,17 +27,11 @@ namespace Instances
   {n : Nat} -> Num a => Algebra (Vect n) a where
     reduce = foldr (+) (fromInteger 0)
   
-  -- public export
-  -- [appSum] {shape : Vect n Nat} -> 
-  -- Num a => Applicative f =>
-  -- Algebra (TensorA shape) (f a) using applicativeNum where
-  --   reduce (TZ val) = val
-  --   reduce (TS xs) = reduce (reduce <$> xs)
-  -- 
-  -- aa : Algebra (TensorA [2]) (TensorA [3] a) => a
-  -- aa = ?aa_rhs
-  
-  ||| Summing up elements of the tree given by the Num a structure
+  ||| Summing up leaves of a tree given by the Num a structure
+  ||| This assumes that Num a is a Rig structure, meaning the sum operation is
+  ||| assumed to be both commutative and associative.
+  ||| Otherwise we would need to be expose the data of the ordering and 
+  ||| bracketing by which the summation below was performed
   public export
   Num a => Algebra BinTreeLeaf a where
     reduce (Leaf leaf) = leaf
@@ -47,6 +39,11 @@ namespace Instances
       = (reduce {f=BinTreeLeaf} leftTree) + 
         (reduce {f=BinTreeLeaf} rightTree)
   
+  ||| Summing up nodes of a tree given by the Num a structure
+  ||| This assumes that Num a is a Rig structure, meaning the sum operation is
+  ||| assumed to be both commutative and associative.
+  ||| Otherwise we would need to be expose the data of the ordering and 
+  ||| bracketing by which the summation below was performed
   public export
   Num a => Algebra BinTreeNode a where
     reduce (Leaf _) = fromInteger 0
@@ -54,6 +51,11 @@ namespace Instances
        = node + (reduce {f=BinTreeNode} leftTree)
               + (reduce {f=BinTreeNode} rightTree)
   
+  ||| Summing up nodes and leaves of a tree given by the Num a structure
+  ||| This assumes that Num a is a Rig structure, meaning the sum operation is
+  ||| assumed to be both commutative and associative.
+  ||| Otherwise we would need to be expose the data of the ordering and 
+  ||| bracketing by which the summation below was performed
   public export
   Num a => Algebra BinTreeSame a where
     reduce (Leaf leaf) = leaf
@@ -61,15 +63,13 @@ namespace Instances
       = node + (reduce {f=BinTreeSame} leftTree)
             + (reduce {f=BinTreeSame} rightTree)
   
-  public export
-  [usualSum] Num a => Applicative f => Algebra BinTreeSame (f a) where
-    reduce (Leaf leaf) = leaf
-    reduce (Node node leftTree rightTree)
-      = let lt = reduce {f=BinTreeSame} leftTree 
-            rt = reduce {f=BinTreeSame} rightTree
-        in (uncurry (+)) <$> (liftA2 lt rt) 
-  
-  
+  -- public export
+  -- [usualSum] Num a => Applicative f => Algebra BinTreeSame (f a) where
+  --   reduce (Leaf leaf) = leaf
+  --   reduce (Node node leftTree rightTree)
+  --     = let lt = reduce {f=BinTreeSame} leftTree 
+  --           rt = reduce {f=BinTreeSame} rightTree
+  --       in (uncurry (+)) <$> (liftA2 lt rt) 
   
   -- can be simplified by uncommenting the Num (f a) instance in Num.idr
   public export
@@ -87,3 +87,14 @@ namespace Instances
     reduce (Node x subTrees)
       = x + reduce ((reduce {f=RoseTreeSame}) <$> subTrees)
 
+
+  -- public export
+  -- [appSum] {shape : Vect n Nat} -> 
+  -- Num a => Applicative f =>
+  -- Algebra (TensorA shape) (f a) using applicativeNum where
+  --   reduce (TZ val) = val
+  --   reduce (TS xs) = reduce (reduce <$> xs)
+  -- 
+  -- aa : Algebra (TensorA [2]) (TensorA [3] a) => a
+  -- aa = ?aa_rhs
+  

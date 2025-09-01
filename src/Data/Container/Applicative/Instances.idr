@@ -114,15 +114,12 @@ namespace ApplicativeInstances
   BinTreeLeaf = (#) BinTreeLeaf
 
   public export
-  TensorA : List ContA -> Cont
-  TensorA cs = Tensor (GetC <$> cs)
+  Tensor : List ContA -> Cont
+  Tensor cs = Tensor (GetC <$> cs)
   
   public export
   composeExtensionsA : List ContA -> Type -> Type
   composeExtensionsA cs = composeExtensions (GetC <$> cs)
-
-
-
 
   ||| Generalisation of Rose trees with a container
   ||| of subtrees (container whose extension is applicative)
@@ -248,53 +245,3 @@ namespace RoseTreeInstances
   Applicative RoseTree' where
     pure a = LeafS <| \_ => a
     fs <*> vs = uncurry ($) <$> liftA2RoseTree' fs vs
-
-
-
-namespace TensorApplicativeInstances
-  public export
-  tensorReplicate : {shape : List Cont} ->
-    (allAppl : AllApplicative shape) =>
-    (x : a) -> Tensor' shape a
-  tensorReplicate {shape = []} x = toScalar x
-  tensorReplicate {shape = (c :: cs)} {allAppl = Cons @{fst} @{rest}} x
-    = fromExtensionComposition {shape=(c::cs)}
-      (pure (toExtensionComposition (tensorReplicate x)))
-
-  public export
-  liftA2Tensor : {shape : List Cont} ->
-    (allAppl : AllApplicative shape) =>
-    Tensor' shape a -> Tensor' shape b -> Tensor' shape (a, b)
-  liftA2Tensor {shape = []} t t' = () <| \() => (index t (), index t' ())
-  liftA2Tensor {shape = (c :: cs)} {allAppl = Cons @{fr} @{rst} } t t'
-    = embedExt $ uncurry liftA2Tensor <$> liftA2 (extractExt t) (extractExt t')
-
-  public export
-  {c : Cont} -> (allAppl : AllApplicative [c]) =>
-  Applicative (Tensor' [c]) where
-    pure = tensorReplicate {allAppl = allAppl}
-    fs <*> xs = uncurry ($) <$> liftA2Tensor {allAppl = allAppl} fs xs
-
-  public export
-  {c, d : Cont} -> (allAppl : AllApplicative [c, d]) =>
-  Applicative (Tensor' [c, d]) where
-    pure = tensorReplicate {allAppl = allAppl}
-    fs <*> xs = uncurry ($) <$> liftA2Tensor {allAppl = allAppl} fs xs
-
-  public export
-  {c, d, e : Cont} -> (allAppl : AllApplicative [c, d, e]) =>
-  Applicative (Tensor' [c, d, e]) where
-    pure = tensorReplicate {allAppl = allAppl}
-    fs <*> xs = uncurry ($) <$> liftA2Tensor {allAppl = allAppl} fs xs
-
-  public export
-  {c, d, e, f : Cont} -> (allAppl : AllApplicative [c, d, e, f]) =>
-  Applicative (Tensor' [c, d, e, f]) where
-    pure = tensorReplicate {allAppl = allAppl}
-    fs <*> xs = uncurry ($) <$> liftA2Tensor {allAppl = allAppl} fs xs
-
-  public export
-  {c, d, e, f, g : Cont} -> (allAppl : AllApplicative [c, d, e, f, g]) =>
-  Applicative (Tensor' [c, d, e, f, g]) where
-    pure = tensorReplicate {allAppl = allAppl}
-    fs <*> xs = uncurry ($) <$> liftA2Tensor {allAppl = allAppl} fs xs

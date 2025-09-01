@@ -7,7 +7,7 @@ import public Data.Container.Products
 import public Data.Container.TreeUtils
 
 ||| Examples that do not require any additional constraints such as Applicative
-namespace MainExamples
+namespace Examples
   ||| Empty container, isomorphic to Void
   public export
   Empty : Cont
@@ -72,11 +72,6 @@ namespace MainExamples
   public export
   Tensor : List Cont -> Cont
   Tensor = foldr (>@) Scalar
-
-  ||| Cubical tensors are containers
-  public export
-  TensorC : List Nat -> Cont
-  TensorC xs = Tensor (Vect <$> xs)
 
   -- TODO what is "Tensor" with hancock product? with cartesian product?
   -- with hancock product there is a duoidal structure?
