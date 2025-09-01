@@ -3,15 +3,15 @@
 
 [![build](https://github.com/bgavran/TypeSafe_Tensors/actions/workflows/build.yml/badge.svg)](https://github.com/bgavran/TypeSafe_Tensors/actions/workflows/build.yml)
 
-TLDR; like numpy, but with types and the ability to manipulate tree-shaped arrays
+> TLDR; numpy, but with types, and the ability to manipulate tree-shaped arrays
 
 This is framework for pure functional tensor processing, implemented in Idris 2. It
 * Is **type-safe**: tensor indexing and contractions fail at compile time if types do not match
 * **implements non-cubical tensors**: tensors of trees and streams are supported, instead of just arrays
-* **is made with ergonomics in mind**: it aims to provide the standard numpy/Pytorch interface to the user in a purely functional language with first-class types
+* **is made with ergonomics in mind**: it aims to provide the standard NumPy/PyTorch interface to the user in a purely functional language with first-class types
 
 At the moment its main purpose is to enable rapid prototyping of structured neural network architectures. It is currently expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/src/Architectures/Attention.idr#L10) originally described in [Generalised Transformers using Applicative Functors](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html).
-It is in very early stages of development, and not yet performant. Down the line its goal is to achieve performance not at the expense of compositionality, but because of it. See more in the section [below](#Goal-and-technical-details).
+It is in very early stages of development, and **not yet performant**. Down the line its goal is to achieve performance not at the expense of compositionality, but because of it. See more in the section [below](#Goal-and-technical-details).
 
 
 * [Examples](#Examples)
@@ -21,164 +21,232 @@ It is in very early stages of development, and not yet performant. Down the line
 
 ## Examples
 
-These examples are taken from `examples/BasicExamples.idr`.
+These examples are taken from `examples/BasicExamples.idr`. 
+
+Import `Data.Tensor` at the top of your file.
 
 ```idris
-||| We can construct Tensors directly
+import Data.Tensor
+```
+
+Now you can construct tensors directly:
+
+```idris
 t0 : Tensor [3, 4] Double
-t0 = fromConcrete [ [0, 1, 2, 3]
-                  , [4, 5, 6, 7]
-                  , [8, 9, 10, 11]]
+t0 = fromConcreteTy [ [0, 1, 2, 3]
+                    , [4, 5, 6, 7]
+                    , [8, 9, 10, 11]]
+```
 
+or by using functions analogous to numpy's, such as np.arange and np.reshape:
 
-||| Or using analogous functions np.arange, for instance
+```idris
 t1 : Tensor [6] Double
 t1 = range
 
+t2 : Tensor [2, 3] Double
+t2 = reshape t1
+```
+
+where the difference between numpy is that these operations are typechecked - meaning they will fail _at compile-time_ if you supply an array with the wrong shape.
+```idris
 failing
-  ||| These operations will fail if we supply an array with the wrong shape
   failConcrete : Tensor [3, 4] Double
-  failConcrete = fromConcrete [ [0, 1, 2, 3, 999]
-                              , [4, 5, 6, 7]
-                              , [8, 9, 10, 11]]
-
-||| We can perform safe elementwise addition
-t0Sum : Tensor [3, 4] Double
-t0Sum = t0 + t0
-
-||| And all sorts of numeric operations
-numericOps : Tensor [3, 4] Double
-numericOps = abs (- (t0 * t0) <&> (+7))
-
-dotProduct : Tensor [] Double
-dotProduct = dot t1 t1
-
+  failConcrete = fromConcreteTy [ [0, 1, 2, 3, 999]
+                                , [4, 5, 6, 7]
+                                , [8, 9, 10, 11]]
 failing
-  ||| Failing if we add tensors of different shapes
-  tSumFail : Tensor [3, 4] Double
-  tSumFail = t0 + t1
+  failRange : Tensor [6]
+  failRange = range {n=7}
+```
 
+You can perform all sorts of familiar numeric operations:
+
+```idris
+exampleSum : Tensor [3, 4] Double
+exampleSum = t0 + t0
+
+exampleOp : Tensor [3, 4] Double
+exampleOp = abs (- (t0 * t0) <&> (+7))
+```
+
+including standard linear algebra
+
+```idris
+dotExample : Tensor [] Double
+dotExample = dot t1 (t1 <&> (+5))
+
+matMulExample : Tensor [2, 4]
+matMulExample = matMul t2 t0
+
+transposeExample : Tensor [4, 3] Double
+transposeExample = transposeMatrix t1
+```
+
+which all have their types checked at compile-time. For instance, you can't add tensors of a different shape, or perform matrix multiplication if the dimensions of matrices don't match.
+
+```idris
 failing
-  ||| Or if types mismatch in contractions
-  dotProductFail : Tensor [] Double
-  dotProductFail = dot t1 (range {n=7})
+  sumFail : Tensor [3, 4] Double
+  sumFail = t0 + t1
+  
+failing
+  matMulFail : Tensor [7] Double
+  matMulFail = matMul t0 t1
+```
 
-||| We can safely index into tensors
+Like in numpy, you can safely index into tensors, set values of tensors, and perform slicing:
+
+```idris
+||| Retrieves the value of t0 at location [1, 2]
 indexExample : Double
 indexExample = t0 @@ [1, 2]
 
+||| Sets the value of t0 at location [1, 3] to 99 
+setExample : Tensor [3, 4]
+setExample = set t0 [1, 3] 99
+
+||| Takes the first two rows, and 1st column of t0
+sliceExample : Tensor [2, 1] Double
+sliceExample = takeTensor [2, 1] t0
+```
+
+which will all fail if you go out of bounds:
+```idris
 failing
-   ||| And fail if we index outside of the tensor's shape
-   indexExampleFail : Double
-   indexExampleFail = t1 @@ [7, 2]
-
-||| Safe transposition
-t1Transposed : Tensor [4, 3] Double
-t1Transposed = transposeMatrix t1
-
-||| Safe slicing
-takeExample : Tensor [2, 1] Double
-takeExample = takeTensor [2, 1] t0
+  indexExampleFail : Double
+  indexExampleFail = t1 @@ [7, 2]
 
 failing
-  ||| Which fails when we try to take more than exists
-  takeExampleFail : Tensor [10, 2] Double
-  takeExampleFail = takeTensor [10, 2] t0
+  sliceFail : Tensor [10, 2] Double
+  sliceFail = takeTensor [10, 2] t0
+```
 
+**And most importantly, you can do all of this with *non-cubical* tensors.** Let's understand what those are - they are described by `CTensor` datatype. `CTensor` can do everything `Tensor` can:
 
-----------------------------------------
--- Generalised tensor examples
--- These include list, tree shaped tensors, and other non-cubical tensors
-----------------------------------------
+```idris
+t0Again : CTensor [Vect 3, Vect 4] Double
+t0Again = t0
+```
 
-||| TensorA can do everything that Tensor can
-t0Again : TensorA [Vect 3, Vect 4] Double
-t0Again = FromCubicalTensor t0
+including building concrete tensors:
 
-||| Including building concrete Tensors
-t1again : TensorA [Vect 6] Double
-t1again = fromConcreteA [1,2,3,4,5,6]
+```idris
+t1again : CTensor [Vect 6] Double
+t1again = fromConcreteTy [1,2,3,4,5,6]
+```
 
-||| Above, the container Vect is made explicit in the type
-||| There are other containers we can use in its place
-||| We can use List which allows us to store an arbitrary number of elements
-exList : TensorA [List] Double
-exList = fromConcreteA [1,2,3,4,5,6,7,8]
+Here, the container `Vect` is made explicit in the type. There are other containers we can use in its place. Here is a container `BinTree` of binary trees recast as a tree-tensor:
 
-||| Same type as above, different number of elements
-exList2 : TensorA [List] Double
-exList2 = fromConcreteA [100,-200,1000]
+```idris
+{-
+        60
+      /   \
+     7     2 
+    / \
+(-42)  46 
+-}
+treeExample1 : CTensor [BinTree] Double
+treeExample1 = fromConcreteTy $ Node 60 (Node 7 (Leaf (-42)) (Leaf 46)) (Leaf 2)
+```
 
-{- 
-We can also use BinTreeLeaf, allowing us to store a tree with data on its leaves
+This container allows us to store an arbitrary number of elements, unlike `Vect`. Here is another tree-tensor.
 
+```idris
+{-
+   5
+  / \
+100  4
+-}
+treeExample2 : CTensor [BinTree] Double
+treeExample2 = fromConcreteTy $ Node 5 (Leaf 100) (Leaf 4)
+```
+
+The benefit of this representation is that all linear algebra operations follow smoothly. The example below is the _dot product of trees_. The fact that they have the same number of elements is irrelvant.
+What matters is that the container defining them (`BinTree`) is the same.
+
+```idris
+dotProductTree : CTensor [] Double
+dotProductTree = dot treeExample1 treeExample2
+```
+
+We can do much more. Here's a tree-tensor with values only on its leaves:
+
+```idris
+{-
         *
       /   \
      *     2 
     / \
 (-42)  46 
 -}
-exTree1 : TensorA [BinTreeLeaf] Double
-exTree1 = fromConcreteA $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+treeLeafExample : CTensor [BinTreeLeaf] Double
+treeLeafExample = fromConcreteTy $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+```
 
+and here's a tree-tensor with values only on its nodes:
 
-
-{- 
-Here's another tree, with a different number of elements
-        *
+```idris
+{-
+        60
       /   \
-     10   100 
+     7     *
+    / \
+   *   * 
 -}
-exTree2 : TensorA [BinTreeLeaf] Double
-exTree2 = fromConcreteA $ Node' (Leaf 10) (Leaf 100)
+treeNodeExample : CTensor [BinTreeNode] Double
+treeNodeExample = fromConcreteTy $ Node 60 (Node 7 Leaf' Leaf')  Leaf'
+```
 
-||| We can take the dot product of these two trees
-||| The fact that they don't have the same number of elements is irrelevant
-||| What matters is that the container defining them 'BinTreeLeaf' is the same
-dotProduct2 : TensorA [] Double
-dotProduct2 = dotA exTree1 exTree2
+Here's now a tree-tensor whose nodes themselves are vectors of size 2. And this can get very complex, as `exTree4` shows. But it still fully type-checked, and working as you'd expect coming from any tensor proocessing framework.
 
-||| Here's a tree with whose nodes are vectors of size 2
-exTree3 : TensorA [BinTreeNode, Vect 2] Double
-exTree3 = fromConcreteA $ Node [4,1] (Node [17, 4] Leaf' Leaf') Leaf'
+```idris
+exTree3 : CTensor [BinTreeNode, Vect 2] Double
+exTree3 = fromConcreteTy $ Node [4,1] (Node [17, 4] Leaf' Leaf') Leaf'
 
-||| This can get very complex, but is still fully type-checked
-exTree4 : TensorA [BinTreeNode, BinTreeLeaf, Vect 3] Double
-exTree4 = fromConcreteA $
+exTree4 : CTensor [BinTreeNode, BinTreeLeaf, Vect 3] Double
+exTree4 = fromConcreteTy $
   Node (Node'
           (Leaf [1,2,3])
           (Leaf [4,5,6]))
     Leaf'
     (Node (Leaf [178, -43, 63]) Leaf' Leaf')
 
+```
+
+For instance, here's indexing into this `treeExample1`:
+```idris
 {- 
 We can index into any of these structures
-        *
+        60
       /   \
-     *     2  <---- indexing here is okay
+     7     2  <---- indexing here is okay
     / \
 (-42)  46 
 -}
 indexTreeExample : Double
-indexTreeExample = exTree1 @@ [GoLeft (GoLeft Done)]
+indexTreeExample = treeExample1 @@ [GoLeft (GoLeft Done)]
+```
 
+which will fail _at compile-time_ if you try to index outside of the tree structure:
 
+```idris
 failing
   {- 
-  And we'll get errors if we try to index outside of the structure
-          *
+          60
         /   \
-       *     2  
+       7     2  
       / \     \
   (-42)  46    X   <---- indexing here throws an error
   -}
   indexTreeExampleFail : Double
-  indexTreeExampleFail = ex1 @@ [GoRight (GoRight Done)]
+  indexTreeExampleFail = treeExample1 @@ [GoRight (GoRight Done)]
+```
 
+Likewise, you can perform reshapes, views, reversals, sorting and traversals of non-cubical tensors. Here's a tree-vector with nodes as elements
 
+```idris
 {- 
-We can also perform reshapes, views, and traversals of non-cubical tensors.
-Here's a tree-vector with nodes as elements
         3
       /   \
      2     4
@@ -187,12 +255,15 @@ Here's a tree-vector with nodes as elements
   / \
  *   *
 -}
-exTree5 : TensorA [BinTreeNode] Double
-exTree5 = fromConcreteA $ Node 3 (Node 2 (Node 1 Leaf' Leaf') Leaf') (Node 4 Leaf' Leaf')
+traversalExample : CTensor [BinTreeNode] Double
+traversalExample = fromConcreteTy $ Node 3 (Node 2 (Node 1 Leaf' Leaf') Leaf') (Node 4 Leaf' Leaf')
+```
 
-||| And here is the in-order traversal of that tree
-traverseTree : TensorA [List] Double
-traverseTree = reshapeTensorA inorderBinTreeNode exTree5
+and here is its in-order traversal:
+
+```idris
+traverseTree : CTensor [List] Double
+traverseTree = reshapeTensor inorderBinTreeNode exTree5
 ```
 
 ## Installation instructions
