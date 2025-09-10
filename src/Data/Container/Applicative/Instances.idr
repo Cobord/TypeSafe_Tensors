@@ -207,7 +207,7 @@ namespace ConversionFunctions
   fromRoseTreeSame (Node a rts) =
     let t = fromRoseTreeSame <$> fromList rts
     in NodeS (shapeExt <$> t) <| \case
-      DoneNode => a
+      AtNode => a
       SubTree ps posSt =>
         let rw1 : (shapeExt t = shapeExt (shapeExt <$> t)) := sym (mapShapeExt t)
             rw2 : (shapeExt (index t (rewrite sym (mapShapeExt {f=shapeExt} t) in ps)) = index (shapeExt <$> t) ps) := mapIndexCont {c=List} {f=shapeExt} t ps
@@ -219,9 +219,9 @@ namespace ConversionFunctions
 
   public export
   toRoseTreeSame : RoseTree' a -> RoseTreeSame a
-  toRoseTreeSame (LeafS <| contentAt) = Leaf (contentAt DoneLeaf)
+  toRoseTreeSame (LeafS <| contentAt) = Leaf (contentAt AtLeaf)
   toRoseTreeSame (NodeS (len <| content) <| contentAt)
-    = Node (contentAt DoneNode)
+    = Node (contentAt AtNode)
            (toList $ toRoseTreeSame 
                   <$> (\i => content i <| contentAt . SubTree i)
                   <$> positionsCont)

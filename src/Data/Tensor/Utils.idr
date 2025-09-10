@@ -184,6 +184,13 @@ namespace Triangular
   lowerTriangular : Num a => {n : Nat} -> Tensor [n, n] a -> Tensor [n, n] a
   lowerTriangular = (* tri)
 
+
+namespace Traversals
+  public export
+  inorder : CTensor [BinTreeNode] a -> CTensor [List] a
+  inorder = extToVector . extMap BinTreeNode.inorder . vectorToExt
+
+
 namespace Random
 -- TODO Fix for strided
 -- public export

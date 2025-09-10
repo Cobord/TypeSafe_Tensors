@@ -1,4 +1,4 @@
-package typesafe-tensors-examples
+package tensortype-examples
 -- version =
 authors = "Bruno Gavranovic"
 -- maintainers =
@@ -13,7 +13,7 @@ authors = "Bruno Gavranovic"
 -- langversion
 
 -- packages to add to search path
-depends = typesafe-tensors
+depends = tensortype
 
 -- modules to install
 modules = BasicExamples,

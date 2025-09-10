@@ -12,13 +12,13 @@ import Data.Container.SubTerm
 
 %language ElabReflection
 
-{-----------------------------------------------------------
-{-----------------------------------------------------------
+{-------------------------------------------------------------------------------
+{-------------------------------------------------------------------------------
 This file defines the types of shapes and positions 
 for various tree types for usage in containers.
 All of the trees here are *finite*.
 
-It defines the type of shapes of 
+Specifically, this file defines the type of shapes of 
 * Binary trees, together with the type of positions for
   * Binary trees with data stored both at nodes and leaves
   * Binary trees with data stored at nodes only
@@ -27,8 +27,8 @@ It defines the type of shapes of
   * Rose trees with data stored both at nodes and leaves
   * Rose trees with data stored at nodes only
   * Rose trees with data stored at leaves only
------------------------------------------------------------}
------------------------------------------------------------}
+-------------------------------------------------------------------------------}
+-------------------------------------------------------------------------------}
 
 
 namespace BinaryTrees
@@ -50,60 +50,52 @@ namespace BinaryTrees
   numNodes : BinTreeShape -> Nat
   numNodes LeafS = 0
   numNodes (NodeS lt rt) = numNodes lt + (1 + numNodes rt)
+
+  public export
+  numNodesAndLeaves : BinTreeShape -> Nat
+  numNodesAndLeaves LeafS = 1
+  numNodesAndLeaves (NodeS lt rt)
+    = numNodesAndLeaves lt + (1 + numNodesAndLeaves rt)
   
   namespace NodesAndLeaves
     ||| Positions corresponding to both nodes and leaves within a BinTreeShape
     public export
     data BinTreePos : (b : BinTreeShape) -> Type where
-      DoneLeaf : BinTreePos LeafS
-      DoneNode : {l, r : BinTreeShape} -> BinTreePos (NodeS l r)
+      AtLeaf : BinTreePos LeafS
+      AtNode : {l, r : BinTreeShape} -> BinTreePos (NodeS l r)
       GoLeft : {l, r : BinTreeShape} -> BinTreePos l -> BinTreePos (NodeS l r)
       GoRight : {l, r : BinTreeShape} -> BinTreePos r -> BinTreePos (NodeS l r)
 
-    -- look for deceq in the tutorial
     %runElab deriveIndexed "BinTreePos" [Eq, Show]
 
-    -- TODO finish this
+    ||| Check if a term is a subterm of another term
+    ||| t1 < t2 means that t2 > t1
     public export
-    {b : BinTreeShape} -> DecEq (BinTreePos b) where
-      decEq DoneLeaf DoneLeaf = Yes Refl
-      decEq DoneNode DoneNode = Yes Refl
-      decEq DoneNode (GoLeft x) = No ?ghh_5
-      decEq DoneNode (GoRight x) = No ?ghh_6
-      decEq (GoLeft x) t2 = No ?ghh_2
-      decEq (GoRight x) t2 = No ?ghh_3
+    MOrd (BinTreePos b) where
+      mcompare AtLeaf AtLeaf = Just EQ
+      mcompare AtNode AtNode = Just EQ
+      mcompare (GoLeft b1) (GoLeft b2) = mcompare b1 b2
+      mcompare (GoRight b1) (GoRight b2) = mcompare b1 b2
+      mcompare AtNode (GoLeft _) = Just LT
+      mcompare AtNode (GoRight _) = Just LT
+      mcompare (GoLeft _) AtNode = Just GT
+      mcompare (GoRight _) AtNode = Just GT
+      mcompare (GoLeft _) (GoRight _) = Nothing -- they diverge
+      mcompare (GoRight _) (GoLeft _) = Nothing -- they diverge
+      -- for quantitave version of MOrd the last two should map to BinTreePos b extende with a negative direction
 
-  ||| Check if a term is a subterm of another term
-  ||| t1 < t2 means that t2 > t1
-  public export
-  MOrd (BinTreePos b) where
-    mcompare DoneLeaf DoneLeaf = Just EQ
-    mcompare DoneNode DoneNode = Just EQ
-    mcompare (GoLeft b1) (GoLeft b2) = mcompare b1 b2
-    mcompare (GoRight b1) (GoRight b2) = mcompare b1 b2
-    mcompare DoneNode (GoLeft _) = Just LT
-    mcompare DoneNode (GoRight _) = Just LT
-    mcompare (GoLeft _) DoneNode = Just GT
-    mcompare (GoRight _) DoneNode = Just GT
-    mcompare (GoLeft _) (GoRight _) = Nothing -- they diverge
-    mcompare (GoRight _) (GoLeft _) = Nothing -- they diverge
-    -- for quantitave version of MOrd the last two should map to BinTreePos b extende with a negative direction
-
-  data Dir : (a : Type) -> Type where
-    Pos : a -> Dir a
-    Neg : a -> Dir a
 
   Tr : BinTreeShape
   Tr = NodeS (NodeS LeafS LeafS) LeafS
     
   Path1 : BinTreePos Tr
-  Path1 = GoLeft DoneNode
+  Path1 = GoLeft AtNode
 
   Path2 : BinTreePos Tr
-  Path2 = GoLeft (GoLeft DoneLeaf)
+  Path2 = GoLeft (GoLeft AtLeaf)
 
   Path3 : BinTreePos Tr
-  Path3 = GoRight DoneLeaf
+  Path3 = GoRight AtLeaf
 
   fh : (mcompare Path1 Path2) = Just LT
   fh = ?aaaaasdf
@@ -112,21 +104,41 @@ namespace BinaryTrees
     ||| Positions corresponding to nodes within a BinTreeNode shape.
     public export
     data BinTreePosNode : (b : BinTreeShape) -> Type where
-      Done : {l, r : BinTreeShape} -> BinTreePosNode (NodeS l r)
+      AtNode : {l, r : BinTreeShape} -> BinTreePosNode (NodeS l r)
       GoLeft  : {l, r : BinTreeShape} -> BinTreePosNode l -> BinTreePosNode (NodeS l r)
       GoRight  : {l, r : BinTreeShape} -> BinTreePosNode r -> BinTreePosNode (NodeS l r)
 
     %runElab deriveIndexed "BinTreePosNode" [Eq, Show]
+
+    public export
+    MOrd (BinTreePosNode b) where
+      mcompare AtNode AtNode = Just EQ
+      mcompare (GoLeft b1) (GoLeft b2) = mcompare b1 b2
+      mcompare (GoRight b1) (GoRight b2) = mcompare b1 b2
+      mcompare AtNode (GoLeft _) = Just LT
+      mcompare AtNode (GoRight _) = Just LT
+      mcompare (GoLeft _) AtNode = Just GT
+      mcompare (GoRight _) AtNode = Just GT
+      mcompare (GoLeft _) (GoRight _) = Nothing -- they diverge
+      mcompare (GoRight _) (GoLeft _) = Nothing -- they diverge
   
   namespace Leaves
     ||| Positions corresponding to leaves within a BinTreeShape 
     public export
     data BinTreePosLeaf : (b : BinTreeShape) -> Type where
-      Done : BinTreePosLeaf LeafS
+      AtLeaf : BinTreePosLeaf LeafS
       GoLeft : {l, r : BinTreeShape} -> BinTreePosLeaf l -> BinTreePosLeaf (NodeS l r)
       GoRight : {l, r : BinTreeShape} -> BinTreePosLeaf r -> BinTreePosLeaf (NodeS l r)
 
     %runElab deriveIndexed "BinTreePosLeaf" [Eq, Show]
+
+    public export
+    MOrd (BinTreePosLeaf b) where
+      mcompare AtLeaf AtLeaf = Just EQ
+      mcompare (GoLeft b1) (GoLeft b2) = mcompare b1 b2
+      mcompare (GoRight b1) (GoRight b2) = mcompare b1 b2
+      mcompare (GoLeft _) (GoRight _) = Nothing -- they diverge
+      mcompare (GoRight _) (GoLeft _) = Nothing -- they diverge
 
 
 namespace ApplicativeRoseTree
@@ -151,8 +163,8 @@ namespace ApplicativeRoseTree
     ||| Positions corresponding to both nodes and leaves within a RoseTreeShape
     public export
     data RoseTreePos : (c : ContA) -> (t : RoseTreeShape c) -> Type where
-      DoneLeaf : RoseTreePos c LeafS
-      DoneNode : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
+      AtLeaf : RoseTreePos c LeafS
+      AtNode : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
         RoseTreePos c (NodeS ts)
       SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
         (ps : c.pos (shapeExt ts)) -> -- position in a given list
@@ -162,7 +174,7 @@ namespace ApplicativeRoseTree
   namespace Nodes
     public export
     data RoseTreePosNode : (c : ContA) -> (t : RoseTreeShape c) -> Type where
-      DoneNode : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
+      AtNode : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
         RoseTreePosNode c (NodeS ts)
       SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
         (ps : c.pos (shapeExt ts)) -> -- position in a given list
@@ -172,7 +184,7 @@ namespace ApplicativeRoseTree
   namespace Leaves
     public export
     data RoseTreePosLeaf : (c : ContA) -> (t : RoseTreeShape c) -> Type where
-      DoneLeaf : RoseTreePosLeaf c LeafS
+      AtLeaf : RoseTreePosLeaf c LeafS
       SubTree : {ts : (GetC c) `fullOf` (RoseTreeShape c)} ->
         (ps : c.pos (shapeExt ts)) -> -- position in a given list
         RoseTreePosLeaf c (index ts ps) -> -- position in the sub-tree at the above defined position
@@ -207,8 +219,8 @@ namespace RoseTrees
     ||| Positions corresponding to both nodes and leaves within a RoseTreeShape
     public export
     data RoseTreePos : (t : RoseTreeShape) -> Type where
-      DoneLeaf : RoseTreePos LeafS
-      DoneNode : {ts : List RoseTreeShape} -> RoseTreePos (NodeS ts)
+      AtLeaf : RoseTreePos LeafS
+      AtNode : {ts : List RoseTreeShape} -> RoseTreePos (NodeS ts)
       SubTree : {ts : List RoseTreeShape} ->
         (i : Fin (length ts)) -> -- which subtree
         RoseTreePos (index' ts i) -> -- position in that subtree

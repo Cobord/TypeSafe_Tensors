@@ -10,7 +10,6 @@ import Data.Functor.Naperian
 
 %hide Prelude.(<|)
 
-
 namespace ExtensionsOfMainExamples
   ||| Isomorphic to the Identity
   public export

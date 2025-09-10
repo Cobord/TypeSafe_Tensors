@@ -1,4 +1,4 @@
-package typesafe-tensors
+package tensortype
 -- version =
 authors = "Bruno Gavranovic"
 -- maintainers =

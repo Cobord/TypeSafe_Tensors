@@ -36,23 +36,29 @@ namespace VectInstances
   {n : Nat} -> Num a => Algebra (Vect' n) a where
     reduce v = reduce (toVect v)
 
+  -- Applicative and Naperian instance follow because the set of shapes is ()
+
+  -- analogus to Misc.takeFin, but for Vect'
+  public export 
+  take : {n : Nat} ->
+    (s : Fin (S n)) -> Vect' n a -> Vect' (finToNat s) a
+  take s = fromVect . takeFin s . toVect
+
 {---
 Ideally, all instances would be defined in terms of ConcreteTypes,
 but there are totality checking issues with types whose size isn't known
 at compile time
 ---}
 namespace ListInstances
-  ||| Not partial but not sure how to convince Idris totality checker
-  partial
+  ||| Is there a different way to convince Idris' totality checker?
   public export
   Eq a => Eq (List' a) where
-    l == l' = (toList l) == (toList l')
+    l == l' = assert_total ((toList l) == (toList l'))
 
-  ||| Not partial but not sure how to convince Idris totality checker
-  partial
+  ||| Is there a different way to convince Idris' totality checker?
   public export
   Show a => Show (List' a) where
-    show x = show (toList x)
+    show x = assert_total (show (toList x))
 
   public export
   Foldable List' where
@@ -78,40 +84,36 @@ namespace ListInstances
 
 
 namespace BinTreeInstances
-  ||| Not partial but not sure how to convince Idris totality checker
-  partial
+  ||| Is there a different way to convince Idris' totality checker?
   public export
   Eq a => Eq (BinTree' a) where
-    t == t' = (toBinTreeSame t) == (toBinTreeSame t')
+    t == t' = assert_total (toBinTreeSame t == toBinTreeSame t')
 
-  ||| Not partial but not sure how to convince Idris totality checker
-  partial
+  ||| Is there a different way to convince Idris' totality checker?
   public export
   Show a => Show (BinTree' a) where
-    show = show . toBinTreeSame
+    show = assert_total (show . toBinTreeSame)
 
   ||| Summing up nodes and leaves of the tree given by the Num a structure
   public export
   Num a => Algebra BinTree' a where
     reduce = reduce {f=BinTreeSame} . toBinTreeSame
 
-  public export
-  binTreePosInterface : InterfaceOnPositions BinTree DecEq
-  binTreePosInterface = MkI
+  -- public export
+  -- binTreePosInterface : InterfaceOnPositions BinTree DecEq
+  -- binTreePosInterface = MkI
 
 
 namespace BinTreeLeafInstances
-  ||| Not partial but not sure how to convince Idris totality checker
-  partial
+  ||| Is there a different way to convince Idris' totality checker?
   public export
   Eq a => Eq (BinTreeLeaf' a) where
-    t == t' = (toBinTreeLeaf t) == (toBinTreeLeaf t')
+    t == t' = assert_total (toBinTreeLeaf t == toBinTreeLeaf t')
 
-  ||| Not partial but not sure how to convince Idris totality checker
-  partial
+  ||| Is there a different way to convince Idris' totality checker?
   public export
   Show a => Show (BinTreeLeaf' a) where
-    show = show . toBinTreeLeaf
+    show = assert_total (show . toBinTreeLeaf)
 
   ||| Summing up leaves of the tree given by the Num a structure
   public export
@@ -120,17 +122,15 @@ namespace BinTreeLeafInstances
 
 
 namespace BinTreeNodeInstances
-  ||| Not partial but not sure how to convince Idris totality checker
-  partial
+  ||| Is there a different way to convince Idris' totality checker?
   public export
   Eq a => Eq (BinTreeNode' a) where
-    t == t' = (toBinTreeNode t) == (toBinTreeNode t')
+    t == t' = assert_total (toBinTreeNode t == toBinTreeNode t')
 
-  ||| Not partial but not sure how to convince Idris totality checker
-  partial
+  ||| Is there a different way to convince Idris' totality checker?
   public export
   Show a => Show (BinTreeNode' a) where
-    show = show . toBinTreeNode
+    show = assert_total (show . toBinTreeNode)
 
   ||| Summing up nodes of the tree given by the Num a structure
   public export

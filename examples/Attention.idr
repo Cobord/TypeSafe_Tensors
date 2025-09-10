@@ -20,18 +20,18 @@ SelfAttentionMat : {n, d : Nat}
 SelfAttentionMat = SelfAttention softargmax
 
 
-||| Let's choose a simple input matrix
+||| Let's fix a simple input matrix
 inputMatrix : Tensor [3, 2] Double
 inputMatrix = fromConcreteTy [ [1, 3]
                              , [2, -3]
                              , [0, 0.3]]
 
-||| Let's choose a query, value and key matrices:
-||| a matrix of ones, a triangular matrix, and a matrix of threes, respectively
+||| Let's fix attention parameters for the query, key and value matrices.
+||| For instance, a matrix of ones, a triangular matrix, and a matrix of threes
 params : {d : Nat} -> CSelfAttentionParams (Vect d) {a=Double}
 params = MkCSAParams ones tri (ones <&> (*3))
 
-||| Now we can run self attention on the matrix
+||| Now we can run self attention on the input matrix
 ||| This value can be inspected in REPL, or otherwise
 outputMatrix : Tensor [3, 2] Double
 outputMatrix = Run SelfAttentionMat inputMatrix params
@@ -41,14 +41,14 @@ outputMatrix = Run SelfAttentionMat inputMatrix params
 ||| container tensors for this. Here we'll study attention where the input
 ||| structure isn't a sequence, but a tree, but we'll keep the feature structure
 ||| as a sequence
-||| That is, instead of `Tensor [n, d] Double`
+||| That is, instead of `CTensor [Vect n, Vect d] Double`
 ||| we'll have `CTensor [BinTreeLeaf, Vect d] Double`
 SelfAttentionTree : {d : Nat} -> Para
   (CTensor [BinTreeLeaf, Vect d] Double)
   (CTensor [BinTreeLeaf, Vect d] Double)
 SelfAttentionTree = SelfAttention softargmax
 
-||| We choose a simple input tree
+||| We fix a simple input tree
 ||| Notably, the set of parameters can be the same as the one for matrices
 inputTree : CTensor [BinTreeLeaf, Vect 2] Double
 inputTree = fromConcreteTy $
@@ -56,6 +56,6 @@ inputTree = fromConcreteTy $
                (Leaf [0.5, 1.2]))
         (Leaf [-0.3, 1.2])
 
-||| We can run sefl attention on the tree, and inspect the result
+||| We can run self attention on the tree, and inspect the result
 outputTree : CTensor [BinTreeLeaf, Vect 2] Double
 outputTree = Run SelfAttentionTree inputTree params

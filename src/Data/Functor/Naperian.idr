@@ -29,7 +29,7 @@ positions = tabulate id
 
 public export
 transpose : Naperian f => Naperian g => f (g a) -> g (f a)
-transpose {f} {g} x = tabulate <$> tabulate (flip (lookup . (lookup x)))
+transpose x = tabulate <$> tabulate (flip (lookup . (lookup x)))
 
 public export
 {n : Nat} -> Naperian (Vect n) where

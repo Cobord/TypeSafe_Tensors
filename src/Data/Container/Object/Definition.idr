@@ -1,13 +1,15 @@
 module Data.Container.Object.Definition
 
-||| A container is a pair: a shape and a set of positions indexed by that shape
-||| They can be used to describe various data types
+||| Containers capture the idea that concrete datatypes consist of memory 
+||| locations where data can be stored
+||| Each memory location is a one 'shape' of data, and there are `shp : Type`
+||| many of them. These locations are usually referred to as 'positions'
 public export
 record Cont where
   constructor (!>)
   ||| A type of shapes
   shp : Type
-  ||| For each shape, a position
+  ||| For each shape, a set of positions
   pos : shp -> Type
 
 export typebind infixr 0 !>

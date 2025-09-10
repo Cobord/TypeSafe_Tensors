@@ -1,10 +1,14 @@
 module Data.Tensor.Tensor
 
 import Data.DPair
+import public Data.Fin.Split
 
 import public Data.Container
+import Data.Container.Object.Instances as Cont
 
 import public Misc
+
+%hide Syntax.WithProof.prefix.(@@) -- used here for indexing
 
 {-------------------------------------------------------------------------------
 {-------------------------------------------------------------------------------
@@ -22,23 +26,27 @@ Functionality includes:
 * Converting to and from nested tensors
 * Converting to and from concrete types
 * Various tensor contractions
+* Slicing for cubical tensors
 * Getters 
 * Setters (TODO)
-* Slicing for cubical tensors (TODO)
-* Reshape (TODO)
+* Functionality for general reshaping such as views, traversals
+* Concrete reshape for cubical tensors
 
 -------------------------------------------------------------------------------}
 -------------------------------------------------------------------------------}
 
-||| Need to wrap it in a record to help type inference
+||| Container Tensor: a tensor whose shape is a list of containers
+||| This is merely a wrapper around `Ext (Tensor shape) a` to help type
+||| inference
 public export
 record CTensor (shape : List Cont) (a : Type) where
   constructor MkT
-  GetT : Ext (Tensor shape) a
+  GetT : Ext (Cont.Tensor shape) a
 
 %name CTensor t, t', t''
 
-||| Cubical tensors
+||| Cubical tensors. Used name 'Tensor' for backwards compatibility with 
+||| terminology in the numpy/pytorch ecosystem
 public export
 Tensor : (shape : List Nat) -> Type -> Type
 Tensor shape = CTensor (Vect <$> shape)
@@ -243,7 +251,7 @@ namespace TensorInstances
     -- Turns out only this is sufficient for the setC function to work
     %hint
     public export
-    interfacePosEq : {n : Nat} -> InterfaceOnPositions (Examples.Tensor [Vect n]) Eq
+    interfacePosEq : {n : Nat} -> InterfaceOnPositions (Cont.Tensor [Vect n]) Eq
     interfacePosEq = MkI
 
     teq : {shape : List Cont} -> AllEq shape a => CTensor shape a -> Bool
@@ -465,6 +473,13 @@ namespace TensorInstances
       lookup = tensorLookup
       tabulate = tensorTabulate
 
+    -- ||| Should already have the Applicative instance for any Tensor
+    -- public export
+    -- [flat] {shape : List Nat} -> Applicative (Tensor shape) => Naperian (Tensor shape) where
+    --   Log = ?ee
+    --   lookup = ?eee
+    --   tabulate = ?eeee
+
     public export 
     transposeMatrix : {i, j : Cont} ->
       (allNaperian : AllNaperian [i, j]) =>
@@ -596,8 +611,8 @@ namespace TensorInstances
     matrixMatrixProduct m1 m2 = fromNestedTensor $ 
       matrixVectorProduct m1 <$> toNestedTensor m2
 
-t0 : CTensor [] Integer
-t0 = pure 13
+tt0 : CTensor [] Integer
+tt0 = pure 13
 
 fg : CTensor [Vect 7] Integer
 fg = pure 5
@@ -606,7 +621,7 @@ fgh : CTensor [Vect 7, Vect 7] Integer
 fgh = pure 13
 
 sht0 : String
-sht0 = show t0
+sht0 = show tt0
 
 fsh0 : Show (Vect 8 `fullOf` (CTensor [] Integer))
 fsh0 = %search
@@ -626,6 +641,74 @@ bt = fromConcreteTy $ Node 1 (Node 2 (Leaf 3) (Leaf 4)) (Leaf 5)
 rt : RoseTree' Char
 rt = fromConcreteTy (Node 'c' [Leaf 'c', Leaf 'd'])
 
+
+namespace Reshape
+  public export
+  wrap : {c, d : Cont} ->
+    c =%> d ->
+    Cont.Tensor [c] =%> Cont.Tensor [d]
+  wrap (fwd <%! bwd) = (\e => fwd (shapeExt e) <| \_ => ()) <%!
+    (\e, (cp ** ()) => (bwd (shapeExt e) cp ** ()))
+
+  ||| Effectively a wrapper around `extMap`
+  ||| Allows us to define views, traversals and general reshaping
+  public export
+  restructure : {cs, ds : List Cont} ->
+    Cont.Tensor cs =%> Cont.Tensor ds ->
+    CTensor cs a -> CTensor ds a
+  restructure f = MkT . extMap f . GetT
+
+  treeExample1 : CTensor [BinTree] Double
+  treeExample1 = fromConcreteTy $ Node 60 (Node 7 (Leaf (-42)) (Leaf 46)) (Leaf 2)
+
+  traversalExample : CTensor [List] Double
+  traversalExample = restructure (wrap inorder) treeExample1
+
+  ||| Isomorphism between a tensor of a particular shape, and a vector with
+  ||| the length equal to the product of the shape elements
+  ||| Down the line, we'll want to track the device we perform computation on,
+  ||| and do this kind of transformation selectively.
+  ||| Here we also need to be explicit about whether we're using a column-major
+  ||| or row-major order: following PyTorch and NumPy row-major is chosen.
+  namespace CubicalShapeProductIso
+    public export
+    toVectProd : {shape : List Nat} ->
+      Tensor shape a ->
+      Vect' (prod shape) a
+    toVectProd {shape = []} (MkT t) = () <| \_ => extract t
+    toVectProd {shape = (n :: ns)} t =
+      let tm = index . toVectProd . lookup (extractTopExt t)
+      in tabulate (uncurry tm . splitProd) -- Split.splitProd is row-major
+
+    public export
+    fromVectProd : {shape : List Nat} ->
+      Vect' (prod shape) a ->
+      Tensor shape a
+    fromVectProd {shape = []} (() <| index) = embed (index FZ)
+    fromVectProd {shape = (n :: ns)} (() <| index) = embedTopExt $
+      () <| \i => fromVectProd $ () <| index . (indexProd i)
+
+  ||| Reshape is simply a rewrite!
+  public export
+  dLensReshape : {oldShape, newShape : List Nat} ->
+    {auto prf : prod oldShape = prod newShape} ->
+    Vect (prod oldShape) =%> Vect (prod newShape)
+  dLensReshape = id <%! \(), i => rewrite prf in i
+
+  ||| Restructuring for cubical tensors that leaves number of elements unchanged
+  public export
+  reshape : {oldShape, newShape : List Nat} ->
+    Tensor oldShape a ->
+    {auto prf : prod oldShape = prod newShape} ->
+    Tensor newShape a
+  reshape t = fromVectProd $ extMap dLensReshape $ toVectProd t
+
+  -- tEx : Tensor [2, 3] Integer
+  -- tEx = fromConcreteTy [ [1,2,3]
+  --                      , [4,5,6] ]
+
+  -- tEx2 : Tensor [6] Integer
+  -- tEx2 = reshape {oldShape=[2, 3]} {newShape=[6]} tEx
 
 namespace SetterGetter
   ||| Machinery for indexing into a CTensor
@@ -698,8 +781,6 @@ namespace SetterGetter
   jj : Integer
   jj = index t11 [1, 1]
 
-
-
 namespace CubicalSetterGetter
   public export
   data IndexC : List Nat -> Type where
@@ -722,3 +803,32 @@ namespace CubicalSetterGetter
 
 s : Tensor [2, 3] Integer
 s = setC t11 [1, 1] 100
+
+||| Functionality for slicing tensors
+namespace Slice
+  namespace CubicalSlicing
+    ||| Machinery for slicing cubical tensors
+    ||| Crucially, different from the indexing one in the definition of (::)
+    ||| Here we have Fin (S m) instead of Fin m
+    public export
+    data Slice : (shape : List Nat) -> Type where
+      Nil : Slice []
+      (::) : Fin (S m) -> Slice ms -> Slice (m :: ms)
+
+  public export
+  sliceToShape : {shape : List Nat} -> Slice shape -> List Nat
+  sliceToShape [] = []
+  sliceToShape (s :: ss) = finToNat s :: sliceToShape ss
+
+  public export
+  take : {shape : List Nat} ->
+    (slice : Slice shape) ->
+    Tensor shape a ->
+    Tensor (sliceToShape slice) a
+  take [] t = t
+  take (s :: ss) t = embedTopExt $ take ss <$> take s (extractTopExt t)
+
+
+  ||| What does it mean to slice a non-cubical tensor?
+  ||| CTensor [BinTree, List] a
+  namespace NonCubicalSlicing

@@ -62,22 +62,22 @@ namespace ConversionFunctions
     let (lts <| ltc) = fromBinTreeSame lt
         (rts <| rtc) = fromBinTreeSame rt
     in NodeS lts rts <| \case
-        DoneNode => x
+        AtNode => x
         GoLeft posL => ltc posL
         GoRight posR => rtc posR
 
   public export
   toBinTreeSame : BinTree' a -> BinTreeSame a
-  toBinTreeSame (LeafS <| index) = Leaf (index DoneLeaf)
+  toBinTreeSame (LeafS <| index) = Leaf (index AtLeaf)
   toBinTreeSame (NodeS lt rt <| index) =
-    Node (index DoneNode)
+    Node (index AtNode)
          (toBinTreeSame (lt <| index . GoLeft))
          (toBinTreeSame (rt <| index . GoRight))
   
   
   public export
   fromTreeHelper : BinTreePosNode LeafS -> a
-  fromTreeHelper Done impossible
+  fromTreeHelper AtNode impossible
   fromTreeHelper (GoLeft x) impossible
   fromTreeHelper (GoRight x) impossible
   
@@ -88,7 +88,7 @@ namespace ConversionFunctions
     = let (lts <| ltc) = fromBinTreeNode leftTree
           (rts <| rtc) = fromBinTreeNode rightTree
       in (NodeS lts rts <| \case
-            Done => node
+            AtNode => node
             GoLeft posL => ltc posL
             GoRight posR => rtc posR)
 
@@ -96,7 +96,7 @@ namespace ConversionFunctions
   toBinTreeNode : BinTreeNode' a -> BinTreeNode a
   toBinTreeNode (LeafS <| index) = Leaf ()
   toBinTreeNode (NodeS lt rt <| index) = 
-    Node (index Done)
+    Node (index AtNode)
          (toBinTreeNode (lt <| index . GoLeft))
          (toBinTreeNode (rt <| index . GoRight))
   
@@ -112,7 +112,7 @@ namespace ConversionFunctions
 
   public export
   toBinTreeLeaf : BinTreeLeaf' a -> BinTreeLeaf a
-  toBinTreeLeaf (LeafS <| content) = Leaf (content Done)
+  toBinTreeLeaf (LeafS <| content) = Leaf (content AtLeaf)
   toBinTreeLeaf (NodeS l r <| content) =
     Node' (toBinTreeLeaf (l <| content . GoLeft))
           (toBinTreeLeaf (r <| content . GoRight))

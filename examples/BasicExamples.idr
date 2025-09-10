@@ -2,85 +2,100 @@ module BasicExamples
 
 import Data.Tensor
 
+%hide Syntax.WithProof.prefix.(@@) -- (@@) is used here for indexing
+
 ----------------------------------------
 -- Examples of standard, cubical tensors
 ----------------------------------------
 
-||| We can construct Tensors directly
+||| Now you can construct Tensors directly
 t0 : Tensor [3, 4] Double
 t0 = fromConcreteTy [ [0, 1, 2, 3]
                     , [4, 5, 6, 7]
                     , [8, 9, 10, 11]]
 
 
-||| Or using analogous functions to np.arange and np.reshape
+||| or by using functions analogous to numpy's, such as `np.arange` or `np.reshape`
 t1 : Tensor [6] Double
 t1 = arange
 
--- Need to fix reshape
--- t2 : Tensor [2, 3] Double
--- t2 = reshape t1
+-- These implicit arguments will not be necessary in the future
+t2 : Tensor [2, 3] Double
+t2 = reshape {oldShape=[6], newShape=[2, 3]} t1
 
+{-
+where the difference between numpy is that these operations are typechecked
+- meaning they fail at compile-time if you supply an array with the wrong shape.
+-}
 failing
-  ||| Which will fail if we supply an array with the wrong shape
   failConcrete : Tensor [3, 4] Double
   failConcrete = fromConcreteTy [ [0, 1, 2, 3, 999]
                                 , [4, 5, 6, 7]
                                 , [8, 9, 10, 11]]
 
 failing
-  ||| Or if the reshape is not possible
   failReshape : Tensor [7, 2] Double
-  failReshape = reshape t1
+  failReshape = arange {n=7}
 
-||| We can perform safe elementwise addition
-t0Sum : Tensor [3, 4] Double
-t0Sum = t0 + t0
+||| You can perform all sorts of familiar numeric operations:
+exampleSum : Tensor [3, 4] Double
+exampleSum = t0 + t0
 
-||| And all sorts of numeric operations
-numericOps : Tensor [3, 4] Double
-numericOps = abs (- (t0 * t0) <&> (+7))
+exampleOp : Tensor [3, 4] Double
+exampleOp = abs (- (t0 * t0) <&> (+7))
 
-dotProduct : Tensor [] Double
-dotProduct = dot t1 t1
+||| including standard linear algebra
+dotExample : Tensor [] Double
+dotExample = dot t1 (t1 <&> (+5))
+
+matMulExample : Tensor [2, 4] Double
+matMulExample = matMul t2 t0
+
+transposeExample : Tensor [4, 3] Double
+transposeExample = transposeMatrix t0
+
+{-
+which all have their types checked at compile-time. For instance, you can't 
+add tensors of different shapes, or perform matrix multiplication if the 
+dimensions of matrices don't match.
+-}
+failing
+  sumFail : Tensor [3, 4] Double
+  sumFail = t0 + t1
 
 failing
-  ||| Failing if we add tensors of different shapes
-  tSumFail : Tensor [3, 4] Double
-  tSumFail = t1 + t2
+  matMulFail : Tensor [7] Double
+  matMulFail = matMul t0 t1
 
-failing
-  ||| Or if types mismatch in contractions
-  dotProductFail : Tensor [] Double
-  dotProductFail = dot t1 (range {n=7})
-
-||| We can safely index into tensors
+||| Like in numpy, you can safely index into tensors, set values of tensors, and perform slicing:
+||| This retrieves the value of t- at location [1,2]
 indexExample : Double
 indexExample = t0 @@ [1, 2]
 
+-- TODO needs to be fixed
+-- ||| Sets the value of t0 at location [1, 3] to 99 
+-- setExample : Tensor [3, 4]
+-- setExample = set t0 [1, 3] 99
+
+||| Takes the first two rows, and 1st column of t0
+sliceExample : Tensor [2, 1] Double
+sliceExample = take [2, 1] t0
+
+-- Which will all fail if you go out of bounds
 failing
-   ||| And fail if we index outside of the tensor's shape
-   indexExampleFail : Double
-   indexExampleFail = t1 @@ [7, 2]
+  indexExampleFail : Double
+  indexExampleFail = t1 @@ [7, 2]
 
-||| Safe transposition
-t0Transposed : Tensor [4, 3] Double
-t0Transposed = transposeMatrix t0
+failing
+  sliceFail : Tensor [10, 2] Double
+  sliceFail = take [10, 2] t0
 
--- ||| Safe slicing
--- takeExample : Tensor [2, 1] Double
--- takeExample = takeTensor [2, 1] t0
+{--------------------
+And most importantly, you can do all of this with non-cubical tensors.** These describe tensors whose shape isn't rectangular/cubical, but can be branching/recursive/higher-order.
 
--- failing
---   ||| Which fails when we try to take more than exists
---   takeExampleFail : Tensor [10, 2] Double
---   takeExampleFail = takeTensor [10, 2] t0
-
-
-----------------------------------------
--- Generalised tensor examples
--- These include list, tree shaped tensors, and other non-cubical tensors
-----------------------------------------
+These are described via 'containers' and the datatype named `CTensor` standing for 'container tensor'.
+Let's understand what it can do - it can do everything `Tensor` can:
+--------------------}
 
 ||| TensorA can do everything that Tensor can
 t0Again : CTensor [Vect 3, Vect 4] Double
@@ -90,52 +105,66 @@ t0Again = t0
 t1again : CTensor [Vect 6] Double
 t1again = fromConcreteTy [1,2,3,4,5,6]
 
-||| Above, the container Vect is made explicit in the type
-||| There are other containers we can use in its place
-||| We can use List which allows us to store an arbitrary number of elements
-exList : CTensor [List] Double
-exList = fromConcreteTy [1,2,3,4,5,6,7,8]
-
-||| Same type as above, different number of elements
-exList2 : CTensor [List] Double
-exList2 = fromConcreteTy [100,-200,1000]
+{-
+Here, the container `Vect` is made explicit in the type. 
+There are other containers we can use in its place. 
+Here is a container `BinTree` of binary trees recast as a tree-tensor:
+       60
+      /  \
+     7    2 
+    / \
+(-42)  46 
+-}
+treeExample1 : CTensor [BinTree] Double
+treeExample1 = fromConcreteTy $ Node 60 (Node 7 (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
 {- 
-We can also use BinTreeLeaf, allowing us to store a tree with data on its leaves
+This container allows us to store an arbitrary number of elements, unlike `Vect`. Here is another tree-tensor.
+   5
+  / \
+100  4
+-}
+treeExample2 : CTensor [BinTree] Double
+treeExample2 = fromConcreteTy $ Node 5 (Leaf 100) (Leaf 4)
 
+
+||| The benefit of this representation is that all linear algebra operations 
+||| follow smoothly. The example below is the dot product of trees. 
+||| The fact that they have the same number of elements is irrelevant.
+||| What matters is that the container defining them (`BinTree`) is the same.
+dotProductTree : CTensor [] Double
+dotProductTree = dot treeExample1 treeExample2
+
+{-
+We can do much more.
+Here's a tree-tensor with values only on its leaves:
         *
       /   \
      *     2 
     / \
 (-42)  46 
 -}
-exTree1 : CTensor [BinTreeLeaf] Double
-exTree1 = fromConcreteTy $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
+treeLeafExample : CTensor [BinTreeLeaf] Double
+treeLeafExample = fromConcreteTy $ Node' (Node' (Leaf (-42)) (Leaf 46)) (Leaf 2)
 
-
-
-{- 
-Here's another tree, with a different number of elements
-        *
-      /   \
-     10   100 
+{-
+and here's a tree-tensor with values only on its nodes:
+       60
+      /  \
+     7    *
+    / \
+   *   * 
 -}
-exTree2 : CTensor [BinTreeLeaf] Double
-exTree2 = fromConcreteTy $ Node' (Leaf 10) (Leaf 100)
+treeNodeExample : CTensor [BinTreeNode] Double
+treeNodeExample = fromConcreteTy $ Node 60 (Node 7 Leaf' Leaf')  Leaf'
 
-||| We can take the dot product of these two trees
-||| The fact that they don't have the same number of elements is irrelevant
-||| What matters is that the container defining them 'BinTreeLeaf' is the same
-dotProduct2 : CTensor [] Double
-dotProduct2 = dot exTree1 exTree2
+||| And this can get very complex and nested, as `exTree3` and `exTree4` show.
+|||  But it still fully type-checked, and working as you'd expect.
+treeExample3 : CTensor [BinTreeNode, Vect 2] Double
+treeExample3 = fromConcreteTy $ Node [4,1] (Node [17, 4] Leaf' Leaf') Leaf'
 
-||| Here's a tree with whose nodes are vectors of size 2
-exTree3 : CTensor [BinTreeNode, Vect 2] Double
-exTree3 = fromConcreteTy $ Node [4,1] (Node [17, 4] Leaf' Leaf') Leaf'
-
-||| This can get very complex, but is still fully type-checked
-exTree4 : CTensor [BinTreeNode, BinTreeLeaf, Vect 3] Double
-exTree4 = fromConcreteTy $
+treeExample4 : CTensor [BinTreeNode, BinTreeLeaf, Vect 3] Double
+treeExample4 = fromConcreteTy $
   Node (Node'
           (Leaf [1,2,3])
           (Leaf [4,5,6]))
@@ -143,20 +172,19 @@ exTree4 = fromConcreteTy $
     (Node (Leaf [178, -43, 63]) Leaf' Leaf')
 
 {- 
-We can index into any of these structures
-        *
-      /   \
-     *     2  <---- indexing here is okay
+For instance, we can index into `treeExample1`:
+       60
+      /  \
+     7    2  <---- indexing here is okay
     / \
 (-42)  46 
 -}
-indexTreeExample : Double
-indexTreeExample = exTree1 @@ [GoLeft (GoLeft Done)]
+indexTreeExample1 : Double
+indexTreeExample1 = treeExample1 @@ [GoRight AtLeaf]
 
-
+-- This will fail at compile-time if you try to index outside of the tree structure:
 failing
   {- 
-  And we'll get errors if we try to index outside of the structure
           *
         /   \
        *     2  
@@ -164,23 +192,19 @@ failing
   (-42)  46    X   <---- indexing here throws an error
   -}
   indexTreeExampleFail : Double
-  indexTreeExampleFail = ex1 @@ [GoRight (GoRight Done)]
+  indexTreeExampleFail = ex1 @@ [GoRight (GoRight AtLeaf)]
 
 
 {- 
-We can also perform reshapes, views, and traversals of non-cubical tensors.
-Here's a tree-vector with nodes as elements
-        3
-      /   \
-     2     4
-    / \   / \
-   1   * *   * 
-  / \
- *   *
--}
-exTree5 : CTensor [BinTreeNode] Double
-exTree5 = fromConcreteTy $ Node 3 (Node 2 (Node 1 Leaf' Leaf') Leaf') (Node 4 Leaf' Leaf')
+Likewise, you can perform reshapes, views, reversals, sorting and traversals of non-cubical tensors.
+Here is the in-order traversal of `treeExample1` from above.
+       60
+      /  \
+     7    2 
+    / \
+(-42)  46 
 
--- ||| And here is the in-order traversal of that tree
--- traverseTree : TensorA [List] Double
--- traverseTree = reshapeTensorA inorderBinTreeNode exTree5
+-- Can also use Utils.Traversals.inorder
+-}
+traversalExample : CTensor [List] Double
+traversalExample = restructure (wrap inorder) treeExample1

@@ -1,20 +1,14 @@
-[custom.all.typesafe-tensors]
+[custom.all.tensortype]
 type = "local"
 path = ""
-ipkg = "typesafe-tensors.ipkg"
+ipkg = "tensortype.ipkg"
 
-[custom.all.typesafe-tensors-examples]
+[custom.all.tensortype-examples]
 type = "local"
 path = "examples"
-ipkg = "typesafe-tensors-examples.ipkg"
+ipkg = "tensortype-examples.ipkg"
 
-[custom.all.typesafe-tensors-tests]
+[custom.all.tensortype-tests]
 type = "local"
 path = "tests"
-ipkg = "typesafe-tensors-tests.ipkg"
-
-[custom.all.elab-util]
-type   = "git"
-url    = "https://github.com/stefan-hoeck/idris2-elab-util"
-commit = "ffbfe4f50900f45722035a16e6285f580047e846"
-ipkg   = "elab-util.ipkg"
+ipkg = "tensortype-tests.ipkg"

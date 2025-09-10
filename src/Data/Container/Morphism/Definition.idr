@@ -26,6 +26,8 @@ namespace DependentLenses
     constructor (<%!)
     fwd : c1.shp -> c2.shp
     bwd : (x : c1.shp) -> c2.pos (fwd x) -> c1.pos x
+
+  %name (=%>) f, g, h
   
   
   ||| Constructor for closed dependent lens

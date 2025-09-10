@@ -35,6 +35,6 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Build using pack
         run: |
-          pack --no-prompt install typesafe-tensors
+          pack --no-prompt install tensortype
           cd examples
-          pack --no-prompt install typesafe-tensors-examples
+          pack --no-prompt install tensortype-examples
