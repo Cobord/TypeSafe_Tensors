@@ -256,7 +256,7 @@ Here is the in-order traversal of `treeExample1` from above.
     / \
 (-42)  46 
 -}
-traversalExample : CTensor [BinTreeNode] Double
+traversalExample : CTensor [List] Double
 traversalExample = restructure (wrap inorder) treeExample1
 ```
 
