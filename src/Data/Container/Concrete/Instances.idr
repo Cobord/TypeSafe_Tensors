@@ -59,12 +59,12 @@ namespace ConversionFunctions
   fromBinTreeSame : BinTreeSame a -> BinTree' a
   fromBinTreeSame (Leaf x) = LeafS <| \_ => x
   fromBinTreeSame (Node x lt rt) =
-    let (lts <| ltc) = fromBinTreeSame lt
-        (rts <| rtc) = fromBinTreeSame rt
-    in NodeS lts rts <| \case
+    let fblt = fromBinTreeSame lt
+        fbrt = fromBinTreeSame rt
+    in NodeS (shapeExt fblt) (shapeExt fbrt) <| \case
         AtNode => x
-        GoLeft posL => ltc posL
-        GoRight posR => rtc posR
+        GoLeft posL => index fblt posL
+        GoRight posR => index fbrt posR
 
   public export
   toBinTreeSame : BinTree' a -> BinTreeSame a
@@ -85,12 +85,12 @@ namespace ConversionFunctions
   fromBinTreeNode : BinTreeNode a -> BinTreeNode' a
   fromBinTreeNode (Leaf ()) = LeafS <| fromTreeHelper
   fromBinTreeNode (Node node leftTree rightTree)
-    = let (lts <| ltc) = fromBinTreeNode leftTree
-          (rts <| rtc) = fromBinTreeNode rightTree
-      in (NodeS lts rts <| \case
+    = let fblt = fromBinTreeNode leftTree
+          fbrt = fromBinTreeNode rightTree
+      in (NodeS (shapeExt fblt) (shapeExt fbrt) <| \case
             AtNode => node
-            GoLeft posL => ltc posL
-            GoRight posR => rtc posR)
+            GoLeft posL => index fblt posL
+            GoRight posR => index fbrt posR)
 
   public export
   toBinTreeNode : BinTreeNode' a -> BinTreeNode a
@@ -104,11 +104,11 @@ namespace ConversionFunctions
   fromBinTreeLeaf : BinTreeLeaf a -> BinTreeLeaf' a
   fromBinTreeLeaf (Leaf leaf) = LeafS <| \_ => leaf
   fromBinTreeLeaf (Node node lt rt) =
-    let (shL <| fnL) = fromBinTreeLeaf lt
-        (shR <| fnR) = fromBinTreeLeaf rt
-    in NodeS shL shR <| \case
-          GoLeft posL => fnL posL
-          GoRight posR => fnR posR
+    let fblt = fromBinTreeLeaf lt
+        fbrt = fromBinTreeLeaf rt
+    in NodeS (shapeExt fblt) (shapeExt fbrt) <| \case
+          GoLeft posL => index fblt posL
+          GoRight posR => index fbrt posR
 
   public export
   toBinTreeLeaf : BinTreeLeaf' a -> BinTreeLeaf a

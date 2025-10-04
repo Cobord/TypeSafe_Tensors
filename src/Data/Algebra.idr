@@ -96,5 +96,21 @@ namespace Instances
   --   reduce (TS xs) = reduce (reduce <$> xs)
   -- 
   -- aa : Algebra (TensorA [2]) (TensorA [3] a) => a
-  -- aa = ?aa_rhs
+
+
+namespace Initial
+  ||| Initial algebra for an endofunctor
+  public export
+  data Initial : (f : Type -> Type) -> Type where
+    ||| One part of the isomorphism
+    In : f (Initial f) -> Initial f
   
+  ||| Second part of the isomorphism 
+  public export
+  Out : Initial f -> f (Initial f)
+  Out (In r) = r
+  
+  public export
+  cata : Functor f =>
+    Algebra f a -> (Initial f -> a)
+  cata (MkAlgebra g) rs = g $ cata (MkAlgebra g) <$> Out rs 

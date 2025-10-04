@@ -13,7 +13,7 @@ authors = "Bruno Gavranovic"
 -- langversion
 
 -- packages to add to search path
-depends = contrib, hashmap, elab-util
+depends = contrib, elab-util
 
 -- modules to install
 modules = Data.Container,

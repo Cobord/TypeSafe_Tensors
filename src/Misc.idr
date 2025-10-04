@@ -46,6 +46,11 @@ public export
 removeBeginning : (Fin (S l) -> x) -> (x, (Fin l -> x))
 removeBeginning f = (f FZ, f . FS)
 
+||| All but the last element of a 'vector'
+public export
+init : (Fin (S n) -> a) -> Fin n -> a
+init f x = f (weaken x)
+
 public export
 updateAt : Eq a => (a -> b) -> (a, b) -> (a -> b)
 updateAt f (i, val) i' = if i == i' then val else f i'
@@ -117,10 +122,12 @@ unConcat {n = (S k)} xs = let (f, s) = splitAt m xs
 
 
 
+||| Interface describing how a type can be displayed as a 2d grid of characters
 public export
 interface Display (a : Type) where
   display : (x : a) -> (h : Nat ** w : Nat ** Vect h ((Vect w) Char))
 
+||| Any type that implements Display can be shown as a string
 public export
 {a : Type} -> Display a => Show a where
   show x = let (h ** w ** xs) = display x
@@ -143,12 +150,15 @@ rr : {n, x, y : Nat}
   -> Fin (S n)
   -> {auto prf : n = x * y}
   -> (Fin (S x), Fin (S y))
-rr i = ?rooo
   -- -> Data.Fin.Arith.(*) (Fin (S x)) (Fin (S y))
 
 
-mm : {m, n : Nat} -> Fin (S m) -> Fin (S n) -> Fin (S (m * n))
-mm = Data.Fin.Arith.(*)
+||| There is a similar function in Data.Fin.Arith, which has the smallest
+||| possible bound. This one does not, but has a simpler type signature.
+public export
+multFin : {m, n : Nat} -> Fin m -> Fin n -> Fin (m * n)
+multFin {n = (S _)} FZ y = FZ
+multFin {n = (S _)} (FS x) y = y + weaken (multFin x y)
 
 
 ||| Splits xs at each occurence of delimeter (general version for lists)
@@ -388,8 +398,6 @@ testt [] = Unit
 testt (x :: xs) = (Fin x, testt xs)
 
 ggh : (shape : List Nat) -> testt shape
-ggh [] = ()
-ggh (x :: xs) = ?ggh_rhs_1
 
 
 interface Interface1 a where
@@ -411,10 +419,8 @@ getBoth = (getInterface1, getInterface2)
 
 
 ll : Num a => List a
-ll = ?ll_rhs
 
 ll2 : List (Num a => a)
-ll2 = ?ll2_rhs
 
 lk : (a :  Type ** List (Interface1 a => a))
 lk = (Nat ** [3, 5])
@@ -496,4 +502,12 @@ Prelude.absurd : Uninhabited t => t -> a
 
 
 gg : Functor (Maybe . Maybe)
-gg = let t = Functor.Compose in ?gg_rhs
+--gg = let t = Functor.Compose in ?gg_rhs
+
+
+
+
+
+
+
+

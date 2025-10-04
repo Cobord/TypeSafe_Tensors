@@ -98,7 +98,6 @@ namespace BinaryTrees
   Path3 = GoRight AtLeaf
 
   fh : (mcompare Path1 Path2) = Just LT
-  fh = ?aaaaasdf
   
   namespace Nodes
     ||| Positions corresponding to nodes within a BinTreeNode shape.

@@ -31,6 +31,16 @@ namespace BinaryTrees
   %runElab derive "BinTree" [Eq, Show]
   %name BinTree bt, bt', bt''
 
+
+  -- public export
+  -- {a, b : Type} -> Display a => Display b => Display (BinTree a b) where
+  --   display (Leaf a) = display a
+  --   display (Node b lt rt) =
+  --     let dlt = display lt 
+  --         drt = display rt 
+  --         (bh ** bw ** bc) = display b
+  --     in ?hmm_1
+
   public export
   Bifunctor BinTree where
       bimap f g (Leaf x) = Leaf (f x)
@@ -267,7 +277,6 @@ namespace RoseTrees
         = let (xh ** xw ** dx) = display x 
           in ?whatt_1
 
-
   -- TODO RoseTreeLeaf, RoseTreeNode?
 
   -- Idris' totality checker does not accept this as total
@@ -284,81 +293,4 @@ namespace RoseTrees
 -- 
   
   
-
-namespace TreeRotation
-  -- not really used, works for binary trees
-  {-
-  Can only rotate right trees of the shape
-  
-     /\
-    /\ c
-   a b
-  
-  Other shapes, such as
-  
-    a
-  
-  
-    or
-  
-    /\
-    a b
-  
-  
-     or
-  
-     /\
-    a /\   --- here a could be a Leaf node, making this equal to the case above
-      b c
-  
-  don't work
-  -}
-  public export
-  data CanRotateRight : (BinTree : BinTreeLeaf a) -> Type where
-    RotateRight : (leftLeftTree : BinTreeLeaf a)
-               -> (leftRightTree : BinTreeLeaf a)
-               -> (rightTree : BinTreeLeaf a)
-               -> CanRotateRight (Node' (Node' leftLeftTree leftRightTree) rightTree)
-  
-  
-  --  public export
-  --  cannotRotateLeaf : CanRotateRight (Leaf leaf) -> Void
-  --  cannotRotateLeaf (RotateRight _ _ _) impossible
-  
-  --  public export
-  --   cannotRotateThisTree : CanRotateRight (Node n (Leaf l) (Node n' lt rt)) -> Void
-  --   cannotRotateThisTree (RotateRight _ _ _) impossible
-  
-  {-
-  
-     /\             /\   
-    /\ c    -->    a /\
-   a b               b c
-  
-  -}
-  -- Tree rotation
-  public export
-  rotateRight : (tree : BinTreeLeaf a)
-             -> (CanRotateRight tree)
-             -> BinTreeLeaf a
-  rotateRight (Node n (Node n' leftLeftTree leftRightTree) rightTree) x
-    = Node n leftLeftTree (Node n' leftRightTree rightTree)
-  
-  
-  
-  
-  
-  PathBinTree : Type
-  PathBinTree = List Bool
-  
-  
-  -- Swap the left and right subtrees at at specified path
-  commute : PathBinTree -> BinTreeLeaf l -> BinTreeLeaf l
-  commute [] (Leaf leaf) = Leaf leaf
-  commute [] (Node node l r) = Node node r l
-  commute (x :: xs) (Leaf leaf) = Leaf leaf
-  commute (False :: xs) (Node node l r) = Node node (commute xs l) r
-  commute (True :: xs) (Node node l r) = Node node l (commute xs r)
-
-
 

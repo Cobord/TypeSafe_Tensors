@@ -13,17 +13,19 @@ public export infixr 0 >*<
 public export infixr 0 >+<
 public export infixr 0 >@
 
-||| Hancock, Dirichlet, or tensor product of containers
+||| Categorical product of containers
+public export
+(>*<) : Cont -> Cont -> Cont
+(shp !> pos) >*< (shp' !> pos')
+  = ((s, s') : (shp, shp')) !> Either (pos s) (pos' s')
+
+||| Non-categorical product of containers, often also called
+||| 'Hancock' (Scotland), 'Dirichlet' (Spivak ), or 'Tensor product' (various)
 ||| Monoid with CUnit
 public export
 (><) : Cont -> Cont -> Cont
 (shp !> pos) >< (shp' !> pos') = ((s, s') : (shp, shp')) !> (pos s, pos' s')
 
-||| Product of containers
-public export
-(>*<) : Cont -> Cont -> Cont
-(shp !> pos) >*< (shp' !> pos')
-  = ((s, s') : (shp, shp')) !> Either (pos s) (pos' s')
 
 ||| Coproduct of containers
 public export
@@ -70,4 +72,3 @@ shapesIoP : InterfaceOnPositions (shapesOnly a) DecEq
 shapesIoP = MkI
 
 derivConst : (a : Type) -> Ext (Deriv (shapesOnly a)) Integer
-derivConst a = ?aa <| ?bb

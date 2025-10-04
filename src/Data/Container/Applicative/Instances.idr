@@ -191,8 +191,8 @@ namespace ExtensionsOfApplicativeExamples
   -- TODO
   public export
   Applicative (Ext (ApplicativeRoseTree c)) where
-    pure a = ?one
-    fs <*> xs = ?two
+    pure a = ?applicativeRoseTree_pure
+    fs <*> xs = ?applicativeRoseTree_ap
 
   public export
   ApplicativeRoseTree : ContA -> ContA

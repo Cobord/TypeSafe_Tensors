@@ -79,7 +79,7 @@ namespace EqExt
   decEqExt : (e1, e2 : Ext c a) ->
     EqExt e1 e2 ->
     Dec (e1 = e2)
-  decEqExt e1 e2 (MkEqExt shapesEqual valuesEqual)
-    = Yes ?decEqExt_rhs_0 -- complicated, but doable?
+  -- decEqExt e1 e2 (MkEqExt shapesEqual valuesEqual)
+  --   = Yes ?decEqExt_rhs_0 -- complicated, but doable?
 
   

@@ -303,7 +303,8 @@ When it comes to technical details, this library hinges of three interdependent 
 ## Planned features
 * Type-safe einsum
 * Type-safe broadcasting and stacking for both cubical and applicative tensors
-* In-place operations/views, strided representation of tensors, including reasearch on feasibility of such strided variants for non-cubical tensors
+* In-place operations/views, and research on feasibility of linear types for doing so
+* Strided representation of tensors, including reasearch on feasibility of such strided variants for non-cubical tensors
 * Better error reporting
 * Comprehensive optimisation via a FFI to a low-level kernel
 
