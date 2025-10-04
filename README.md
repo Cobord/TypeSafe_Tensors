@@ -11,7 +11,7 @@ TensorType is a framework for pure functional tensor processing, implemented in 
 * **is made with ergonomics in mind**: it aims to provide the standard NumPy/PyTorch interface to the user in a purely functional language
 
 At the moment its main purpose is to enable rapid prototyping of structured neural network architectures. For instance, it is expressive enough to [implement generalised cross-attention](https://github.com/bgavran/TypeSafe_Tensors/blob/main/src/Architectures/Attention.idr#L10) (as described in the [Generalised Transformers blog post](https://glaive-research.org/2025/02/11/Generalized-Transformers-from-Applicative-Functors.html)).
-It is in very early stages of development; expect breaking changes. It is not yet performant: down the line the goal is to obtain performance in a systematic way, not at the expense of compositionality and types, but rather because of them. See more in the section [below](#Goal-and-technical-details).
+It is in very early stages of development; expect breaking changes. It is not yet performant: down the line the goal is to obtain performance in a systematic way, not at the expense of compositionality and types, but because of them. See more in the section [below](#Goal-and-technical-details).
 
 
 * [Examples](#Examples)
@@ -262,40 +262,33 @@ traversalExample = restructure (wrap inorder) treeExample1
 
 ## Installation instructions
 
-It's recommended to manage the installation of this package (and generally, Idris 2) using the Idris 2 package manager [pack](https://github.com/stefan-hoeck/idris2-pack). The instructions below assume you've got both installed.
+It is recommended to manage the installation of this package (and generally, Idris 2) using the package manager [pack](https://github.com/stefan-hoeck/idris2-pack). The instructions below assume you've got both Idris 2 and pack installed.
 
 **If you want to just try it out in the REPL:**
 1. Clone repository, and `cd` into it
 2. Run `pack repl examples/BasicExamples.idr`
 3. That's it!
 
-**To use this framework in your project**, follow [pack standard practices](https://github.com/stefan-hoeck/idris2-pack/tree/main/example1):
-1. Add the following to your `pack.toml`
-```
-[custom.all.tensortype]
-type   = "git"
-url    = "https://github.com/bgavran/TensorType"
-commit = "latest:main"
-ipkg   = "tensortype.ipkg"
-```
-2. Add `tensortype` to your `depends` argument in your project's `.ipkg` file. (Just like it is done in `examples/tensortype-examples.ipkg`)
-3. Include `import Data.Tensor` at the top of your source files.
-4. That's it!
+**To use TensorType in your project:**
+1. Add `tensortype` to the `depends` argument in your project's `.ipkg` file. (See `examples/tensortype-examples.ipkg` for an example)
+2. Include `import Data.Tensor` at the top of your source files.
+3. That's it!
 
 
 ## Goal and technical details
 
-In addition to enabling fast prototyping of structured neural networks, the goal of this framework is to eventually evaluate the following hypothesis:
+In addition to enabling type-driven development of neural network architectures, the goal of this framework is to eventually evaluate the following hypothesis:
 
 > **Performance can be achieved not at the expense of compositionality, but because of it.**
 
-by taking special care to:
-1) develop typed tensor interface and abstractions that enable abundant static analysis, and 
-2) defer the sacrifice of those typed abstractions for performance optimisations until the point when it becomes clear that such a sacrifice is necessary.
+That is, the goal is to move towards CUDA-level performance of generalised tensor contractions in a manner where type safety, modularity, and our ability to reason about code is not sacrificed until it becomes abundantly clear that such a sacrifice is necessary.
+In other words, the plan is to first make it work, and then make it work fast.
 
-This static analysis is aimed to inform performance optimisations down the line, especially when in context of non-cubical tensors. These are at the moment only scarcely explored, without any existing CUDA packages or optimisation algorithms.
+The reason for this belief is that **types** of these tensor abstractions are themselves meta-information that can be used to enable abundant static analysis and performance optimisations down the line.
+Keeping this information costs little if we learn how to manage it.
+This especially holds in the context of non-cubical tensors, which are at the moment only scarcely explored, without any existing CUDA packages or optimisation algorithms.
 
-When it comes to technical details, this library hinges of three interdependent components:
+When it comes to the question of "How does TensorType work?", it is based on three interdependent components:
 * **Containers** for **well-typed indexing of non-cubical tensors**: they allow us to validate that an index into a generalised tensor is not out of bounds at compile-time. Doing this with cubical containers is easy since they expose the size information at the type level (i.e. `Tensor [2,3,4] Double`), but once we move on to the world of applicative functors this is no longer the case. Checking that an index into a `CTensor [BinTreeNode] Double` is not out of bounds is only possible if the underlying functor additionally comes equipped with the data of the valid set of "shapes" and the valid "positions" for that shape. This is equivalent to asking that the functor is polynomial, or that the functor is an extension of a container.
 * **Applicative functors** for **generalised linear algebra**: they allow us to perform generalised linear algebra operations as described in the [Applicative Programming with Naperian Functors](https://www.cs.ox.ac.uk/people/jeremy.gibbons/publications/aplicative.pdf) paper.
 * **Dependent lenses** for **reshaping and traversing operations**: they allow us to define morphisms of containers, and therefore generalised tensor reshaping operations that do not operate on the content of the data, only the shape. These include views, reshapes, and traversals, and many other culprits that appear in libraries like numpy.
@@ -307,6 +300,7 @@ When it comes to technical details, this library hinges of three interdependent 
 * Strided representation of tensors, including reasearch on feasibility of such strided variants for non-cubical tensors
 * Better error reporting
 * Comprehensive optimisation via a FFI to a low-level kernel
+* Documentation
 
 
 ## Contact
