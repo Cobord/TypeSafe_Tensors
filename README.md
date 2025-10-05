@@ -281,11 +281,9 @@ In addition to enabling type-driven development of neural network architectures,
 
 > **Performance can be achieved not at the expense of compositionality, but because of it.**
 
-That is, the goal is to move towards CUDA-level performance of generalised tensor contractions in a manner where type safety, modularity, and our ability to reason about code is not sacrificed until it becomes abundantly clear that such a sacrifice is necessary.
-In other words, the plan is to first make it work, and then make it work fast.
+That is, the goal is to move towards CUDA-level performance of generalised tensor contractions in a manner where type safety, modularity, and our ability to reason about code is not sacrificed.
 
-The reason for this belief is that **types** of these tensor abstractions are themselves meta-information that can be used to enable abundant static analysis and performance optimisations down the line.
-Keeping this information costs little if we learn how to manage it.
+The reason for this belief is that types of these tensor abstractions are themselves meta-information that can be used to enable abundant static analysis and performance optimisations down the line.
 This especially holds in the context of non-cubical tensors, which are at the moment only scarcely explored, without any existing CUDA packages or optimisation algorithms.
 
 When it comes to the question of "How does TensorType work?", it is based on three interdependent components:

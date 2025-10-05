@@ -2,8 +2,8 @@ package tensortype
 -- version =
 authors = "Bruno Gavranovic"
 -- maintainers =
--- license =
--- brief =
+license = "AGPL-3.0"
+brief = "Type-safe pure functional tensor processing framework, supporting non-cubical tensors"
 -- readme =
 -- homepage =
 -- sourceloc =
