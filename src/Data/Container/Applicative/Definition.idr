@@ -40,6 +40,14 @@ data AllApplicative : List Cont -> Type where
     AllApplicative (c :: cs)
 
 
+-- is there a better way?
+%hint
+public export
+oneToTwoAppl : AllApplicative [c] => AllApplicative [c, c]
+oneToTwoAppl @{Cons} = Cons
+
+
+
 -- ||| This states a list version of 
 -- ||| Ext c2 . Ext c1 = Ext (c2 . c1)
 -- public export
