@@ -58,6 +58,18 @@ namespace ZerosOnes
   ones : Num a => {shape : List Cont} -> AllApplicative shape => 
     CTensor shape a
   ones = tensorReplicate (fromInteger 1)
+
+
+  ||| An identity matrix with True on the diagonal and False elsewhere
+  public export
+  identityBool : {n : Nat} -> Tensor [n, n] Bool
+  identityBool = outerWith (==) (positions {sh=()}) (positions {sh=()})
+
+  ||| An identity matrix with ones on the diagonal and zeros elsewhere
+  ||| Analogous to numpy.eye
+  public export
+  identity : Num a => {n : Nat} -> Tensor [n, n] a
+  identity = fromBool <$> identityBool
   
 namespace Range
   {----- 
@@ -153,7 +165,7 @@ namespace Triangular
   public export
   cTriBool : {c : Cont} ->
     (ip : InterfaceOnPositions c MOrd) =>
-    AllApplicative [c, c] => -- TODO 'All' pattern does not handle repeated indices well
+    AllApplicative [c] =>
     (sh : c.shp) -> CTensor [c, c] Bool
   cTriBool {ip = MkI {p}} sh
     = let cPositions = positions {sh=sh}
@@ -163,7 +175,7 @@ namespace Triangular
   public export
   triA : Num a => {c : Cont} ->
     (ip : InterfaceOnPositions c MOrd) =>
-    AllApplicative [c, c] =>
+    AllApplicative [c] =>
     (sh : c.shp) -> CTensor [c, c] a
   triA sh = fromBool <$> cTriBool sh
 
@@ -205,7 +217,3 @@ namespace Random
 -- 
 -- random : Random a => (shape : List Nat) -> IO (Tensor shape a)
 -- random shape = randomIO
-
--- public export
--- eye : Num a => CTensor [n, n] a
--- eye = ?eye_rhs
