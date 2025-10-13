@@ -32,7 +32,7 @@ namespace DependentLenses
   
   ||| Constructor for closed dependent lens
   public export 
-  (!%) : {c1, c2 : Cont} ->
+  (!%) : {0 c1, c2 : Cont} ->
     ((x : c1.shp) -> (y : c2.shp ** (c2.pos y -> c1.pos x))) ->
     c1 =%> c2
   (!%) f = (\x => fst (f x)) <%! (\x => snd (f x))
@@ -48,6 +48,10 @@ namespace DependentLenses
   (%>>) : a =%> b -> b =%> c -> a =%> c
   (%>>) = compDepLens
 
+  public export
+  id : a =%> a
+  id = !% \x => (x ** \y => y)
+
 namespace DependentCharts
   ||| Dependent charts
   ||| Forward-forward container morphisms
@@ -60,7 +64,7 @@ namespace DependentCharts
   
   ||| Constructor for closed dependent chart
   public export
-  (!&) : {c1, c2 : Cont} ->
+  (!&) : {0 c1, c2 : Cont} ->
     ((x : c1.shp) -> (y : c2.shp ** (c1.pos x -> c2.pos y))) ->
     c1 =&> c2
   (!&) f = (\x => fst (f x)) <&! (\x => snd (f x))
@@ -75,6 +79,10 @@ namespace DependentCharts
   public export
   (&>>) : a =&> b -> b =&> c -> a =&> c
   (&>>) = compDepChart
+
+  public export
+  id : a =&> a
+  id = !& \x => (x ** \y => y)
 
 
 -- experimental stuff below
