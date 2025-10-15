@@ -13,3 +13,6 @@ import public Data.Container.Products
 import public Data.Tree
 import public Data.Algebra
 import public Data.Functor.Naperian
+
+-- temp/misc
+import public Data.Container.SubTerm

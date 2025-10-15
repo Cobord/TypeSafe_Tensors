@@ -62,13 +62,17 @@ takeFin : (s : Fin (S n)) -> Vect n a -> Vect (finToNat s) a
 takeFin FZ _ = []
 takeFin (FS s) (x :: xs) = x :: takeFin s xs
 
+||| We also incldue minus infinity because of computation causal masks within
+||| attention: we need to have a number such that `exp minusInfinity = 0`.
 public export
 interface Exp a where
   exp : a -> a
+  minusInfinity : a
 
 public export
 Exp Double where
   exp = Prelude.exp
+  minusInfinity = cast "-inf.0"
 
 
 ||| Pointwise Num structure for Applicative functors
@@ -279,6 +283,11 @@ public export
 fromBool : Num a => Bool -> a
 fromBool False = fromInteger 0
 fromBool True = fromInteger 1
+
+public export
+applyWhen : Bool -> (a -> a) -> a -> a
+applyWhen False f a = a
+applyWhen True f a = f a
 
 
 namespace FinArithmetic

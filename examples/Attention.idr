@@ -15,9 +15,12 @@ Will run self attention as usual, on matrices, and then on trees
 ||| We'll first instantiate self attention as a parametric map on matrices
 ||| `n` here represents the length of sequence
 ||| `d` here represents the dimension of the features
-SelfAttentionMat : {n, d : Nat}
-  -> Para (Tensor [n, d] Double) (Tensor [n, d] Double)
-SelfAttentionMat = SelfAttention softargmax
+SelfAttentionMat : {n, d : Nat} ->
+  {default False causalMask : Bool} ->
+  Para (Tensor [n, d] Double) (Tensor [n, d] Double)
+SelfAttentionMat {causalMask} = case causalMask of
+  False => SelfAttention softargmax
+  True => SelfAttention {causalMask=Attention.causalMask} softargmax
 
 
 ||| Let's fix a simple input matrix
@@ -34,7 +37,7 @@ params = MkCSAParams ones tri (ones <&> (*3))
 ||| Now we can run self attention on the input matrix
 ||| This value can be inspected in REPL, or otherwise
 outputMatrix : Tensor [3, 2] Double
-outputMatrix = Run SelfAttentionMat inputMatrix params
+outputMatrix = Run (SelfAttentionMat {causalMask=True}) inputMatrix params
 
 
 ||| Now we'll instantiate self attention as a parametric map on trees and use

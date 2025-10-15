@@ -70,7 +70,7 @@ namespace ZerosOnes
   public export
   identity : Num a => {n : Nat} -> Tensor [n, n] a
   identity = fromBool <$> identityBool
-  
+
 namespace Range
   {----- 
   This one is interesting, as in the cubical case it's effectively a version of 'tabulate' from Naperian functors.
@@ -172,29 +172,45 @@ namespace Triangular
           pp : MOrd (c.pos sh) := p sh
       in outerWith (flip isSubTerm) cPositions cPositions
 
-  public export
-  triA : Num a => {c : Cont} ->
-    (ip : InterfaceOnPositions c MOrd) =>
-    AllApplicative [c] =>
-    (sh : c.shp) -> CTensor [c, c] a
-  triA sh = fromBool <$> cTriBool sh
+  -- public export
+  -- triA : Num a => {c : Cont} ->
+  --   (ip : InterfaceOnPositions c MOrd) =>
+  --   AllApplicative [c] =>
+  --   (sh : c.shp) -> CTensor [c, c] a
+  -- triA sh = fromBool <$> cTriBool sh
 
   public export
   triBool : {n : Nat} -> Tensor [n, n] Bool
   triBool = cTriBool ()
 
-  ||| A matrix with ones below the diagonal, and zeros elsewhere
+  ||| A matrix with ones on and below the diagonal, and zeros elsewhere
   ||| Analogous to numpy.tri
   public export
   tri : Num a => {n : Nat} -> Tensor [n, n] a
   tri = fromBool <$> triBool
 
-  ||| Lower triangular part of a matrix
-  ||| The upper triangular part is set to zero
-  ||| Analogous to numpy.tril
+  ||| Lower triangular part of a matrix. Elements above the diagonal are set to
+  ||| zero. Analogous to numpy.tril
   public export
   lowerTriangular : Num a => {n : Nat} -> Tensor [n, n] a -> Tensor [n, n] a
   lowerTriangular = (* tri)
+
+  ||| Upper triangular part of a matrix. Elements below the diagonal are set to
+  ||| zero. Analogous to numpy.triu(.., k=1)
+  public export
+  upperTriangular : Num a => {n : Nat} -> Tensor [n, n] a -> Tensor [n, n] a
+  upperTriangular t = t * ((fromBool . not) <$> triBool)
+
+  ||| Fill the elements of a tensor `t` with `fill` where `mask` is True
+  public export
+  maskedFill : {shape : List Cont} -> Num a => AllApplicative shape =>
+    (t : CTensor shape a) ->
+    (mask : CTensor shape Bool) ->
+    (fill : a) ->
+    CTensor shape a
+  maskedFill t mask fill = liftA2Tensor mask t <&>
+    (\(maskVal, tVal) => if maskVal then fill else tVal)
+
 
 
 namespace Traversals
