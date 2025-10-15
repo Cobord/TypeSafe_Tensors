@@ -224,8 +224,14 @@ namespace TensorInstances
     ttt : {shape : List Cont} -> AllApplicative shape => (x : a) -> CTensor shape a
     ttt x = pure x
 
+
+
+    -- tth : {shape : List Nat} -> AllApplicative (Vect <$> shape)
+    -- tth = %search
+
     -- tttc : {shape : List Nat} -> (x : a) -> Tensor shape a
     -- tttc x = pure x
+
 
   namespace EqInstance
     public export
@@ -289,8 +295,9 @@ namespace TensorInstances
       t / v = (uncurry (/)) <$> liftA2 t v
 
     public export
-    Exp a => Exp (CTensor shape a) where
+    {shape : List Cont} -> Exp a => AllApplicative shape => Exp (CTensor shape a) where
       exp = (exp <$>)
+      minusInfinity = pure minusInfinity
 
 
   namespace AlgebraInstance
