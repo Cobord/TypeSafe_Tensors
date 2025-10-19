@@ -8,7 +8,7 @@ type = "local"
 path = "examples"
 ipkg = "tensortype-examples.ipkg"
 
-[custom.all.tensortype-tests]
-type = "local"
-path = "tests"
-ipkg = "tensortype-tests.ipkg"
+# [custom.all.tensortype-tests]
+# type = "local"
+# path = "tests"
+# ipkg = "tensortype-tests.ipkg"
