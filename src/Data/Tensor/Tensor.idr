@@ -225,7 +225,6 @@ namespace TensorInstances
     ttt x = pure x
 
 
-
     -- tth : {shape : List Nat} -> AllApplicative (Vect <$> shape)
     -- tth = %search
 
@@ -283,6 +282,10 @@ namespace TensorInstances
     Neg (CTensor shape a) where
       negate = (negate <$>)
       xs - ys = (uncurry (-)) <$> liftA2 xs ys
+
+    -- TODO this throws an error?
+    negNotFound : {shape : List Nat} -> Neg a => Neg (Tensor shape a)
+    negNotFound = ?interfaceProblemsAgain
 
     public export
     {shape : List Cont} -> Abs a => AllApplicative shape =>
@@ -434,6 +437,30 @@ namespace TensorInstances
     -- parametricDoesNotWork : {shape : List Nat} ->
     --   Tensor shape Integer -> Integer
     -- parametricDoesNotWork t = foldr (+) 0 t
+
+  namespace TraversableInstance
+    public export
+    data AllTraversable : (shape : List Cont) -> Type where
+        Nil : AllTraversable []
+        Cons : Traversable (Ext c) =>
+          AllTraversable cs =>
+          AllTraversable (c :: cs)
+
+    public export
+    tensorTraverse : (allTraversable : AllTraversable shape) =>
+      Applicative f =>
+      (a -> f b) -> CTensor shape a -> f (CTensor shape b)
+    tensorTraverse {allTraversable = []} f t = pure <$> f (extract t)
+    tensorTraverse {allTraversable = Cons} f t = embedTopExt <$> 
+      traverse (\ct => tensorTraverse f ct) (extractTopExt t)
+
+    public export
+    {shape : List Cont} ->
+    (allTraversable : AllTraversable shape) =>
+    (allFoldable : AllFoldable shape) =>
+    Traversable (CTensor shape) where
+      traverse = tensorTraverse
+
 
   namespace NaperianInstance
     public export
@@ -808,8 +835,8 @@ namespace CubicalSetterGetter
         ts : Tensor ss a := setC (indexC tNested [i]) is x
     in fromNestedTensor $ MkT $ set (GetT tNested) (i ** ()) ts
 
-s : Tensor [2, 3] Integer
-s = setC t11 [1, 1] 100
+-- sTest : Tensor [2, 3] Integer
+-- sTest = setC t11 [1, 1] 100
 
 ||| Functionality for slicing tensors
 namespace Slice
