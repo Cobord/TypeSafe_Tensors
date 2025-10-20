@@ -10,13 +10,28 @@ record Para (a : Type) (b : Type) where
     Param : a -> Type
     Run : (x : a) -> Param x -> b
 
--- TODO infix notation
+public export infixr 0 -\->
+
+||| Experimental infix notation, for now
+public export
+(-\->) : (a, b : Type) -> Type
+a -\-> b = Para a b
 
 public export
-composePara : Para a b -> Para b c -> Para a c
+composePara : a -\-> b -> b -\-> c -> a -\-> c
 composePara (MkPara p f) (MkPara q g) = MkPara
   (\x => (p' : p x ** q (f x p')))
   (\x, (p' ** q') => g (f x p') q')
+
+public export
+trivialParam : (a -> a) -> a -\-> a
+trivialParam f = MkPara 
+  (\_ => Unit)
+  (\a, _ => f a)
+
+public export
+id : a -\-> a
+id = trivialParam id
 
 -- mapRunPara : {a : Type} -> {b : Type} ->
 --   (model : Para a b) -> Vect n a -> Vect n b
@@ -31,6 +46,13 @@ public export
 (<$^>) : {t : a -> Type} -> (f : (x : a) -> t x) ->
   Vect n a -> Vect n (x : a ** t x)
 (<$^>) f xs = depMap f xs
+
+
+public export
+composeNTimes : Nat -> a -\-> a -> a -\-> a
+composeNTimes 0 f = id
+composeNTimes 1 f = f -- to get rid of the annoying Unit parameter
+composeNTimes (S k) f = composePara f (composeNTimes k f)
 
 
 -- composePara_rhs_1 : (p : Vect n Type) -> (q : Vect m Type)

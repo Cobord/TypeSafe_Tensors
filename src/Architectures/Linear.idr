@@ -12,10 +12,10 @@ linearImpl {allAppl = Cons} weights bias input
   = matrixVectorProduct weights input + bias
 
 public export
-linearParaA : {x, y : Cont} -> {a : Type} -> Num a =>
+linearPara : {x, y : Cont} -> {a : Type} -> Num a =>
   AllAlgebra [x] a =>
   AllApplicative [x, y] =>
-  Para (CTensor [x] a) (CTensor [y] a)
-linearParaA = MkPara
+  CTensor [x] a -\-> CTensor [y] a
+linearPara = MkPara
   (const (CTensor [y, x] a, CTensor [y] a))
   (\input, (weights, bias) => linearImpl weights bias input)

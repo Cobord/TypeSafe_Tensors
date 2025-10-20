@@ -65,8 +65,7 @@ SelfAttention : {a : Type} -> Num a =>
   (allAlg : AllAlgebra [inputStructure, features] a) =>
   {default id causalMask : CTensor [inputStructure, inputStructure] a -> CTensor [inputStructure, inputStructure] a} ->
   (softargmax : CTensor [inputStructure] a -> CTensor [inputStructure] a) ->
-  Para (CTensor [inputStructure, features] a)
-       (CTensor [inputStructure, features] a)
+  CTensor [inputStructure, features] a -\-> CTensor [inputStructure, features] a
 SelfAttention {causalMask} softargmax = MkPara
   (const (CSelfAttentionParams features a))
   (SAImpl {causalMask} softargmax)

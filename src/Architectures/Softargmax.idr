@@ -14,10 +14,6 @@ softargmax {temperature} t
 
 
 
-
-
-
-
 -- TODO namedSoftmax
 -- namedSoftmax : {axis : Type -> Type}
 --   -> {shape : Vect n ApplF} -> {a : Type}

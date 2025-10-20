@@ -17,7 +17,7 @@ Will run self attention as usual, on matrices, and then on trees
 ||| `d` here represents the dimension of the features
 SelfAttentionMat : {n, d : Nat} ->
   {default False causalMask : Bool} ->
-  Para (Tensor [n, d] Double) (Tensor [n, d] Double)
+  Tensor [n, d] Double -\-> Tensor [n, d] Double
 SelfAttentionMat {causalMask} = case causalMask of
   False => SelfAttention softargmax
   True => SelfAttention {causalMask=Attention.causalMask} softargmax
@@ -46,9 +46,9 @@ outputMatrix = Run (SelfAttentionMat {causalMask=True}) inputMatrix params
 ||| as a sequence
 ||| That is, instead of `CTensor [Vect n, Vect d] Double`
 ||| we'll have `CTensor [BinTreeLeaf, Vect d] Double`
-SelfAttentionTree : {d : Nat} -> Para
-  (CTensor [BinTreeLeaf, Vect d] Double)
-  (CTensor [BinTreeLeaf, Vect d] Double)
+SelfAttentionTree : {d : Nat} ->
+  CTensor [BinTreeLeaf, Vect d] Double -\->
+  CTensor [BinTreeLeaf, Vect d] Double
 SelfAttentionTree = SelfAttention softargmax
 
 ||| We fix a simple input tree
