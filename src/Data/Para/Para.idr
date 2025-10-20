@@ -24,7 +24,7 @@ composePara (MkPara p f) (MkPara q g) = MkPara
   (\x, (p' ** q') => g (f x p') q')
 
 public export
-trivialParam : (a -> a) -> a -\-> a
+trivialParam : (a -> b) -> a -\-> b
 trivialParam f = MkPara 
   (\_ => Unit)
   (\a, _ => f a)
