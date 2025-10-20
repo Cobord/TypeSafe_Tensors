@@ -162,8 +162,8 @@ namespace BinaryTrees
      1  3
     
      -}
-    t : BinTree Int Int
-    t = Node 4 (Node 2 (Leaf 1) (Leaf 3)) (Leaf 5)
+    MyTree : BinTree Int Int
+    MyTree = Node 4 (Node 2 (Leaf 1) (Leaf 3)) (Leaf 5)
   
     public export
     inorder : BinTree a b -> List (Either a b)
@@ -172,7 +172,7 @@ namespace BinaryTrees
       inorder leftTree ++ [Right node] ++ inorder rightTree
   
     testInorder :
-      Traversals.inorder Traversals.t = [Left 1, Right 2, Left 3, Right 4, Left 5]
+      Traversals.inorder MyTree = [Left 1, Right 2, Left 3, Right 4, Left 5]
     testInorder = Refl
   
     public export
@@ -181,7 +181,7 @@ namespace BinaryTrees
     preorder (Node node leftTree rightTree) =
       [Right node] ++ preorder leftTree ++ preorder rightTree
   
-    testPreorder : Traversals.preorder Traversals.t
+    testPreorder : Traversals.preorder MyTree 
       = [Right 4, Right 2, Left 1, Left 3, Left 5]
     testPreorder = Refl
   
@@ -191,7 +191,7 @@ namespace BinaryTrees
     postorder (Node node leftTree rightTree)
       = postorder leftTree ++ postorder rightTree ++ [Right node]
   
-    testPostorder : Traversals.postorder Traversals.t
+    testPostorder : Traversals.postorder MyTree 
       = [Left 1, Left 3, Right 2, Left 5, Right 4]
     testPostorder = Refl
   

@@ -116,7 +116,7 @@ public export
 CartesianClosure : Cont -> Cont -> Cont
 CartesianClosure c d
   = (f : ((x : c.shp) -> (y : d.shp ** d.pos y -> Maybe (c.pos x))))
-    !> (xx : c.shp ** yy' : d.pos (fst (f xx)) ** ?hh)
+    !> (xx : c.shp ** yy' : d.pos (fst (f xx)) ** ?cartesianClosureImpl)
 
 ||| Constant container, positions do not depend on shapes
 ||| Some of the above containers can be refactored in terms of these
