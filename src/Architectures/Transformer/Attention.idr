@@ -1,4 +1,4 @@
-module Architectures.Attention
+module Architectures.Transformer.Attention
 
 import Data.Tensor
 import Data.Para

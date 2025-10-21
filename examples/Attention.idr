@@ -3,8 +3,8 @@ module Attention
 import Data.Tensor
 import Data.Para
 
-import Architectures.Attention
 import Architectures.Softargmax
+import Architectures.Transformer.Attention
 
 {-------------------------------------------------------------------------------
 Attention example

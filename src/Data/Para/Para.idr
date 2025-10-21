@@ -33,6 +33,12 @@ public export
 id : a -\-> a
 id = trivialParam id
 
+public export
+data IsNotDependent : Para a b -> Type where
+  MkNonDep : (p : Type) -> (f : a -> p -> b) ->
+    IsNotDependent (MkPara (\_ => p) f)
+
+
 -- mapRunPara : {a : Type} -> {b : Type} ->
 --   (model : Para a b) -> Vect n a -> Vect n b
 public export

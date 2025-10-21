@@ -45,9 +45,12 @@ modules = Data.Container,
           Data.Tree,
           Data.Algebra,
           Architectures.Activations,
-          Architectures.Attention,
           Architectures.Softargmax,
-          Architectures.Linear,
+          Architectures.Affine,
+          Architectures.MLP,
+          Architectures.Transformer.Attention,
+          Architectures.Transformer.Definition,
+          Architectures.Utils,
           Misc
 
 -- main file (i.e. file to load at REPL)
