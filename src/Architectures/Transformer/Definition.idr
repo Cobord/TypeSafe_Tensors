@@ -5,7 +5,6 @@ import Data.Para
 
 import Architectures.Affine
 import Architectures.Residual
-import Architectures.Normalisation
 import Architectures.MLP
 import Architectures.Activations
 import Architectures.Transformer.Attention
